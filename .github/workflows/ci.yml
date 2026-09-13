@@ -88,20 +88,15 @@ jobs:
           category: "/language:javascript-typescript"
       # TEMPLATE-ONLY:END(codeql)
 
-      # Coverage reporting via mcoverage CLI — LCOV + HTML + artifact + threshold + PR comment
-      - name: Install lcov
-        run: sudo apt-get update && sudo apt-get install -y lcov bc
+      # Coverage reporting — all logic lives in the mcoverage CLI
+      # (configs/coverage/src/cli.ts): setup installs genhtml, html renders the
+      # report, check enforces the threshold by parsing LCOV directly.
+      - name: Setup coverage tooling
+        run: mcoverage setup
         shell: bash
 
-      - name: Generate coverage HTML (mcoverage html)
-        run: |
-          echo "📊 Generating HTML coverage report via mcoverage"
-          if [ -f "coverage/lcov.info" ]; then
-            mcoverage html || genhtml coverage/lcov.info --output-directory coverage/html --title "Coverage Report" --show-details --highlight --legend || echo "genhtml failed, continuing"
-            ls -lh coverage/html/ | head -20
-          else
-            echo "⚠️ coverage/lcov.info not found, skipping genhtml"
-          fi
+      - name: Generate coverage HTML
+        run: mcoverage html
         shell: bash
 
       - name: Upload coverage HTML artifact
@@ -112,22 +107,10 @@ jobs:
           retention-days: 14
 
       - name: Check coverage threshold (80% via mcoverage)
-        run: |
-          if [ ! -f "coverage/lcov.info" ]; then
-            echo "⚠️ coverage/lcov.info not found, skipping threshold check"
-            exit 0
-          fi
-          mcoverage check || {
-            COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | awk '{print $2}' | tr -d '%')
-            echo "Line coverage: $COVERAGE% (fallback)"
-            if [ -n "$COVERAGE" ] && (( $(echo "$COVERAGE < 80" | bc -l) )); then
-              echo "::error::Coverage ${COVERAGE}% is below 80% threshold"
-              exit 1
-            fi
-          }
+        run: mcoverage check --threshold 80
         shell: bash
 
-      - name: Report coverage to PR (lcov-reporter-action)
+      - name: Report coverage to PR
         if: github.event_name == 'pull_request'
         uses: romeovs/lcov-reporter-action@v0.3.1
         with:

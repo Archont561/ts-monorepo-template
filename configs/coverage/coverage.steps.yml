@@ -1,35 +1,15 @@
-      - name: Run tests with coverage (Bun + Rust via mbun + mnative)
-        run: |
-          echo "📊 Running tests with coverage via mbun + mnative"
-          bun run coverage || echo "bun coverage failed"
-          if [ -f "packages/native/Cargo.toml" ] && command -v cargo-llvm-cov >/dev/null 2>&1; then
-            echo "🦀 Running Rust coverage via mnative llvm-cov"
-            mnative llvm-cov --lcov --output-path ../../coverage/rust-lcov.info || echo "rust coverage failed"
-            if [ -f "coverage/rust-lcov.info" ] && [ -f "coverage/lcov.info" ]; then
-              echo "Merging Rust + JS LCOV via lcov --add-tracefile"
-              lcov --add-tracefile coverage/lcov.info --add-tracefile coverage/rust-lcov.info --output-file coverage/merged.lcov || mcoverage merge || echo "merge failed"
-              mv coverage/merged.lcov coverage/lcov.info || true
-            elif [ -f "coverage/rust-lcov.info" ]; then
-              cp coverage/rust-lcov.info coverage/lcov.info
-            fi
-          else
-            echo "⚠️ cargo-llvm-cov not installed, skipping Rust coverage"
-          fi
+      # Standalone coverage Pages site (used when the pages config is disabled).
+      # Every step delegates to the mcoverage CLI — no inline shell.
+      - name: Collect coverage (Bun + Rust)
+        run: mcoverage collect
         shell: bash
 
-      - name: Install lcov
-        run: sudo apt-get update && sudo apt-get install -y lcov bc
+      - name: Setup coverage tooling
+        run: mcoverage setup
         shell: bash
 
-      - name: Generate coverage HTML (mcoverage html)
-        run: |
-          if [ -f "coverage/lcov.info" ]; then
-            mcoverage html || genhtml coverage/lcov.info --output-directory coverage/html --title "Coverage Report" --show-details --highlight --legend
-          else
-            echo "⚠️ coverage/lcov.info not found"
-            mkdir -p coverage/html
-            echo "<h1>No coverage data</h1>" > coverage/html/index.html
-          fi
+      - name: Generate coverage HTML
+        run: mcoverage html
         shell: bash
 
       - name: Upload coverage HTML artifact
@@ -40,19 +20,7 @@
           retention-days: 14
 
       - name: Check coverage threshold (80% via mcoverage)
-        run: |
-          if [ ! -f "coverage/lcov.info" ]; then
-            echo "⚠️ No lcov.info, skipping threshold"
-            exit 0
-          fi
-          mcoverage check || {
-            COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | awk '{print $2}' | tr -d '%')
-            echo "Coverage: $COVERAGE% (fallback)"
-            if [ -n "$COVERAGE" ] && (( $(echo "$COVERAGE < 80" | bc -l) )); then
-              echo "::error::Coverage ${COVERAGE}% is below 80% threshold"
-              exit 1
-            fi
-          }
+        run: mcoverage check --threshold 80
         shell: bash
 
       - name: Report coverage to PR

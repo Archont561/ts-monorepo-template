@@ -1,20 +1,7 @@
       # TEMPLATE-ONLY:START(pages)
-      - name: Generate coverage HTML for Pages (include at /coverage/ via mcoverage)
-        run: |
-          echo "📊 Generating coverage HTML for inclusion in Pages site (via mcoverage)"
-          if [ ! -f "coverage/lcov.info" ]; then
-            echo "⚠️ coverage/lcov.info not found, running coverage first"
-            bun run coverage || echo "coverage failed"
-          fi
-          if [ -f "coverage/lcov.info" ]; then
-            sudo apt-get update && sudo apt-get install -y lcov bc || echo "lcov install failed"
-            mcoverage html || genhtml coverage/lcov.info --output-directory coverage/html --title "Coverage Report" --show-details --highlight --legend || echo "genhtml failed"
-            mkdir -p apps/example/public/coverage
-            cp -r coverage/html/* apps/example/public/coverage/ || echo "copy coverage to public/coverage failed"
-            echo "✅ Coverage included at /coverage/ in Pages site"
-            ls -lh apps/example/public/coverage/ | head -20
-          else
-            echo "⚠️ No coverage/lcov.info, skipping Pages coverage inclusion"
-          fi
+      # Collects coverage if needed, renders HTML and copies it into the Pages
+      # artifact so it is served at /coverage/ — all inside mcoverage pages.
+      - name: Publish coverage to Pages (mcoverage)
+        run: mcoverage pages
         shell: bash
       # TEMPLATE-ONLY:END(pages)
