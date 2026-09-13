@@ -42,7 +42,16 @@ bun run test:e2e         # Playwright (auto-skips without browsers)
 bun run coverage         # merged LCOV
 bun run build            # Bunup, orchestrated by Turbo
 bun run docs:sync        # regenerate workflows from configs/*
+
+# One package at a time
+bun --filter @myorg/external run test:watch
+bun --filter @myorg/external run build
 ```
+
+CI runs the same set in this order: lint → test → coverage → package health
+(`publint` + `arethetypeswrong` on every non-private package) → E2E →
+typecheck → build. Dependencies and the Turbo cache are restored before
+install, and superseded pull-request runs are cancelled automatically.
 
 ## Working on these docs
 
