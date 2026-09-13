@@ -55,21 +55,8 @@ jobs:
       # are checked; private ones are never published.
       # attw runs with --profile esm-only: the template ships ESM-only
       # packages, so the strict profile's CJS resolutions are intentional.
-      - name: Package health (publint + arethetypeswrong)
-        run: |
-          set -eo pipefail
-          bun run build
-          publishable=$(bun -e 'const { readdirSync, readFileSync, existsSync } = require("node:fs"); const dirs = []; for (const d of readdirSync("packages")) { const p = `packages/${d}/package.json`; if (existsSync(p) && !JSON.parse(readFileSync(p, "utf8")).private) dirs.push(`packages/${d}`); } console.log(dirs.join("\n"));')
-          if [ -z "$publishable" ]; then
-            echo "No publishable packages — skipping"
-            exit 0
-          fi
-          echo "$publishable" | while read -r dir; do
-            echo "→ $dir"
-            bunx --yes publint "$dir"
-            (cd "$dir" && bunx --yes @arethetypeswrong/cli --pack . --profile esm-only)
-          done
-        shell: bash
+      - name: Package health (publint + arethetypeswrong, via mbunup)
+        run: mbunup health
 
       # TEMPLATE-ONLY:START(codeql)
       # CodeQL — SAST for JS/TS (opt-in, default true)
@@ -163,14 +150,12 @@ jobs:
 
       - name: Build native bindings (host, mnative)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: |
-          echo "🦀 Building native bindings via mnative (self-contained)"
-          bun run build:native || echo "native build skipped (install Rust)"
+        run: mnative napi:build
         shell: bash
 
       - name: Check native package types
         if: hashFiles('packages/native/package.json') != ''
-        run: bun --filter @myorg/native run typecheck || echo "native typecheck skipped"
+        run: mnative typecheck
         shell: bash
       # TEMPLATE-ONLY:END(native)
 
@@ -196,9 +181,7 @@ jobs:
 
       - name: Build image for Trivy scan (if Dockerfile exists)
         if: hashFiles('apps/example/Dockerfile') != ''
-        run: |
-          echo "🐳 Building image for Trivy scan"
-          docker build -t app:trivy-scan -f apps/example/Dockerfile . || echo "docker build failed, skipping image scan"
+        run: mtrivy build
 
       - name: Trivy image scan (if Dockerfile)
         if: hashFiles('apps/example/Dockerfile') != ''

@@ -14,15 +14,11 @@
 
       - name: Cargo build release (mnative)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: |
-          echo "🦀 Building Rust release via mnative"
-          mnative build:release || echo "cargo build failed"
+        run: mnative build:release
         shell: bash
 
       - name: Build native bindings for release (napi via mnative)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: |
-          echo "🦀 Building native bindings for release (napi via mnative)"
-          bun run build:native || mnative napi:build || echo "native build failed, continuing with JS fallback"
+        run: mnative napi:build
         shell: bash
       # TEMPLATE-ONLY:END(native)

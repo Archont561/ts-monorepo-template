@@ -1,6 +1,10 @@
 #!/usr/bin/env bun
+import { existsSync } from "node:fs";
 import { spawnSync, which } from "bun";
 import { defineCommand, runMain } from "citty";
+
+const DOCKERFILE = "apps/example/Dockerfile";
+const IMAGE = "app:trivy-scan";
 
 function hasTrivy(): boolean {
   return !!which("trivy");
@@ -21,6 +25,30 @@ function runTrivy(args: string[]): number {
   });
   return result.exitCode;
 }
+
+const buildCommand = defineCommand({
+  meta: { name: "build", description: `docker build -t ${IMAGE} (image for the trivy image scan)` },
+  run() {
+    if (!existsSync(DOCKERFILE)) {
+      console.warn(`⚠️ ${DOCKERFILE} not found — skipping image build`);
+      process.exit(0);
+    }
+    if (!which("docker")) {
+      console.warn("⚠️ docker not found — skipping image build");
+      process.exit(0);
+    }
+    const result = spawnSync({
+      cmd: ["docker", "build", "-t", IMAGE, "-f", DOCKERFILE, "."],
+      stdout: "inherit",
+      stderr: "inherit",
+      stdin: "inherit",
+    });
+    if (result.exitCode !== 0) {
+      console.warn("⚠️ image build failed — skipping the Trivy image scan");
+    }
+    process.exit(0);
+  },
+});
 
 const fsCommand = defineCommand({
   meta: { name: "fs", description: "trivy fs . --severity HIGH,CRITICAL (filesystem scan)" },
@@ -54,6 +82,7 @@ const main = defineCommand({
   subCommands: {
     fs: fsCommand,
     image: imageCommand,
+    build: buildCommand,
   },
   run() {
     const raw = process.argv.slice(2);

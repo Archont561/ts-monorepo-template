@@ -34,13 +34,11 @@
 
       - name: Build native bindings (host, mnative)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: |
-          echo "🦀 Building native bindings via mnative (self-contained)"
-          bun run build:native || echo "native build skipped (install Rust)"
+        run: mnative napi:build
         shell: bash
 
       - name: Check native package types
         if: hashFiles('packages/native/package.json') != ''
-        run: bun --filter @myorg/native run typecheck || echo "native typecheck skipped"
+        run: mnative typecheck
         shell: bash
       # TEMPLATE-ONLY:END(native)

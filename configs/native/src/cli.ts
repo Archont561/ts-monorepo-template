@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { existsSync } from "node:fs";
 import { spawnSync, which } from "bun";
 import { defineCommand, runMain } from "citty";
 
@@ -164,6 +165,29 @@ const denyCommand = defineCommand({
   },
 });
 
+const typecheckCommand = defineCommand({
+  meta: {
+    name: "typecheck",
+    description: "Type-check packages/native (skips when the package is absent)",
+  },
+  run() {
+    if (!existsSync("packages/native/package.json")) {
+      console.warn("⚠️ packages/native not present, skipping typecheck");
+      process.exit(0);
+    }
+    // Running in the package dir keeps this scope-agnostic — there is no
+    // @scope/native name to rewrite when the template is scaffolded.
+    const result = spawnSync({
+      cmd: ["bun", "run", "typecheck"],
+      cwd: "packages/native",
+      stdout: "inherit",
+      stderr: "inherit",
+      stdin: "inherit",
+    });
+    process.exit(result.exitCode);
+  },
+});
+
 const napiBuildCommand = defineCommand({
   meta: { name: "napi:build", description: "napi build --release --platform (native .node)" },
   run() {
@@ -233,6 +257,7 @@ const main = defineCommand({
     "llvm-cov": llvmCovCommand,
     audit: auditCommand,
     deny: denyCommand,
+    typecheck: typecheckCommand,
     "napi:build": napiBuildCommand,
     "napi:build:debug": napiBuildDebugCommand,
     "napi:build:wasm": napiBuildWasmCommand,

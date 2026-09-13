@@ -17,9 +17,7 @@
 
       - name: Build image for Trivy scan (if Dockerfile exists)
         if: hashFiles('apps/example/Dockerfile') != ''
-        run: |
-          echo "🐳 Building image for Trivy scan"
-          docker build -t app:trivy-scan -f apps/example/Dockerfile . || echo "docker build failed, skipping image scan"
+        run: mtrivy build
 
       - name: Trivy image scan (if Dockerfile)
         if: hashFiles('apps/example/Dockerfile') != ''
