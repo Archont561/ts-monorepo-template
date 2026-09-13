@@ -9,13 +9,19 @@ function run(cmd: string[]): number {
   return result.exitCode;
 }
 
+type Repo = { owner: string; repo: string };
+
 /**
- * Repo name for a GitHub Pages project site, e.g. "org/my-app" -> "my-app".
- * Prefers the Actions-provided GITHUB_REPOSITORY, falls back to git remote.
+ * Resolves `owner/repo` for a GitHub Pages project site. Prefers the
+ * Actions-provided GITHUB_REPOSITORY, falls back to the git remote so it also
+ * works on a dev machine (and inside the docs data loader).
  */
-function repoName(): string | undefined {
-  const fromEnv = process.env.GITHUB_REPOSITORY?.split("/")[1];
-  if (fromEnv) return fromEnv;
+function repoSlug(): Repo | undefined {
+  const fromEnv = process.env.GITHUB_REPOSITORY;
+  if (fromEnv?.includes("/")) {
+    const [owner, repo] = fromEnv.split("/");
+    if (owner && repo) return { owner, repo };
+  }
 
   const remote = spawnSync({
     cmd: ["git", "config", "--get", "remote.origin.url"],
@@ -23,10 +29,16 @@ function repoName(): string | undefined {
   });
   const url = remote.stdout?.toString().trim();
   if (!url) return undefined;
-  return url
-    .replace(/\.git$/, "")
-    .split("/")
-    .at(-1);
+
+  // https://github.com/owner/repo.git | git@github.com:owner/repo.git
+  const match = url.replace(/\.git$/, "").match(/[:/]([^/:]+)\/([^/]+)$/);
+  if (!match) return undefined;
+  return { owner: match[1], repo: match[2] };
+}
+
+/** Canonical Pages URL for the repo, e.g. https://owner.github.io/repo. */
+function pagesUrl(slug: Repo): string {
+  return `https://${slug.owner.toLowerCase()}.github.io/${slug.repo}`;
 }
 
 const buildCommand = defineCommand({
@@ -65,12 +77,31 @@ const baseCommand = defineCommand({
       description: "Rewrite absolute href/src in the built HTML to include the base path",
       default: false,
     },
+    json: {
+      type: "boolean",
+      description: "Print { owner, repo, base, url } as JSON",
+      default: false,
+    },
   },
   async run({ args }) {
-    const name = repoName();
-    const owner = process.env.GITHUB_REPOSITORY_OWNER ?? "unknown";
+    const slug = repoSlug();
+    const name = slug?.repo;
+    const url = slug ? pagesUrl(slug) : undefined;
+
+    if (args.json) {
+      console.log(
+        JSON.stringify({
+          owner: slug?.owner ?? null,
+          repo: name ?? null,
+          base: name ? `/${name}` : null,
+          url: url ?? null,
+        }),
+      );
+      return;
+    }
+
     console.log(`🔧 Repo name: ${name ?? "(unknown)"}`);
-    console.log(`   Default Pages URL: https://${owner}.github.io/${name ?? ""}`);
+    console.log(`   Default Pages URL: ${url ?? "(unknown)"}`);
 
     if (!args.inject) return;
     if (!name) {

@@ -63,7 +63,7 @@ function installTools(): void {
   }
 }
 
-function generateHtml(): void {
+function generateHtml(outDir: string = HTML_DIR): void {
   if (!existsSync(LCOV)) {
     console.warn(`⚠️ ${LCOV} not found — skipping HTML report`);
     return;
@@ -72,11 +72,12 @@ function generateHtml(): void {
     console.warn("⚠️ genhtml not found — run `mcoverage setup` first (HTML report skipped)");
     return;
   }
+  mkdirSync(outDir, { recursive: true });
   const code = run([
     "genhtml",
     LCOV,
     "--output-directory",
-    HTML_DIR,
+    outDir,
     "--title",
     "Coverage Report",
     "--show-details",
@@ -84,7 +85,7 @@ function generateHtml(): void {
     "--legend",
   ]);
   if (code === 0) {
-    console.log(`\n✅ HTML report: ${HTML_DIR}/index.html`);
+    console.log(`\n✅ HTML report: ${outDir}/index.html`);
   }
   process.exit(code);
 }
@@ -98,9 +99,19 @@ const setupCommand = defineCommand({
 });
 
 const htmlCommand = defineCommand({
-  meta: { name: "html", description: "Generate HTML report via genhtml from coverage/lcov.info" },
-  run() {
-    generateHtml();
+  meta: {
+    name: "html",
+    description: "Generate HTML report via genhtml from coverage/lcov.info",
+  },
+  args: {
+    out: {
+      type: "string",
+      description: `Output directory (default: ${HTML_DIR})`,
+      default: HTML_DIR,
+    },
+  },
+  run({ args }) {
+    generateHtml((args.out as string) || HTML_DIR);
     process.exit(0);
   },
 });
@@ -239,12 +250,31 @@ const mergeCommand = defineCommand({
 });
 
 const summaryCommand = defineCommand({
-  meta: { name: "summary", description: "Show coverage summary" },
-  run() {
+  meta: { name: "summary", description: "Show coverage summary (--json for machine-readable output)" },
+  args: {
+    json: { type: "boolean", description: "Print JSON instead of a human-readable line" },
+  },
+  run({ args }) {
+    const result = totals();
+    if (args.json) {
+      // Always parse the LCOV ourselves: --json is consumed by scripts and the
+      // docs data loader, so it must not depend on lcov being installed.
+      console.log(
+        JSON.stringify({
+          source: LCOV,
+          available: Boolean(result),
+          lines: {
+            hit: result?.hit ?? 0,
+            found: result?.found ?? 0,
+            percent: result ? Number(result.percent.toFixed(2)) : 0,
+          },
+        }),
+      );
+      process.exit(0);
+    }
     if (has("lcov") && existsSync(LCOV)) {
       process.exit(run(["lcov", "--summary", LCOV]));
     }
-    const result = totals();
     if (!result) {
       console.warn(`⚠️ ${LCOV} not found`);
       process.exit(0);
@@ -279,11 +309,11 @@ Usage:
 Commands:
   setup              Install lcov/genhtml if missing
   collect            Collect JS + Rust coverage and merge them
-  html               genhtml coverage/lcov.info → coverage/html/
+  html [--out DIR]   genhtml coverage/lcov.info → DIR (default coverage/html/)
   check [--threshold 80]  Fail if line coverage is below the threshold
   pages              Publish coverage/html into the Pages artifact dir
   merge              Merge {packages,apps}/*/coverage/lcov.info via lcov
-  summary            Print a coverage summary
+  summary [--json]   Print a coverage summary (--json for scripts/docs)
 
 Examples:
   mcoverage setup && mcoverage check --threshold 90
