@@ -20,5 +20,8 @@
   },
   "devDependencies": {
     "lefthook": "^2.1.12"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

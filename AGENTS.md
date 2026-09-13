@@ -62,14 +62,15 @@ All tool invocations use `m`-prefixed aliases that bake in config paths. Each co
 | :--- | :--- | :--- |
 | `mturbo` | `turbo` | Build orchestration with `turbo.base.json` |
 | `mbiome` | `biome` | Lint + format with shared config |
-| `mbun` | `bun` + `mturbo coverage` | Bun runtime with `bunfig.toml`; `mbun coverage` merges LCOV |
+| `mbun` | `bun` + `mturbo coverage` | Bun runtime with `bunfig.toml`; `mbun coverage` merges LCOV (citty) |
 | `mbunup` | `bunup` | Package bundler |
-| `mchangeset` | `changeset` | Versioning + releases; `mchangeset init` ensures config |
-| `mci` | `actionlint` + `act` | CI: `mci lint` validates workflows, `mci act` runs locally |
+| `mchangeset` | `changeset` | Versioning + releases; `mchangeset init` ensures config (citty) |
+| `mci` | `actionlint` + `act` | CI: `mci lint` validates workflows, `mci act` runs locally (citty) |
+| `mcitty` | `citty` | CLI builder info |
 | `me2e` | `playwright test` | E2E with browser detection and auto-skip |
-| `mskills` | — | AI agent skill management |
-| `msetup` | — | Links m-bins, regenerates `lefthook.yml`, hooks |
-| `mdocs` | — | Regenerates workflows from `configs/*` |
+| `mskills` | `citty` + `skills` | AI agent skill management (citty, 8 subcommands) |
+| `msetup` | `citty` | Links m-bins, regenerates `lefthook.yml`, hooks (citty) |
+| `mdocs` | `citty` | Regenerates workflows from `configs/*` (citty) |
 | `mtsc` | `tsc` | TypeScript type-checking |
 
 <details>
@@ -174,12 +175,13 @@ Tool configs and their agent-facing docs (reference, not concatenated):
 | Config | File | Purpose |
 | :--- | :--- | :--- |
 | Biome | [AGENT.md](configs/biome/AGENT.md) | Lint and format |
-| Bun Config | [AGENT.md](configs/bun-config/AGENT.md) | Bun runtime and coverage |
+| Bun Config | [AGENT.md](configs/bun-config/AGENT.md) | Bun runtime and coverage (citty) |
 | Bunup | [AGENT.md](configs/bunup/AGENT.md) | Bundling presets |
-| Changeset | [AGENT.md](configs/changeset/AGENT.md) | Releases |
+| Changeset | [AGENT.md](configs/changeset/AGENT.md) | Releases (citty) |
+| Citty | [AGENT.md](configs/citty/AGENT.md) | CLI builder (citty) |
 | Commitlint | [AGENT.md](configs/commitlint/AGENT.md) | Commit messages |
-| GitHub Actions | [AGENT.md](configs/gh-actions/AGENT.md) | CI workflow validation and local act |
-| Lefthook | [AGENT.md](configs/lefthook/AGENT.md) | Git hooks |
+| GitHub Actions | [AGENT.md](configs/gh-actions/AGENT.md) | CI workflow validation and local act (citty) |
+| Lefthook | [AGENT.md](configs/lefthook/AGENT.md) | Git hooks (citty) |
 <!-- TEMPLATE-ONLY:START(native) -->
 | Native | [AGENT.md](configs/native/AGENT.md) | NAPI-RS opt-in |
 <!-- TEMPLATE-ONLY:END(native) -->

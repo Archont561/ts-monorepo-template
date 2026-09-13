@@ -22,5 +22,8 @@
   "devDependencies": {
     "@clack/prompts": "^1.8.0",
     "@myorg/ts": "workspace:*"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

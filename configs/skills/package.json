@@ -40,5 +40,8 @@
   },
   "devDependencies": {
     "skills": "^1.5.26"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

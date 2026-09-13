@@ -152,6 +152,7 @@ Tool configs and their docs (reference, not concatenated):
 | [Bun Config](configs/bun-config/README.md) | `mbun` | Bun runtime, test, coverage |
 | [Bunup](configs/bunup/README.md) | `mbunup` | Bundling presets |
 | [Changeset](configs/changeset/README.md) | `mchangeset` | Versioning and releases |
+| [Citty](configs/citty/README.md) | `mcitty` | Elegant CLI builder (citty) |
 | [Commitlint](configs/commitlint/README.md) | — | Conventional Commits |
 | [GitHub Actions](configs/gh-actions/README.md) | `mci` | CI workflows, `mci lint` / `mci act` |
 | [Lefthook](configs/lefthook/README.md) | `msetup` | Git hooks |

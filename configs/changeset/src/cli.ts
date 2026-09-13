@@ -1,17 +1,7 @@
 #!/usr/bin/env bun
 import { mkdir } from "node:fs/promises";
 import { file, spawnSync, write } from "bun";
-
-/**
- * m-prefixed Changesets CLI — single bin for @myorg/changeset.
- *
- * - `mchangeset init` — ensures `.changeset/config.json` exists, copying from
- *   the shared config package when missing (never overwrites).
- * - `mchangeset <args>` — delegates to `@changesets/cli` (e.g. `add`, `version`, `publish`).
- *
- * Root `prepare` uses `mchangeset init`; `changeset`, `version`, `release`
- * scripts use `mchangeset` directly.
- */
+import { defineCommand, runMain } from "citty";
 
 export async function minit(target = "changeset"): Promise<void> {
   if (target !== "changeset") {
@@ -32,27 +22,67 @@ export async function minit(target = "changeset"): Promise<void> {
   await write(configPath, await file(source).text());
 }
 
-async function main() {
-  const args = process.argv.slice(2);
-  const sub = args[0];
+// Passthrough for changeset commands — bypass citty for unknown subcommands
+const rawArgs = process.argv.slice(2);
+const knownSubcommands = ["init"];
+const firstArg = rawArgs[0];
+const isHelp = rawArgs.includes("--help") || rawArgs.includes("-h");
+const isVersion = rawArgs.includes("--version") || rawArgs.includes("-v");
 
-  if (sub === "init") {
-    await minit(args[1] ?? "changeset");
-    return;
-  }
-
+if (
+  firstArg &&
+  !knownSubcommands.includes(firstArg) &&
+  !firstArg.startsWith("-") &&
+  !isHelp &&
+  !isVersion
+) {
   const changeset = Bun.fileURLToPath(import.meta.resolve("@changesets/cli/bin.js"));
-
   const result = spawnSync({
-    cmd: ["bun", changeset, ...args],
+    cmd: ["bun", changeset, ...rawArgs],
     stdout: "inherit",
     stderr: "inherit",
     stdin: "inherit",
   });
-
   process.exit(result.exitCode);
 }
 
+const initCommand = defineCommand({
+  meta: { name: "init", description: "Ensure .changeset/config.json exists from shared template" },
+  args: {
+    target: {
+      type: "positional",
+      description: "Init target (default: changeset)",
+      required: false,
+      default: "changeset",
+    },
+  },
+  async run({ args }) {
+    await minit((args.target as string) ?? "changeset");
+  },
+});
+
+const main = defineCommand({
+  meta: {
+    name: "mchangeset",
+    version: "1.0.0",
+    description: "Changesets wrapper — init config and delegate to @changesets/cli",
+  },
+  subCommands: { init: initCommand },
+  run() {
+    const raw = process.argv.slice(2);
+    const changeset = Bun.fileURLToPath(import.meta.resolve("@changesets/cli/bin.js"));
+
+    const result = spawnSync({
+      cmd: ["bun", changeset, ...raw],
+      stdout: "inherit",
+      stderr: "inherit",
+      stdin: "inherit",
+    });
+
+    process.exit(result.exitCode);
+  },
+});
+
 if (import.meta.main) {
-  await main();
+  runMain(main);
 }

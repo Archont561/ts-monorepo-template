@@ -1,25 +1,22 @@
 {
-  "name": "@myorg/bun-config",
+  "name": "@myorg/citty",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scaffold": {
     "default": "always",
-    "flag": "bun-config",
-    "prompt": "Configure Bun (coverage, test settings)?"
+    "flag": "citty",
+    "prompt": "Configure Citty (elegant CLI builder)?"
   },
   "bin": {
-    "mbun": "./src/cli.ts"
+    "mcitty": "./src/cli.ts"
   },
   "scripts": {
     "build": "mbunup",
     "dev": "mbunup --watch"
   },
   "exports": {
-    "./bunfig.toml": "./bunfig.toml"
-  },
-  "devDependencies": {
-    "lcov-result-merger": "^6.0.0"
+    ".": "./src/index.ts"
   },
   "dependencies": {
     "citty": "^0.2.2"

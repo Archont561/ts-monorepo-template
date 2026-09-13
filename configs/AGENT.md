@@ -13,6 +13,7 @@ Shared tooling configurations. Each sub-directory owns one tool's config and exp
 | Bun Config | `mbun` | [AGENT.md](bun-config/AGENT.md) |
 | Bunup | `mbunup` | [AGENT.md](bunup/AGENT.md) |
 | Changeset | `mchangeset` | [AGENT.md](changeset/AGENT.md) |
+| Citty | `mcitty` | [AGENT.md](citty/AGENT.md) |
 | Commitlint | — | [AGENT.md](commitlint/AGENT.md) |
 | GitHub Actions | `mci` | [AGENT.md](gh-actions/AGENT.md) |
 | Lefthook | `msetup` | [AGENT.md](lefthook/AGENT.md) |

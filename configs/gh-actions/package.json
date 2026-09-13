@@ -20,5 +20,8 @@
   },
   "devDependencies": {
     "github-actionlint": "^1.7.12"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

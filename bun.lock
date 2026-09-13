@@ -45,6 +45,9 @@
       "bin": {
         "mbun": "./src/cli.ts",
       },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
       "devDependencies": {
         "lcov-result-merger": "^6.0.0",
       },
@@ -65,8 +68,21 @@
       "bin": {
         "mchangeset": "./src/cli.ts",
       },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
       "devDependencies": {
         "@changesets/cli": "^3.0.2",
+      },
+    },
+    "configs/citty": {
+      "name": "@myorg/citty",
+      "version": "0.0.0",
+      "bin": {
+        "mcitty": "./src/cli.ts",
+      },
+      "dependencies": {
+        "citty": "^0.2.2",
       },
     },
     "configs/commitlint": {
@@ -83,6 +99,9 @@
       "bin": {
         "mci": "./src/cli.ts",
       },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
       "devDependencies": {
         "github-actionlint": "^1.7.12",
       },
@@ -92,6 +111,9 @@
       "version": "0.0.0",
       "bin": {
         "msetup": "./src/cli.ts",
+      },
+      "dependencies": {
+        "citty": "^0.2.2",
       },
       "devDependencies": {
         "lefthook": "^2.1.12",
@@ -120,6 +142,9 @@
       "bin": {
         "mskills": "./src/cli.ts",
       },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
       "devDependencies": {
         "skills": "^1.5.26",
       },
@@ -129,6 +154,9 @@
       "version": "0.0.0",
       "bin": {
         "mdocs": "./src/docs.ts",
+      },
+      "dependencies": {
+        "citty": "^0.2.2",
       },
       "devDependencies": {
         "@clack/prompts": "^1.8.0",
@@ -370,6 +398,8 @@
 
     "@myorg/changeset": ["@myorg/changeset@workspace:configs/changeset"],
 
+    "@myorg/citty": ["@myorg/citty@workspace:configs/citty"],
+
     "@myorg/commitlint": ["@myorg/commitlint@workspace:configs/commitlint"],
 
     "@myorg/example": ["@myorg/example@workspace:apps/example"],
@@ -600,7 +630,7 @@
 
     "@oxc-parser/binding-win32-x64-msvc": ["@oxc-parser/binding-win32-x64-msvc@0.131.0", "", { "os": "win32", "cpu": "x64" }, "sha512-o14Hk8dAyiEUMFEWEgmAwFZvBt1RzAYLM3xeQ+5315JXgVYhoemivgYcbYVRbsFkS71ShMGlAFE0kPnr460rww=="],
 
-    "@oxc-project/types": ["@oxc-project/types@0.131.0", "", {}, "sha512-PgnWDfV0h+b16XNKbXU7Daib/BFSt/J2mEzfYIBu6JB/wNdlU+kVYXCkGA1A9fWkTbOgbjh4e6NhPeQOYvFhEA=="],
+    "@oxc-project/types": ["@oxc-project/types@0.149.0", "", {}, "sha512-Efcc+iF0j3Bf67YjEqIqWXbX5XddXoK/Mw4K1/JuXwRCZ8N16VR7iT23nlCc9XrveFVh/E5Rqs2StT0V8v9LdA=="],
 
     "@oxc-resolver/binding-android-arm-eabi": ["@oxc-resolver/binding-android-arm-eabi@11.24.2", "", { "os": "android", "cpu": "arm" }, "sha512-y09e0L0SRI2OA2tUIrjBgoV3eH5hvUKXNkJqXmNo5V2WxIjyC7I7aJfRLMEVpA8yi95f90gFDvO0VMgrDw+vwA=="],
 
@@ -1328,7 +1358,7 @@
 
     "micromatch/picomatch": ["picomatch@2.3.2", "", {}, "sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA=="],
 
-    "rolldown/@oxc-project/types": ["@oxc-project/types@0.149.0", "", {}, "sha512-Efcc+iF0j3Bf67YjEqIqWXbX5XddXoK/Mw4K1/JuXwRCZ8N16VR7iT23nlCc9XrveFVh/E5Rqs2StT0V8v9LdA=="],
+    "oxc-parser/@oxc-project/types": ["@oxc-project/types@0.131.0", "", {}, "sha512-PgnWDfV0h+b16XNKbXU7Daib/BFSt/J2mEzfYIBu6JB/wNdlU+kVYXCkGA1A9fWkTbOgbjh4e6NhPeQOYvFhEA=="],
 
     "unconfig/jiti": ["jiti@2.7.0", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ=="],
 

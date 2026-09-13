@@ -1,19 +1,6 @@
 #!/usr/bin/env bun
 import { spawnSync } from "bun";
-
-/**
- * m-prefixed CI CLI — single bin for @myorg/gh-actions.
- *
- * Subcommands:
- *   mci lint [args] — validates workflows via actionlint with shared config
- *   mci act [args]  — runs GitHub Actions locally via act with baked-in flags
- *
- * Usage:
- *   mci lint
- *   mci act -l
- *   mci act push -n
- *   mci act push
- */
+import { defineCommand, runMain } from "citty";
 
 const ACT_FLAGS = [
   "-P",
@@ -26,20 +13,17 @@ function runActionlint(args: string[]) {
   const actionlint = Bun.fileURLToPath(
     import.meta.resolve("github-actionlint/dist/bin/actionlint.js"),
   );
-
   const result = spawnSync({
     cmd: ["bun", actionlint, `-config-file=${import.meta.dir}/../actionlint.yaml`, ...args],
     stdout: "inherit",
     stderr: "inherit",
     stdin: "inherit",
   });
-
   process.exit(result.exitCode);
 }
 
 function runAct(args: string[]) {
   const actPath = Bun.which("act");
-
   if (!actPath) {
     console.error(`
 'act' is not installed.
@@ -63,12 +47,44 @@ Then ensure Docker is running and try again.
     stderr: "inherit",
     stdin: "inherit",
   });
-
   process.exit(result.exitCode);
 }
 
-function printHelp() {
-  console.log(`
+const lintCommand = defineCommand({
+  meta: { name: "lint", description: "Validate workflows via actionlint with shared config" },
+  args: {
+    args: { type: "positional", description: "Extra args for actionlint", required: false },
+  },
+  run() {
+    const raw = process.argv.slice(3);
+    runActionlint(raw);
+  },
+});
+
+const actCommand = defineCommand({
+  meta: { name: "act", description: "Run GitHub Actions locally via act with baked-in flags" },
+  args: {
+    args: { type: "positional", description: "Extra args for act", required: false },
+  },
+  run() {
+    const raw = process.argv.slice(3);
+    runAct(raw);
+  },
+});
+
+const main = defineCommand({
+  meta: {
+    name: "mci",
+    version: "1.0.0",
+    description: "CI tooling for GitHub Actions — lint workflows and run locally with act",
+  },
+  subCommands: { lint: lintCommand, act: actCommand },
+  run() {
+    const raw = process.argv.slice(2);
+    if (raw.length > 0 && raw[0].startsWith("-")) {
+      runAct(raw);
+    } else {
+      console.log(`
 mci — CI tooling for GitHub Actions
 
 Usage:
@@ -80,32 +96,11 @@ Examples:
   mci act -l
   mci act push -n
   mci act push
+
+Run mci <command> --help for more info.
 `);
-}
-
-const [sub, ...rest] = process.argv.slice(2);
-
-switch (sub) {
-  case "lint":
-    runActionlint(rest);
-    break;
-  case "act":
-    runAct(rest);
-    break;
-  case undefined:
-  case "-h":
-  case "--help":
-  case "help":
-    printHelp();
-    break;
-  default:
-    // For backward compat, if first arg looks like an act flag, treat as act
-    // e.g. `mci -l` => `mci act -l`
-    if (sub?.startsWith("-")) {
-      runAct([sub, ...rest]);
-    } else {
-      console.error(`Unknown subcommand '${sub}'. Expected 'lint' or 'act'.`);
-      printHelp();
-      process.exit(1);
     }
-}
+  },
+});
+
+runMain(main);

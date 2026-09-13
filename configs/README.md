@@ -13,6 +13,7 @@ Shared tooling configurations for the monorepo. Each sub-directory is a private 
 | [Bun Config](bun-config/README.md) | `mbun` | ✅ Always | Bun runtime, test, coverage |
 | [Bunup](bunup/README.md) | `mbunup` | ✅ Always | Bundling presets |
 | [Changeset](changeset/README.md) | `mchangeset` | ✅ Always | Versioning and releases |
+| [Citty](citty/README.md) | `mcitty` | ✅ Always | Elegant CLI builder |
 | [Commitlint](commitlint/README.md) | — | ✅ Always | Conventional Commits |
 | [GitHub Actions](gh-actions/README.md) | `mci` | ✅ Always | CI workflows, `mci lint` / `mci act` |
 | [Lefthook](lefthook/README.md) | `msetup` | ✅ Always | Git hooks |

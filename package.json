@@ -12,6 +12,7 @@
     "@myorg/bun-config": "workspace:*",
     "@myorg/bunup": "workspace:*",
     "@myorg/changeset": "workspace:*",
+    "@myorg/citty": "workspace:*",
     "@myorg/gh-actions": "workspace:*",
     "@myorg/lefthook": "workspace:*",
     "@myorg/playwright": "workspace:*",
