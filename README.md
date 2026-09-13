@@ -97,11 +97,12 @@ See [AGENT.md](./AGENT.md) for the agent-facing reference.
 ## What it provides
 
 - `bunfig.toml` — the single source of truth for test + coverage settings.
-- `mbun` — wraps `bun`; passes `--config=<configs/bun-config/bunfig.toml>` for
-  `bun test` (other commands pass through unchanged).
-- `mcoverage` — runs `mturbo coverage` (per-package coverage in dependency
-  order) then merges the per-package `coverage/lcov.info` reports into a single
-  `coverage/lcov.info` with `lcov-result-merger --prepend-source-files`.
+- `mbun` — single bin for this package:
+  - `mbun <bun cmd>` — wraps `bun`; passes `--config=<configs/bun-config/bunfig.toml>` for
+    `bun test` (other commands pass through unchanged).
+  - `mbun coverage` — runs `mturbo coverage` (per-package coverage in dependency
+    order) then merges the per-package `coverage/lcov.info` reports into a single
+    `coverage/lcov.info` with `lcov-result-merger --prepend-source-files`.
 
 ### Config highlights (`bunfig.toml`)
 
@@ -112,7 +113,7 @@ See [AGENT.md](./AGENT.md) for the agent-facing reference.
 
 ```bash
 bun run test       # mturbo test   (Turbo runs per-package mbun test)
-bun run coverage   # mcoverage     (mturbo coverage + merged root lcov.info)
+bun run coverage   # mbun coverage (mturbo coverage + merged root lcov.info)
 ```
 
 ## Rules
@@ -184,24 +185,24 @@ See [AGENT.md](./AGENT.md) for the agent-facing reference.
 
 ## What it provides
 
-- `@changesets/cli` as a shared devDependency (exposed via `changeset`,
-  `changeset version`, `changeset publish`).
+- `@changesets/cli` as a shared devDependency, exposed via single bin `mchangeset`:
+  - `mchangeset init` — copies `config.json` to `.changeset/config.json` when missing
+    and never overwrites it afterwards, so developers can customize.
+  - `mchangeset <args>` — delegates to `changeset` (e.g. `add`, `version`, `publish`).
 - `config.json` — the shared Changesets config (public access, `main` base
   branch, every non-published package in `ignore`).
-- `minit` — copies `config.json` to `.changeset/config.json` when missing and
-  never overwrites it afterwards, so developers can customize.
 
 ## Lifecycle
 
-The root `prepare` script invokes `bun configs/changeset/init.ts changeset`
-on every `bun install`, ensuring `.changeset/config.json` exists.
+The root `prepare` script invokes `mchangeset init` on every `bun install`,
+ensuring `.changeset/config.json` exists.
 
 ## Usage
 
 ```bash
-bun run changeset    # create a changeset for a published-package change
-bun run version      # apply versions + changelogs
-bun run release      # publish to npm
+bun run changeset    # mchangeset — create a changeset for a published-package change
+bun run version      # mchangeset version — apply versions + changelogs
+bun run release      # mchangeset publish — publish to npm
 ```
 
 Only `@myorg/external` is published; everything else stays in `ignore`.
@@ -251,24 +252,25 @@ See [AGENT.md](./AGENT.md) for the agent-facing reference.
 - `ci.base.yml` / `release.base.yml` — the **workflow skeletons** whose
   `{{STEPS}}` placeholder is filled from the configs' step fragments by
   `bun run docs:sync` (generating `.github/workflows/ci.yml` + `release.yml`).
-- `mactionlint` — validates `.github/workflows/` syntax, baking in
-  `-config-file=<configs/gh-actions/actionlint.yaml>`.
-- `mact` — wraps `act` for local CI, baking in a feature-complete runner image
-  (`catthehacker/ubuntu:act-latest`) and `--container-architecture`; prints an
-  install guide when `act` is not installed.
+- `mci` — single bin for this package with subcommands:
+  - `mci lint` — validates `.github/workflows/` syntax, baking in
+    `-config-file=<configs/gh-actions/actionlint.yaml>`.
+  - `mci act` — wraps `act` for local CI, baking in a feature-complete runner image
+    (`catthehacker/ubuntu:act-latest`) and `--container-architecture`; prints an
+    install guide when `act` is not installed.
 
 ## Usage
 
 ```bash
 bun run docs:sync     # regenerate .github/workflows/ from the skeletons + fragments
-bun run ci:lint       # validate workflow syntax (mactionlint)
-bun run ci:list       # list workflows/jobs (mact -l)
-bun run ci:dry        # dry-run plan (mact push -n)
-bun run ci:local      # run CI in Docker (mact push)
+bun run ci:lint       # validate workflow syntax (mci lint)
+bun run ci:list       # list workflows/jobs (mci act -l)
+bun run ci:dry        # dry-run plan (mci act push -n)
+bun run ci:local      # run CI in Docker (mci act push)
 ```
 
-Other events: `act pull_request -n`, `act -W .github/workflows/release.yml -n`,
-`act -j actionlint -n`. Secrets are absent locally — pass `-s NPM_TOKEN` or
+Other events: `mci act pull_request -n`, `mci act -W .github/workflows/release.yml -n`,
+`mci act -j actionlint -n`. Secrets are absent locally — pass `-s NPM_TOKEN` or
 use an untracked `.secrets` file.
 
 ## Rules

@@ -2,5 +2,5 @@ import { cliConfig, defineConfig } from "@myorg/bunup";
 
 export default defineConfig({
   ...cliConfig,
-  entry: ["src/cli.ts", "src/coverage.ts"],
+  entry: ["src/cli.ts"],
 });

@@ -25,22 +25,24 @@ the installed Lefthook Git hooks, and ensures `.changeset/config.json` exists
 
 ## CLI Aliases (m-commands)
 
-All tool invocations use `m`-prefixed aliases that bake in config paths. They
-are linked into `node_modules/.bin` on install (the root ships zero
+All tool invocations use `m`-prefixed aliases that bake in config paths. Each
+config package exposes exactly one `m`-command (with subcommands where needed).
+They are linked into `node_modules/.bin` on install (the root ships zero
 `devDependencies`), so just `bun run <script>` — do not invoke tools directly:
 
-| Alias       | Wraps                  | Description                                        |
-| ----------- | ---------------------- | -------------------------------------------------- |
-| `mturbo`    | `turbo`                | Build orchestration with `turbo.base.json`          |
-| `mbiome`    | `biome`                | Lint + format with shared config                    |
-| `mbun`      | `bun`                  | Bun runtime with `bunfig.toml`                      |
-| `mcoverage` | `mturbo coverage` | Per-package coverage, merged into one LCOV |
-| `me2e`      | `playwright test`      | E2E with browser detection and auto-skip            |
-| `mactionlint`| `actionlint`          | Workflow validation                                 |
-| `mact`      | `act`                  | Local CI simulation (install guard)                 |
-| `mskills`   | —                      | AI agent skill management                           |
-| `msetup`    | —                      | Links m-bins, regenerates `lefthook.yml`, hooks    |
-| `minit`     | —                      | Ensures `.changeset/config.json` exists             |
+| Alias        | Wraps                     | Description                                         |
+| ------------ | ------------------------- | --------------------------------------------------- |
+| `mturbo`     | `turbo`                   | Build orchestration with `turbo.base.json`           |
+| `mbiome`     | `biome`                   | Lint + format with shared config                     |
+| `mbun`       | `bun` + `mturbo coverage` | Bun runtime with `bunfig.toml`; `mbun coverage` merges LCOV |
+| `mbunup`     | `bunup`                   | Package bundler                                      |
+| `mchangeset` | `changeset`               | Versioning + releases; `mchangeset init` ensures config |
+| `mci`        | `actionlint` + `act`      | CI: `mci lint` validates workflows, `mci act` runs locally |
+| `me2e`       | `playwright test`         | E2E with browser detection and auto-skip             |
+| `mskills`    | —                         | AI agent skill management                            |
+| `msetup`     | —                         | Links m-bins, regenerates `lefthook.yml`, hooks     |
+| `mdocs`      | —                         | Regenerates AGENTS.md, README.md, workflows          |
+| `mtsc`       | `tsc`                     | TypeScript type-checking                             |
 
 ## Development Commands
 

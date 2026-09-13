@@ -9,8 +9,7 @@
     "prompt": "Configure GitHub Actions (CI + release workflows)?"
   },
   "bin": {
-    "mactionlint": "./src/cli.ts",
-    "mact": "./src/act.ts"
+    "mci": "./src/cli.ts"
   },
   "scripts": {
     "build": "mbunup",

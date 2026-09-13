@@ -1,15 +1,18 @@
 #!/usr/bin/env bun
 import { mkdir } from "node:fs/promises";
-import { file, write } from "bun";
+import { file, spawnSync, write } from "bun";
 
 /**
- * Ensures `.changeset/config.json` exists, copying from the shared config
- * package when the file is missing. Never overwrites an existing config,
- * so developers can customize their Changesets setup.
+ * m-prefixed Changesets CLI — single bin for @myorg/changeset.
  *
- * Hoisted as the `minit` bin; `bun run prepare` invokes it directly via
- * `minit changeset`.
+ * - `mchangeset init` — ensures `.changeset/config.json` exists, copying from
+ *   the shared config package when missing (never overwrites).
+ * - `mchangeset <args>` — delegates to `@changesets/cli` (e.g. `add`, `version`, `publish`).
+ *
+ * Root `prepare` uses `mchangeset init`; `changeset`, `version`, `release`
+ * scripts use `mchangeset` directly.
  */
+
 export async function minit(target = "changeset"): Promise<void> {
   if (target !== "changeset") {
     throw new Error(`Unknown init target '${target}' (expected "changeset")`);
@@ -29,6 +32,27 @@ export async function minit(target = "changeset"): Promise<void> {
   await write(configPath, await file(source).text());
 }
 
+async function main() {
+  const args = process.argv.slice(2);
+  const sub = args[0];
+
+  if (sub === "init") {
+    await minit(args[1] ?? "changeset");
+    return;
+  }
+
+  const changeset = Bun.fileURLToPath(import.meta.resolve("@changesets/cli/bin.js"));
+
+  const result = spawnSync({
+    cmd: ["bun", changeset, ...args],
+    stdout: "inherit",
+    stderr: "inherit",
+    stdin: "inherit",
+  });
+
+  process.exit(result.exitCode);
+}
+
 if (import.meta.main) {
-  await minit(process.argv[2]);
+  await main();
 }

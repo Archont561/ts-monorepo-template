@@ -5,11 +5,12 @@
 ## What it provides
 
 - `bunfig.toml` — the single source of truth for test + coverage settings.
-- `mbun` — wraps `bun`; passes `--config=<configs/bun-config/bunfig.toml>` for
-  `bun test` (other commands pass through unchanged).
-- `mcoverage` — runs `mturbo coverage` (per-package coverage in dependency
-  order) then merges the per-package `coverage/lcov.info` reports into a single
-  `coverage/lcov.info` with `lcov-result-merger --prepend-source-files`.
+- `mbun` — single bin for this package:
+  - `mbun <bun cmd>` — wraps `bun`; passes `--config=<configs/bun-config/bunfig.toml>` for
+    `bun test` (other commands pass through unchanged).
+  - `mbun coverage` — runs `mturbo coverage` (per-package coverage in dependency
+    order) then merges the per-package `coverage/lcov.info` reports into a single
+    `coverage/lcov.info` with `lcov-result-merger --prepend-source-files`.
 
 ### Config highlights (`bunfig.toml`)
 
@@ -20,7 +21,7 @@
 
 ```bash
 bun run test       # mturbo test   (Turbo runs per-package mbun test)
-bun run coverage   # mcoverage     (mturbo coverage + merged root lcov.info)
+bun run coverage   # mbun coverage (mturbo coverage + merged root lcov.info)
 ```
 
 ## Rules

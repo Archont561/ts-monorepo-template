@@ -4,24 +4,24 @@
 
 ## What it provides
 
-- `@changesets/cli` as a shared devDependency (exposed via `changeset`,
-  `changeset version`, `changeset publish`).
+- `@changesets/cli` as a shared devDependency, exposed via single bin `mchangeset`:
+  - `mchangeset init` — copies `config.json` to `.changeset/config.json` when missing
+    and never overwrites it afterwards, so developers can customize.
+  - `mchangeset <args>` — delegates to `changeset` (e.g. `add`, `version`, `publish`).
 - `config.json` — the shared Changesets config (public access, `main` base
   branch, every non-published package in `ignore`).
-- `minit` — copies `config.json` to `.changeset/config.json` when missing and
-  never overwrites it afterwards, so developers can customize.
 
 ## Lifecycle
 
-The root `prepare` script invokes `bun configs/changeset/init.ts changeset`
-on every `bun install`, ensuring `.changeset/config.json` exists.
+The root `prepare` script invokes `mchangeset init` on every `bun install`,
+ensuring `.changeset/config.json` exists.
 
 ## Usage
 
 ```bash
-bun run changeset    # create a changeset for a published-package change
-bun run version      # apply versions + changelogs
-bun run release      # publish to npm
+bun run changeset    # mchangeset — create a changeset for a published-package change
+bun run version      # mchangeset version — apply versions + changelogs
+bun run release      # mchangeset publish — publish to npm
 ```
 
 Only `@myorg/external` is published; everything else stays in `ignore`.

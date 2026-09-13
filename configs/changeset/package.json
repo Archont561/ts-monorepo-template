@@ -7,11 +7,10 @@
     "default": "always",
     "flag": "changeset",
     "prompt": "Configure Changesets (versioning + releases)?",
-    "setup": "minit changeset"
+    "setup": "mchangeset init"
   },
   "bin": {
-    "minit": "./src/cli.ts",
-    "mchangeset": "./src/changeset.ts"
+    "mchangeset": "./src/cli.ts"
   },
   "scripts": {
     "build": "mbunup",

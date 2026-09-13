@@ -9,24 +9,25 @@
 - `ci.base.yml` / `release.base.yml` — the **workflow skeletons** whose
   `{{STEPS}}` placeholder is filled from the configs' step fragments by
   `bun run docs:sync` (generating `.github/workflows/ci.yml` + `release.yml`).
-- `mactionlint` — validates `.github/workflows/` syntax, baking in
-  `-config-file=<configs/gh-actions/actionlint.yaml>`.
-- `mact` — wraps `act` for local CI, baking in a feature-complete runner image
-  (`catthehacker/ubuntu:act-latest`) and `--container-architecture`; prints an
-  install guide when `act` is not installed.
+- `mci` — single bin for this package with subcommands:
+  - `mci lint` — validates `.github/workflows/` syntax, baking in
+    `-config-file=<configs/gh-actions/actionlint.yaml>`.
+  - `mci act` — wraps `act` for local CI, baking in a feature-complete runner image
+    (`catthehacker/ubuntu:act-latest`) and `--container-architecture`; prints an
+    install guide when `act` is not installed.
 
 ## Usage
 
 ```bash
 bun run docs:sync     # regenerate .github/workflows/ from the skeletons + fragments
-bun run ci:lint       # validate workflow syntax (mactionlint)
-bun run ci:list       # list workflows/jobs (mact -l)
-bun run ci:dry        # dry-run plan (mact push -n)
-bun run ci:local      # run CI in Docker (mact push)
+bun run ci:lint       # validate workflow syntax (mci lint)
+bun run ci:list       # list workflows/jobs (mci act -l)
+bun run ci:dry        # dry-run plan (mci act push -n)
+bun run ci:local      # run CI in Docker (mci act push)
 ```
 
-Other events: `act pull_request -n`, `act -W .github/workflows/release.yml -n`,
-`act -j actionlint -n`. Secrets are absent locally — pass `-s NPM_TOKEN` or
+Other events: `mci act pull_request -n`, `mci act -W .github/workflows/release.yml -n`,
+`mci act -j actionlint -n`. Secrets are absent locally — pass `-s NPM_TOKEN` or
 use an untracked `.secrets` file.
 
 ## Rules

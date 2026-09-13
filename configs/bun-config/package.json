@@ -9,8 +9,7 @@
     "prompt": "Configure Bun (coverage, test settings)?"
   },
   "bin": {
-    "mbun": "./src/cli.ts",
-    "mcoverage": "./src/coverage.ts"
+    "mbun": "./src/cli.ts"
   },
   "scripts": {
     "build": "mbunup",

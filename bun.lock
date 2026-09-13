@@ -44,7 +44,6 @@
       "version": "0.0.0",
       "bin": {
         "mbun": "./src/cli.ts",
-        "mcoverage": "./src/coverage.ts",
       },
       "devDependencies": {
         "lcov-result-merger": "^6.0.0",
@@ -64,8 +63,7 @@
       "name": "@myorg/changeset",
       "version": "0.0.0",
       "bin": {
-        "minit": "./src/cli.ts",
-        "mchangeset": "./src/changeset.ts",
+        "mchangeset": "./src/cli.ts",
       },
       "devDependencies": {
         "@changesets/cli": "^3.0.2",
@@ -83,8 +81,7 @@
       "name": "@myorg/gh-actions",
       "version": "0.0.0",
       "bin": {
-        "mactionlint": "./src/cli.ts",
-        "mact": "./src/act.ts",
+        "mci": "./src/cli.ts",
       },
       "devDependencies": {
         "github-actionlint": "^1.7.12",
@@ -1332,6 +1329,8 @@
     "micromatch/picomatch": ["picomatch@2.3.2", "", {}, "sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA=="],
 
     "rolldown/@oxc-project/types": ["@oxc-project/types@0.149.0", "", {}, "sha512-Efcc+iF0j3Bf67YjEqIqWXbX5XddXoK/Mw4K1/JuXwRCZ8N16VR7iT23nlCc9XrveFVh/E5Rqs2StT0V8v9LdA=="],
+
+    "unconfig/jiti": ["jiti@2.7.0", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ=="],
 
     "wrap-ansi/string-width": ["string-width@7.2.0", "", { "dependencies": { "emoji-regex": "^10.3.0", "get-east-asian-width": "^1.0.0", "strip-ansi": "^7.1.0" } }, "sha512-tsaTIkKW9b4N+AEj+SVA+WhJzV7/zMhcSu78mLKWSk7cXMOSHsBKFWUs0fWwq8QyK3MgJBQRX6Gbi4kYbdvGkQ=="],
 

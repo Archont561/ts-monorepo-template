@@ -26,22 +26,24 @@ the installed Lefthook Git hooks, and ensures `.changeset/config.json` exists
 
 ## CLI Aliases (m-commands)
 
-All tool invocations use `m`-prefixed aliases that bake in config paths. They
-are linked into `node_modules/.bin` on install (the root ships zero
+All tool invocations use `m`-prefixed aliases that bake in config paths. Each
+config package exposes exactly one `m`-command (with subcommands where needed).
+They are linked into `node_modules/.bin` on install (the root ships zero
 `devDependencies`), so just `bun run <script>` — do not invoke tools directly:
 
-| Alias       | Wraps                  | Description                                        |
-| ----------- | ---------------------- | -------------------------------------------------- |
-| `mturbo`    | `turbo`                | Build orchestration with `turbo.base.json`          |
-| `mbiome`    | `biome`                | Lint + format with shared config                    |
-| `mbun`      | `bun`                  | Bun runtime with `bunfig.toml`                      |
-| `mcoverage` | `mturbo coverage` | Per-package coverage, merged into one LCOV |
-| `me2e`      | `playwright test`      | E2E with browser detection and auto-skip            |
-| `mactionlint`| `actionlint`          | Workflow validation                                 |
-| `mact`      | `act`                  | Local CI simulation (install guard)                 |
-| `mskills`   | —                      | AI agent skill management                           |
-| `msetup`    | —                      | Links m-bins, regenerates `lefthook.yml`, hooks    |
-| `minit`     | —                      | Ensures `.changeset/config.json` exists             |
+| Alias        | Wraps                     | Description                                         |
+| ------------ | ------------------------- | --------------------------------------------------- |
+| `mturbo`     | `turbo`                   | Build orchestration with `turbo.base.json`           |
+| `mbiome`     | `biome`                   | Lint + format with shared config                     |
+| `mbun`       | `bun` + `mturbo coverage` | Bun runtime with `bunfig.toml`; `mbun coverage` merges LCOV |
+| `mbunup`     | `bunup`                   | Package bundler                                      |
+| `mchangeset` | `changeset`               | Versioning + releases; `mchangeset init` ensures config |
+| `mci`        | `actionlint` + `act`      | CI: `mci lint` validates workflows, `mci act` runs locally |
+| `me2e`       | `playwright test`         | E2E with browser detection and auto-skip             |
+| `mskills`    | —                         | AI agent skill management                            |
+| `msetup`     | —                         | Links m-bins, regenerates `lefthook.yml`, hooks     |
+| `mdocs`      | —                         | Regenerates AGENTS.md, README.md, workflows          |
+| `mtsc`       | `tsc`                     | TypeScript type-checking                             |
 
 ## Development Commands
 
@@ -132,9 +134,9 @@ steps, a `ci.steps.yml`. No central registry exists.
 ## Bun Runtime & Test Coverage
 
 - `@myorg/bun-config` (`configs/bun-config`) owns `bunfig.toml`: coverage on for `bun test`, LCOV + text reporters, `coverage/lcov.info` output, 80% line/function threshold, and ignore patterns for test/bundle/config files.
-- `mbun` wraps `bun` and passes `--config` for `bun test` (other commands pass through); `mcoverage` runs `mturbo coverage` (Turbo runs every workspace's `coverage` script in dependency order) and merges the per-package LCOV reports into a single root report.
+- `mbun` is the single bin for this package: wraps `bun` and passes `--config` for `bun test` (other commands pass through); `mbun coverage` runs `mturbo coverage` (Turbo runs every workspace's `coverage` script in dependency order) and merges the per-package LCOV reports into a single root report.
 - `bun run test` → `mturbo test` (Turbo runs each package's `mbun test`; `e2e/` Playwright specs are excluded by the config ignore patterns).
-- `bun run coverage` → `mcoverage` → `mturbo coverage` + a merged `coverage/lcov.info`.
+- `bun run coverage` → `mbun coverage` → `mturbo coverage` + a merged `coverage/lcov.info`.
 - No per-package `bunfig.toml` symlinks; the shared config is always passed explicitly.
 - **Coverage rules**: Bun uses JavaScriptCore, not V8 — never use `NODE_V8_COVERAGE`, `v8.takeCoverage()`, or `Profiler.takePreciseCoverage`. `bun test --coverage` only tracks code executed within the test process; use in-process integration tests for server-side coverage.
 <!-- AGENT:bun-config:END -->
@@ -156,14 +158,14 @@ steps, a `ci.steps.yml`. No central registry exists.
 <!-- AGENT:changeset:START -->
 ## Releases
 
-- This monorepo versions and publishes with Changesets. Config is in `configs/changeset/config.json` (copied to `.changeset/config.json` by `minit` if missing; never overwritten after that).
+- This monorepo versions and publishes with Changesets. Config is in `configs/changeset/config.json` (copied to `.changeset/config.json` by `mchangeset init` if missing; never overwritten after that).
 - Only `@myorg/external` is published. Everything else — `@myorg/internal`, all `configs/*`, and `apps/*` — is listed under `ignore`.
 - Create a changeset when you modify `@myorg/external`: new features, bug fixes, breaking changes, or new subpath exports. No changeset needed for private packages, docs, or CI.
 - Workflow:
   ```
-  bun run changeset   # select external, pick patch/minor/major, write summary
+  bun run changeset   # mchangeset — select external, pick patch/minor/major, write summary
   ```
-  PRs with `.changeset/*.md` merge to `main`; the Changesets action opens a "Version Packages" PR; merging it runs `bun run release` (`changeset publish`) to publish to npm.
+  PRs with `.changeset/*.md` merge to `main`; the Changesets action opens a "Version Packages" PR; merging it runs `bun run release` (`mchangeset publish`) to publish to npm.
 - Manual release: `bun run version` → `bun run build` → `bun run release`.
 <!-- AGENT:changeset:END -->
 
@@ -189,20 +191,13 @@ steps, a `ci.steps.yml`. No central registry exists.
 - To add CI steps for a tool, create a `ci.steps.yml` fragment in that config
   package's directory — it is picked up automatically. Then run
   `bun run docs:sync` and `bun run ci:lint`.
-- `mactionlint` (from `@myorg/gh-actions`, `configs/gh-actions`) bakes in
-  `-config-file=<configs/gh-actions/actionlint.yaml>`; there is no root config file.
-- Local CI with `act` via `mact` (flags baked in, no `.actrc`): `bun run ci:list`,
-  `bun run ci:dry` (`-n`, shows the plan), `bun run ci:local` (runs in Docker;
-  requires `act` + Docker).
-- To simulate other events: `act pull_request -n`, `act -W .github/workflows/release.yml -n`,
-  `act -j actionlint -n`.
-- Secrets are absent locally: pass them per-run (`act push -s NPM_TOKEN`) or via an
-  untracked `.secrets` file.
-- The release workflow guards every step with `if: ${{ !env.ACT }}` (step-level `if`
-  only — job-level cannot access the `env` context, and actionlint enforces this) so
-  local `act` runs never publish to npm.
-- Local simulation ≠ GitHub: no OIDC, no environments, limited `GITHUB_TOKEN`. The
-  real CI run is authoritative.
+- `mci` is the single bin for `@myorg/gh-actions`:
+  - `mci lint` (from `configs/gh-actions`) bakes in `-config-file=<configs/gh-actions/actionlint.yaml>`; there is no root config file.
+  - `mci act` wraps `act` (flags baked in, no `.actrc`): `bun run ci:list`, `bun run ci:dry` (`-n`, shows the plan), `bun run ci:local` (runs in Docker; requires `act` + Docker).
+- To simulate other events: `mci act pull_request -n`, `mci act -W .github/workflows/release.yml -n`, `mci act -j actionlint -n`.
+- Secrets are absent locally: pass them per-run (`mci act push -s NPM_TOKEN`) or via an untracked `.secrets` file.
+- The release workflow guards every step with `if: ${{ !env.ACT }}` (step-level `if` only — job-level cannot access the `env` context, and actionlint enforces this) so local `act` runs never publish to npm.
+- Local simulation ≠ GitHub: no OIDC, no environments, limited `GITHUB_TOKEN`. The real CI run is authoritative.
 - Run `bun run ci:lint` after regenerating a workflow.
 <!-- AGENT:gh-actions:END -->
 
@@ -277,7 +272,7 @@ steps, a `ci.steps.yml`. No central registry exists.
 ## Build Orchestration
 
 - `mturbo` (from `@myorg/turbo`, `configs/turbo`) wraps Turbo and bakes in `--root-turbo-json=<configs/turbo/turbo.base.json>`; there is no root-level `turbo.json`.
-- Root scripts (`dev`, `build`, `test`, `test:e2e`, `typecheck`, and `coverage` via `mcoverage`) delegate to `mturbo`, so Turbo infers inter-package dependency order automatically.
+- Root scripts (`dev`, `build`, `test`, `test:e2e`, `typecheck`, and `coverage` via `mbun coverage`) delegate to `mturbo`, so Turbo infers inter-package dependency order automatically.
 - Do not add `turbo` to individual package devDependencies — it is owned by `@myorg/turbo` and hoisted from there.
 <!-- AGENT:turbo:END -->
 
