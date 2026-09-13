@@ -9,6 +9,9 @@ hero:
       text: Get Started
       link: /guide/
     - theme: alt
+      text: Status
+      link: /status
+    - theme: alt
       text: View on GitHub
       link: https://github.com/Archont561/ts-monorepo-template
 features:
