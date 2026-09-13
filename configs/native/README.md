@@ -87,6 +87,7 @@ mnative build:release  # cargo build --release (lto, strip)
 mnative build:ci       # cargo build --profile ci
 mnative tree           # cargo tree
 mnative napi:build     # cargo check && napi build --release --platform
+mnative typecheck      # tsc --noEmit inside packages/native (skips if absent)
 ```
 
 Root package.json also exposes:

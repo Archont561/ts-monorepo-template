@@ -4,7 +4,7 @@
 
 ## What it provides
 
-- `mtrivy` CLI wrapper — defensive, warns if binary missing, exits 0 locally
+- `mtrivy` CLI wrapper — defensive, warns if binary missing, exits 0 locally; `fs` + `image` scans and `build` (docker build of the scan image)
 - `ci.steps.yml` — FS scan (always) + image scan (if Dockerfile)
 - SARIF upload to GitHub Security tab
 - `.trivyignore` optional for false positives.

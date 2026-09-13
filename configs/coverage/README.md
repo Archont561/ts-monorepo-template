@@ -5,8 +5,9 @@
 ## What it provides
 
 - Always-on config (`default: always`) — no opt-in needed
-- `ci.steps.yml` fragment: install `lcov` + `bc`, generate HTML via `genhtml`, upload artifact `coverage-report` (14 days), check 80% threshold via `lcov --summary`, PR comment via `romeovs/lcov-reporter-action`
-- `pages.steps.yml` fragment: when Pages is enabled, generates coverage HTML into `apps/example/public/coverage/` so coverage is served at `https://user.github.io/repo/coverage/` alongside example app
+- `mcoverage` CLI (`configs/coverage/src/cli.ts`) owns every step: `setup` (installs lcov), `collect` (Bun + Rust), `html` (genhtml), `check` (threshold, parses LF/LH — no lcov binary needed), `pages`, `merge`, `summary`
+- `ci.steps.yml` fragment: `mcoverage setup` → `mcoverage html` → upload artifact `coverage-report` (14 days) → `mcoverage check --threshold 80` → PR comment via `romeovs/lcov-reporter-action`
+- `pages.steps.yml` fragment: when Pages is enabled, `mcoverage pages` generates coverage HTML into `apps/example/public/coverage/` so coverage is served at `https://user.github.io/repo/coverage/` alongside example app
 - `coverage.steps.yml` fragment + `coverage.base.yml` skeleton in `configs/gh-actions/`: standalone `coverage.yml` workflow that deploys coverage HTML to Pages when Pages app is **disabled** (avoids conflict — if Pages app exists, coverage is included in `pages.yml` instead)
 - Handles Bun coverage (`bun test --coverage` → `coverage/lcov.info`) merged via `mbun coverage` (`mturbo coverage` + `lcov-result-merger`)
 - Optional Rust coverage via `cargo-llvm-cov` when `packages/native/Cargo.toml` exists (merges Rust LCOV into main)
@@ -25,7 +26,7 @@ graph TD
     D --> F["pages?<br/>public/coverage/"]
     F -->|pages enabled| G["pages.yml<br/>example + coverage at /coverage/"]
     F -->|pages disabled| H["coverage.yml<br/>standalone Pages deploy"]
-    C --> I["lcov --summary + threshold 80%<br/>fail CI if below"]
+    C --> I["mcoverage check --threshold 80<br/>fail CI if below"]
     C --> J["lcov-reporter-action<br/>PR comment"]
 
     style C fill:#0969DA,color:#fff
@@ -142,14 +143,10 @@ So coverage available at `https://user.github.io/repo/coverage/`.
 ## Threshold enforcement (implemented)
 
 ```bash
-COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | awk '{print $2}' | tr -d '%')
-if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-  echo "::error::Coverage ${COVERAGE}% is below 80% threshold"
-  exit 1
-fi
+mcoverage check --threshold 80
 ```
 
-Fail CI if coverage drops below 80% (matches `bunfig.toml` threshold).
+Reads `LF:`/`LH:` straight out of `coverage/lcov.info` — no `lcov` or `bc` binary required — prints the percentage and exits 1 with an `::error::` annotation if coverage drops below 80% (matches `bunfig.toml`).
 
 ## Combine multiple LCOV (monorepo)
 
@@ -168,12 +165,10 @@ genhtml coverage/merged.lcov --output-directory coverage/html
 Rust merging (when native enabled):
 
 ```bash
-cargo install cargo-llvm-cov
-cargo llvm-cov --manifest-path packages/native/Cargo.toml --lcov --output-path coverage/rust-lcov.info
-lcov --add-tracefile coverage/lcov.info --add-tracefile coverage/rust-lcov.info --output-file coverage/merged.lcov
+mcoverage collect     # Bun coverage + mnative llvm-cov, merged into coverage/lcov.info
 ```
 
-Implemented in `coverage.steps.yml` as optional step.
+Implemented in `mcoverage collect` (optional, only when `packages/native/Cargo.toml` exists).
 
 ## Coverage badge
 
@@ -212,12 +207,12 @@ open coverage/html/index.html
 ## Agent Checklist
 
 - ✅ Configure test runner to output LCOV (`coverage/lcov.info`) — done via `bunfig.toml`
-- ✅ Install `lcov` + `bc` in workflow (`sudo apt-get install -y lcov bc`)
+- ✅ Install `lcov` in the workflow via `mcoverage setup` (never fails the job)
 - ✅ Use `genhtml` to convert `.info` → HTML before uploading
 - ✅ Use `actions/upload-artifact@v4` for per-PR downloadable reports (retention 14d)
 - ✅ Gate `upload-pages-artifact` + `deploy-pages` on `main` only
 - ✅ Use `lcov --add-tracefile` to merge multiple LCOV in monorepos (or `lcov-result-merger`)
-- ✅ Add threshold check with `lcov --summary` to fail CI on regression
+- ✅ Add threshold check with `mcoverage check --threshold 80` to fail CI on regression
 - ✅ Use `romeovs/lcov-reporter-action` for PR comments
 - ✅ When Pages app enabled, include coverage at `/coverage/` to avoid Pages conflict; when disabled, deploy standalone coverage site
 - ✅ Handle Rust coverage via `cargo-llvm-cov` when native enabled

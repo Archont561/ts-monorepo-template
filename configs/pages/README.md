@@ -8,7 +8,8 @@
 - `pages.steps.yml` fragment aggregated into `.github/workflows/pages.yml` via `mdocs`
 - `pages.base.yml` skeleton in `configs/gh-actions/` with required permissions (`pages: write`, `id-token: write`), concurrency (`group: pages`, `cancel-in-progress: false`), environment `github-pages`
 - Build + deploy workflow using official Pages actions: `configure-pages`, `upload-pages-artifact`, `deploy-pages`
-- Handles UnoCSS build if enabled, JS build, and base path configuration for `username.github.io/repo-name`
+- `mpages` CLI (`configs/pages/src/cli.ts`) — `mpages build` builds the artifact and verifies `apps/example/public`, `mpages base` prints the repo name + Pages URL and can inject the `/repo-name` base path
+- CSS is **not** built here — the app that owns the UnoCSS config does it in its own `build` script (see `configs/unocss`)
 
 > [!IMPORTANT]
 > Opt-in — choose `Set up GitHub Pages deployment?` during `bun create Archont561/ts-monorepo-template`.

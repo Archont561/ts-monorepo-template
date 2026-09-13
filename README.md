@@ -294,7 +294,7 @@ Tool configs live in `configs/*` and are reached via `m`-prefixed bins. No root 
 | [Native](configs/native/README.md) | `mnative` | none | NAPI-RS bindings (publish/docker/none) |
 <!-- TEMPLATE-ONLY:END(native) -->
 <!-- TEMPLATE-ONLY:START(pages) -->
-| [Pages](configs/pages/README.md) | — | false | GitHub Pages deployment |
+| [Pages](configs/pages/README.md) | `mpages` | false | GitHub Pages deployment (`mpages build` + `mpages base`) |
 <!-- TEMPLATE-ONLY:END(pages) -->
 <!-- TEMPLATE-ONLY:START(playwright) -->
 | [Playwright](configs/playwright/README.md) | `me2e` | true | E2E testing |

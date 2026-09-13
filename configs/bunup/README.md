@@ -6,7 +6,7 @@
 
 - `bunup` as a shared devDependency
 - `baseConfig` + `defineConfig` helpers
-- `mbunup` — CLI alias that bakes in config resolution
+- `mbunup` — CLI alias that bakes in config resolution; `mbunup health` builds, then runs publint + arethetypeswrong over every non-private package
 
 > [!IMPORTANT]
 > Library packages are bundled with Bunup. Apps are not bundled — Bun runs TypeScript directly.
@@ -23,6 +23,7 @@
 ```bash
 bun run build      # mturbo build → per-package mbunup
 bun run dev        # watch mode via Turbo
+mbunup health      # publint + arethetypeswrong over publishable packages
 ```
 
 ```typescript

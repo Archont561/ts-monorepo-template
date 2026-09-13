@@ -3,7 +3,7 @@
 > [!NOTE]
 > Bundler for library packages. Apps are not bundled.
 
-- `mbunup` (from `@myorg/bunup`) wraps `bunup` with shared presets
+- `mbunup` (from `@myorg/bunup`) wraps `bunup` with shared presets; `mbunup health` = build + publint + arethetypeswrong (`--profile esm-only`) over non-private packages — this is the whole CI package-health step
 - `baseConfig` — ESM + `.d.ts`, externalizes deps, inlines `@myorg/internal`
 - Library `bunup.config.ts` extends `baseConfig` with `entry: ["src/index.ts"]`
 - Apps (`apps/*`) use `bun --hot src/index.ts` — no Bunup

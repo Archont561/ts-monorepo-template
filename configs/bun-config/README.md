@@ -23,7 +23,7 @@
 | Setting | Value |
 | :--- | :--- |
 | Coverage | LCOV + text → `coverage/lcov.info` |
-| Threshold | 80% line/function (enforced in CI via `lcov --summary` + `bc`) |
+| Threshold | 80% line/function (enforced in CI via `mcoverage check --threshold 80`) |
 | Ignores | `*.test.ts`, `dist`, `node_modules`, `configs/*`, `cli.ts`, `*.node`, `target`, etc |
 | Reporting | See `@myorg/coverage` for HTML via `genhtml`, artifact upload, Pages, PR comment |
 

@@ -63,7 +63,7 @@ All tool invocations use `m`-prefixed aliases that bake in config paths. Each co
 | `mturbo` | `turbo` | Build orchestration with `turbo.base.json` |
 | `mbiome` | `biome` | Lint + format with shared config |
 | `mbun` | `bun` + `mturbo coverage` | Bun runtime with `bunfig.toml`; `mbun coverage` merges LCOV (citty) |
-| `mbunup` | `bunup` | Package bundler |
+| `mbunup` | `bunup` | Package bundler; `mbunup health` = publint + arethetypeswrong |
 | `mchangeset` | `changeset` | Versioning + releases; `mchangeset init` ensures config (citty) |
 | `mci` | `actionlint` + `act` | CI: `mci lint` validates workflows, `mci act` runs locally (citty) |
 | `mcitty` | `citty` | CLI builder info |
@@ -74,9 +74,10 @@ All tool invocations use `m`-prefixed aliases that bake in config paths. Each co
 | `mtsc` | `tsc` | TypeScript type-checking |
 | `mgitleaks` | `gitleaks` | Secret scanning — `detect` + `protect --staged` (defensive, always) |
 | `mcodeql` | `codeql` | CodeQL SAST info — runs in Actions (opt-in default true) |
-| `mtrivy` | `trivy` | Vuln scanning — `fs` + `image` (defensive, opt-in) |
-| `mnative` | `cargo` + `napi` | Rust bindings — check/clippy/fmt/test/build + napi build (opt-in) |
-| `mcoverage` | `genhtml` + `lcov` | Coverage — html/check/summary/merge (always) |
+| `mtrivy` | `trivy` | Vuln scanning — `fs` + `image` + `build` (defensive, opt-in) |
+| `mnative` | `cargo` + `napi` | Rust bindings — check/clippy/fmt/test/build + napi build + typecheck (opt-in) |
+| `mcoverage` | `genhtml` + `lcov` | Coverage — setup/collect/html/check/pages/merge/summary (always) |
+| `mpages` | GitHub Pages | Pages deploy — `build` the artifact, `base` computes/injects the base path (opt-in) |
 
 <details>
 <summary>Bin linking flow</summary>

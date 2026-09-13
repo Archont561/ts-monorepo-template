@@ -29,6 +29,8 @@ trivy fs . --severity HIGH,CRITICAL
 
 # Scan Docker image (after build)
 mtrivy image my-app:latest --severity HIGH,CRITICAL
+mtrivy build           # docker build -t app:trivy-scan -f apps/example/Dockerfile .
+
 trivy image my-app:latest
 
 # With SARIF for GitHub Security

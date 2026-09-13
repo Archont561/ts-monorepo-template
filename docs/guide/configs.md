@@ -31,7 +31,7 @@ install.
 | `configs/unocss` | `false` | — |
 | `configs/skills` | `false` | `mskills` |
 | `configs/devcontainer` | `false` | — |
-| `configs/pages` | `false` | — |
+| `configs/pages` | `false` | `mpages` |
 | `configs/trivy` | `false` | `mtrivy` |
 | `configs/stale` | `false` | — |
 | `configs/native` | `none` | `mnative` |
