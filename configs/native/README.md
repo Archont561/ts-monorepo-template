@@ -151,16 +151,16 @@ Use `#[cfg(feature = "json")]` to gate.
 ```mermaid
 graph TD
     A[bun create] --> B{native?}
-    B -->|none| C[prune native<br/>Cargo.toml + packages/native + *.node + api/native/**<br/>via glob+regex+extraRemovals]
-    B -->|publish| D[setup.ts<br/>root Cargo.toml workspace + packages/native/]
-    B -->|docker| E[setup.ts + Docker]
-    D --> F[Rust src/lib.rs<br/>#[napi] add, fibonacci, Counter, primes_up_to]
-    F --> G[cargo check → napi build --platform<br/>*.node]
-    F --> H[napi build --target wasm32-wasip1-threads<br/>*.wasi.cjs]
-    G --> I[@myorg/external<br/>native.ts with fallback]
+    B -->|none| C["prune native<br/>Cargo.toml + packages/native + *.node + api/native/**<br/>via glob+regex+extraRemovals"]
+    B -->|publish| D["setup.ts<br/>root Cargo.toml workspace + packages/native/"]
+    B -->|docker| E["setup.ts + Docker"]
+    D --> F["Rust src/lib.rs<br/>#[napi] add, fibonacci, Counter, primes_up_to"]
+    F --> G["cargo check → napi build --platform<br/>*.node"]
+    F --> H["napi build --target wasm32-wasip1-threads<br/>*.wasi.cjs"]
+    G --> I["@myorg/external<br/>native.ts with fallback"]
     H --> I
-    I --> J[example/api/native/**<br/>add, fibonacci, primes, status]
-    J --> K[npm publish<br/>platform packages]
+    I --> J["example/api/native/**<br/>add, fibonacci, primes, status"]
+    J --> K["npm publish<br/>platform packages"]
 
     style B fill:#0969DA,color:#fff
     style F fill:#dea584,stroke:#fff,color:#000

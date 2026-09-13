@@ -29,10 +29,10 @@ Root `AGENTS.md` and `README.md` reference these files instead of concatenating 
 
 ```mermaid
 graph LR
-    A[configs/*] --> B[discoverConfigs]
-    B --> C[mdocs / scaffolder]
-    C --> D[.github/workflows]
-    C --> E[prune disabled]
+    A["configs/*"] --> B[discoverConfigs]
+    B --> C["mdocs / scaffolder"]
+    C --> D[".github/workflows"]
+    C --> E["prune disabled"]
 
     style B fill:#0969DA,color:#fff
 ```

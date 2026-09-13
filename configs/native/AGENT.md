@@ -22,11 +22,11 @@
 ```mermaid
 graph TD
     A[bun create] --> B{native?}
-    B -->|none| C[prune native<br/>Cargo.toml + glob+regex]
-    B -->|publish| D[setup.ts → Cargo.toml workspace (resolver=2)<br/>+ packages/native/<br/>Cargo workspace=true + lib.rs + napi config]
-    B -->|docker| E[setup + Docker + cargo-zigbuild]
-    D --> F[cargo check → napi build<br/>*.node + index.js loader]
-    F --> G[@myorg/external/native.ts<br/>fallback]
+    B -->|none| C["prune native<br/>Cargo.toml + glob+regex"]
+    B -->|publish| D["setup.ts → Cargo.toml workspace (resolver=2)<br/>+ packages/native/<br/>Cargo workspace=true + lib.rs + napi config"]
+    B -->|docker| E["setup + Docker + cargo-zigbuild"]
+    D --> F["cargo check → napi build<br/>*.node + index.js loader"]
+    F --> G["@myorg/external/native.ts<br/>fallback"]
     style B fill:#0969DA,color:#fff
     style F fill:#dea584,color:#000
 ```

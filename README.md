@@ -68,11 +68,11 @@ The example server starts at [http://localhost:3000](http://localhost:3000).
 
 ```mermaid
 graph TD
-    A[apps/example<br/>Bun.serve] --> B[packages/external<br/>public API]
-    B --> C[packages/internal<br/>private impl]
-    B -.-> D[configs/*<br/>tooling]
-    D --> E[mturbo / mbiome / mbun<br/>m-bins]
-    E --> F[.github/workflows<br/>generated]
+    A["apps/example<br/>Bun.serve"] --> B["packages/external<br/>public API"]
+    B --> C["packages/internal<br/>private impl"]
+    B -.-> D["configs/*<br/>tooling"]
+    D --> E["mturbo / mbiome / mbun<br/>m-bins"]
+    E --> F[".github/workflows<br/>generated"]
 
     style B fill:#0969DA,stroke:#fff,color:#fff
     style C fill:#f6f8fa,stroke:#0969DA
@@ -231,10 +231,10 @@ Skills live in: `.agents/skills/` — each is a folder containing `SKILL.md` wit
 ```mermaid
 sequenceDiagram
     participant Dev as Developer
-    participant Config as configs/*/ci.steps.yml
-    participant Base as gh-actions/*.base.yml
-    participant Mdocs as mdocs (aggregate.ts)
-    participant GH as .github/workflows/*.yml
+    participant Config as "configs/*/ci.steps.yml"
+    participant Base as "gh-actions/*.base.yml"
+    participant Mdocs as "mdocs (aggregate.ts)"
+    participant GH as ".github/workflows/*.yml"
 
     Dev->>Config: Edit fragment
     Dev->>Base: Edit skeleton

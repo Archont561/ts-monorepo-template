@@ -65,12 +65,12 @@ my-monorepo/
 
 ```mermaid
 graph TD
-    A[apps/example] --> B[packages/external<br/>public TS]
+    A["apps/example"] --> B["packages/external<br/>public TS"]
     B --> C{Native available?}
-    C -->|yes| D[packages/native<br/>Rust + napi-rs<br/>*.node]
-    C -->|no| E[packages/internal<br/>JS fallback]
-    C -->|wasm| F[packages/native<br/>WASI<br/>wasm32-wasip1-threads]
-    D --> G[npm publish<br/>platform packages]
+    C -->|yes| D["packages/native<br/>Rust + napi-rs<br/>*.node"]
+    C -->|no| E["packages/internal<br/>JS fallback"]
+    C -->|wasm| F["packages/native<br/>WASI<br/>wasm32-wasip1-threads"]
+    D --> G["npm publish<br/>platform packages"]
     F --> G
 
     style D fill:#dea584,stroke:#fff,color:#000
@@ -282,8 +282,8 @@ export async function addWasm(a: number, b: number): Promise<number> {
 ```mermaid
 sequenceDiagram
     participant App as apps/example
-    participant Ext as @myorg/external
-    participant Nat as @myorg/native<br/>*.node
+    participant Ext as "@myorg/external"
+    participant Nat as "@myorg/native<br/>*.node"
     participant Fallback as JS/WASM fallback
 
     App->>Ext: import { add }

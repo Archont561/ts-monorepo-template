@@ -137,14 +137,14 @@ Output:
 
 ```mermaid
 graph TD
-    A[Rust src/lib.rs<br/>#[napi]] --> B[cargo check<br/>fast]
-    B --> C[napi build --platform<br/>cargo build --release]
-    C --> D[*.node<br/>native binary]
-    C --> E[index.js<br/>loader]
-    A --> F[napi build --target wasm32-wasip1-threads<br/>*.wasi.cjs]
-    D --> G[@myorg/external<br/>tries native]
+    A["Rust src/lib.rs<br/>#[napi]"] --> B["cargo check<br/>fast"]
+    B --> C["napi build --platform<br/>cargo build --release"]
+    C --> D["*.node<br/>native binary"]
+    C --> E["index.js<br/>loader"]
+    A --> F["napi build --target wasm32-wasip1-threads<br/>*.wasi.cjs"]
+    D --> G["@myorg/external<br/>tries native"]
     F --> G
-    G --> H[JS fallback if no native]
+    G --> H["JS fallback if no native"]
 
     style A fill:#dea584,stroke:#fff,color:#000
     style D fill:#f6f8fa,stroke:#dea584

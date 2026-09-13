@@ -31,11 +31,11 @@ All bins are linked into `node_modules/.bin` on `bun install`.
 
 ```mermaid
 graph TD
-    A[configs/*/package.json] -->|bin: m*| B[msetup]
-    B --> C[node_modules/.bin]
-    C --> D[Root scripts<br/>bun run dev/build/test]
-    D --> E[mturbo / mbiome / mbun]
-    E --> F[Tool configs]
+    A["configs/*/package.json"] -->|"bin: m*"| B[msetup]
+    B --> C["node_modules/.bin"]
+    C --> D["Root scripts<br/>bun run dev/build/test"]
+    D --> E["mturbo / mbiome / mbun"]
+    E --> F["Tool configs"]
 
     style B fill:#0969DA,color:#fff
     style C fill:#f6f8fa,stroke:#0969DA
@@ -58,10 +58,10 @@ graph TD
 
 ```mermaid
 sequenceDiagram
-    participant C as configs/*
-    participant G as gh-actions/*.base.yml
+    participant C as "configs/*"
+    participant G as "gh-actions/*.base.yml"
     participant M as mdocs
-    participant W as .github/workflows/*.yml
+    participant W as ".github/workflows/*.yml"
 
     C->>M: ci.steps.yml fragments
     G->>M: base skeletons

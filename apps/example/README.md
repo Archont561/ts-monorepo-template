@@ -98,15 +98,15 @@ When `native=none`, Dockerfile auto-skips Rust stages (no Cargo.toml).
 ```mermaid
 graph TD
     A[Request] --> B{Bun.serve routes}
-    B -->|/health| C[Tier 1<br/>static]
-    B -->|/uno.css| D[Tier 1<br/>UnoCSS - unocss only]
-    B -->|/api/native/health| E[Tier 1<br/>Native - native only]
-    B -->|/*| F[Tier 2<br/>FileSystemRouter]
-    F --> G[src/pages/**/*.ts]
+    B -->|/health| C["Tier 1<br/>static"]
+    B -->|/uno.css| D["Tier 1<br/>UnoCSS - unocss only"]
+    B -->|/api/native/health| E["Tier 1<br/>Native - native only"]
+    B -->|"/*"| F["Tier 2<br/>FileSystemRouter"]
+    F --> G["src/pages/**/*.ts"]
     G --> H{Opt-in?}
-    H -->|unocss| I[index-unocss.html → index.html]
-    H -->|native| J[/api/native/**]
-    H -->|plain| K[index.html]
+    H -->|unocss| I["index-unocss.html → index.html"]
+    H -->|native| J["/api/native/**"]
+    H -->|plain| K["index.html"]
 
     style B fill:#0969DA,color:#fff
     style H fill:#f6f8fa,stroke:#0969DA
