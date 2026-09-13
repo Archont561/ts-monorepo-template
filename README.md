@@ -358,7 +358,7 @@ See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](
 | `bun run test:template` | Run template scaffolding tests (all opt-in combinations) |
 | `bun run test:template:cases` | Run only template combination cases (`cases.test.ts`) |
 | `bun run test:e2e` | Run Playwright E2E tests (auto-skips if browsers missing) |
-| `bun run coverage` | Collect unit-test coverage (merged LCOV at `coverage/lcov.info`) |
+| `bun run coverage` | Per-package coverage via Turbo, then `mcoverage merge` → `coverage/lcov.info` |
 | `bun run coverage:html` | Generate HTML report (`mcoverage html`) |
 | `bun run typecheck` | Type-check all packages |
 | `bun run check` | Lint and format check (Biome) |
@@ -371,10 +371,7 @@ See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](
 | `bun run security:trivy` | FS vuln scan (Trivy HIGH,CRITICAL) |
 | `bun run security:audit` | Rust audit (cargo audit via mnative) |
 | `bun run security:check` | Run gitleaks + trivy (if installed) |
-| `bun run skills:list` | List available AI agent skills |
-| `bun run skills:sync` | Sync curated → vendored + validate + index |
-| `bun run skills:add <pkg>` | Add skill via skills.sh |
-| `bun run skills:update` | Update skills via skills.sh |
+| `bun run skills <cmd>` | One command for agent skills — `list`, `sync`, `add <pkg>`, `update`, `validate`, `index` |
 <!-- TEMPLATE-ONLY:START(template) -->
 | `bun run docs:sync` | Regenerate workflows from `configs/*` (`mdocs`) — template-only |
 <!-- TEMPLATE-ONLY:END(template) -->
@@ -383,9 +380,9 @@ See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](
 
 We use the [skills.sh](https://skills.sh) ecosystem to vendor skills into this repo.
 
-- Install: `bun run skills:add vercel-labs/agent-skills`
-- Update: `bun run skills:update`
-- Sync: `bun run skills:sync`
+- Install: `bun run skills add vercel-labs/agent-skills`
+- Update: `bun run skills update`
+- Sync: `bun run skills sync`
 
 Skills live in: `.agents/skills/` — each is a folder containing `SKILL.md` with YAML frontmatter (`name`, `description`). See [.agents/README.md](.agents/README.md).
 

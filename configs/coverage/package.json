@@ -24,6 +24,7 @@
   "devDependencies": {
     "@myorg/bunup": "workspace:*",
     "@myorg/citty": "workspace:*",
-    "@myorg/ts": "workspace:*"
+    "@myorg/ts": "workspace:*",
+    "lcov-result-merger": "^6.0.0"
   }
 }

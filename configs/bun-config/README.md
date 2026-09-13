@@ -6,7 +6,7 @@
 
 - `bunfig.toml` — the single source of truth for test + coverage settings
 - `mbun` — single bin for this package
-- Coverage generation: per-package `coverage/lcov.info` + merged root `coverage/lcov.info` via `lcov-result-merger`
+- Coverage generation: per-package `coverage/lcov.info`, merged into root `coverage/lcov.info` by `mcoverage merge`
 
 > [!NOTE]
 > No per-package `bunfig.toml` symlinks — the shared config is always passed explicitly.
@@ -16,7 +16,8 @@
 | Bin | Wraps | Description |
 | :--- | :--- | :--- |
 | `mbun <cmd>` | `bun` | Wraps `bun`; injects `--config=bunfig.toml` for `bun test` |
-| `mbun coverage` | `mturbo coverage` | Runs per-package coverage then merges LCOV via `lcov-result-merger --prepend-source-files` |
+| `mbun coverage` | `mturbo coverage` | Runs per-package coverage only — `bun run coverage` adds `mcoverage merge` |
+| `mbun clean:modules` | — | Removes workspace `node_modules` dirs (keeps the root one) |
 
 ### Config highlights (`bunfig.toml`)
 
@@ -31,7 +32,7 @@
 
 ```bash
 bun run test       # mturbo test   (Turbo runs per-package mbun test)
-bun run coverage   # mbun coverage (mturbo coverage + merged root lcov.info)
+bun run coverage   # mturbo coverage && mcoverage merge → coverage/lcov.info
 # HTML locally:
 # sudo apt-get install -y lcov && genhtml coverage/lcov.info --output-directory coverage/html --title "Coverage" --show-details --highlight --legend
 ```

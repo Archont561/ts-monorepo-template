@@ -40,7 +40,8 @@
     "@myorg/bunup": "workspace:*",
     "@myorg/citty": "workspace:*",
     "@myorg/ts": "workspace:*",
-    "@unocss/cli": "^66.10.2"
+    "@unocss/cli": "^66.10.2",
+    "unocss": "^66.10.2"
   },
   "bin": {
     "munocss": "./src/cli.ts"

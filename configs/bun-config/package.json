@@ -18,9 +18,7 @@
   "exports": {
     "./bunfig.toml": "./bunfig.toml"
   },
-  "devDependencies": {
-    "lcov-result-merger": "^6.0.0"
-  },
+  "devDependencies": {},
   "dependencies": {
     "citty": "^0.2.2"
   }

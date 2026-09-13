@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { spawnSync, which } from "bun";
 import { defineCommand, runMain } from "citty";
 
@@ -8,6 +9,13 @@ import { defineCommand, runMain } from "citty";
  * `--config ../../configs/unocss/uno.config.ts` by hand.
  */
 const CONFIG_PATH = `${import.meta.dir}/../uno.config.ts`;
+
+/**
+ * The shared config scans root-relative patterns (`apps/example/src/**`), so
+ * the UnoCSS CLI has to run from the repo root — otherwise an app that calls
+ * `munocss build` from its own directory matches nothing.
+ */
+const REPO_ROOT = resolve(import.meta.dir, "..", "..", "..");
 
 /** Resolved relative to this file, so munocss works from any package dir. */
 function configExists(): boolean {
@@ -59,6 +67,7 @@ async function runUnocss(extraArgs: string[]): Promise<number> {
   }
   const result = spawnSync({
     cmd: [...bin, "--config", CONFIG_PATH, ...extraArgs],
+    cwd: REPO_ROOT,
     stdout: "inherit",
     stderr: "inherit",
     stdin: "inherit",

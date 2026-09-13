@@ -95,7 +95,7 @@ Root package.json also exposes:
 ```bash
 bun run cargo:check    # → mnative check
 bun run cargo:clippy   # → mnative clippy
-bun run build:native   # → bun --filter @myorg/native run build
+bun run build:native   # → mnative napi:build (no-op when native is disabled)
 ```
 
 ### Build Profiles
@@ -185,7 +185,7 @@ mnative fmt:check
 mnative test
 
 # Build native for current host
-bun run build:native          # → bun --filter @myorg/native run build → cargo check && napi build --platform
+bun run build:native          # → mnative napi:build → cargo check && napi build --platform
 # or directly:
 mnative napi:build
 # or cargo directly in package dir:

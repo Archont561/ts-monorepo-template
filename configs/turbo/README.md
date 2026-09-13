@@ -7,6 +7,7 @@
 - `turbo` as a shared devDependency
 - `turbo.base.json` — the root task graph (there is no root-level `turbo.json`)
 - `mturbo` — a CLI alias that resolves Turbo and bakes in `--root-turbo-json=<configs/turbo/turbo.base.json>` automatically
+- Every per-package job goes through Turbo: `build`, `dev`, `test`, `coverage`, `typecheck`. Packages implement their own method (`mbunup`, `mbun test`, `mnative napi:build`, `me2e`, `munocss build`) and the root scripts are just `mturbo <task>`
 
 > [!NOTE]
 > All root scripts delegate to `mturbo` — Turbo infers dependency order and caches output.

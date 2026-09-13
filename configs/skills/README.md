@@ -42,21 +42,21 @@ We use the [skills.sh](https://skills.sh) ecosystem to vendor skills into this r
 
 ## Usage
 
+One root script, `mskills` subcommands:
+
 ```bash
 # Sync curated → vendored + validate + index
-bun run skills:sync        # mskills sync
+bun run skills sync        # mskills sync (also the default with no subcommand)
 
 # List installed
-bun run skills:list        # mskills list
+bun run skills list        # mskills list
 
 # Add via skills.sh (GitHub or pack)
-bun run skills:add vercel-labs/agent-skills
-bun run skills:add https://skills.sh/p/<pack-id>
-npx skills add vercel-labs/agent-skills -p --agent * -y
+bun run skills add vercel-labs/agent-skills
+bun run skills add https://skills.sh/p/<pack-id>
 
 # Update via skills.sh
-bun run skills:update
-npx skills update -p -y
+bun run skills update
 
 # Validate frontmatter
 bun run skills:validate    # mskills validate

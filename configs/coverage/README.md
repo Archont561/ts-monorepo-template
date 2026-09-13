@@ -11,7 +11,7 @@
 - `mcoverage pages` renders the report into `coverage/html`; `mpages build` then folds it into the Pages artifact as `/coverage/`. Doing it in that order means the two steps can appear in any order in the workflow
 - In the template repo, coverage is published with the docs site instead: `mdocs site` runs `mcoverage html --out docs/public/coverage`, served at `https://archont561.github.io/ts-monorepo-template/coverage/`. Generated monorepos use `mcoverage pages`
 - `coverage.steps.yml` fragment + `coverage.base.yml` skeleton in `configs/gh-actions/`: standalone `coverage.yml` workflow that deploys coverage HTML to Pages when Pages app is **disabled** (avoids conflict — if Pages app exists, coverage is included in `pages.yml` instead)
-- Handles Bun coverage (`bun test --coverage` → `coverage/lcov.info`) merged via `mbun coverage` (`mturbo coverage` + `lcov-result-merger`)
+- Handles Bun coverage (`bun test --coverage` → `coverage/lcov.info`) merged by `mcoverage merge` (`bun run coverage` = `mturbo coverage && mcoverage merge`)
 - Optional Rust coverage via `cargo-llvm-cov` when `packages/native/Cargo.toml` exists (merges Rust LCOV into main)
 
 > [!NOTE]

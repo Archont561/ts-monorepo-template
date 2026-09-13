@@ -108,7 +108,7 @@ bun run test           # Run all unit tests (Turbo runs each package's mbun test
 bun run test:template  # Run template scaffolding tests (all opt-in combos, cases.test.ts)
 bun run test:template:cases # Run only template combination cases
 bun run test:e2e       # Run Playwright E2E tests (auto-skips if browsers missing)
-bun run coverage       # Collect unit-test coverage (mbun coverage + merged LCOV)
+bun run coverage       # mturbo coverage && mcoverage merge → coverage/lcov.info
 bun run check          # Lint and format check (Biome)
 bun run check:fix      # Auto-fix lint and format issues
 bun run ci:lint        # Validate GitHub Actions workflows (mci lint)
@@ -116,17 +116,18 @@ bun run security:gitleaks # Scan for secrets (gitleaks)
 bun run security:trivy # FS vuln scan (Trivy HIGH,CRITICAL)
 bun run security:audit # Rust audit (mnative audit)
 bun run security:check # gitleaks + trivy
-bun run skills:list    # List available AI agent skills
-bun run skills:sync    # Sync curated → vendored + validate + index
-bun run skills:add <pkg> # Add via skills.sh (e.g. vercel-labs/agent-skills)
-bun run skills:update  # Update via skills.sh
-bun run skills:validate # Validate SKILL.md frontmatter
-bun run skills:index   # Build skills.index.json
+bun run skills <cmd>   # One command: list | sync | add <pkg> | update | validate | index
 bun run docs:sync      # Regenerate workflows from configs/* (mdocs)
 bun run docs:site      # Build the docs artifact: docs + coverage + demo app
 ```
 
 The root scripts are clean one-liners backed by the m-commands above. The shared tool configs live in `configs/*` and are never re-declared at root.
+
+Per-package work (`build`, `test`, `dev`, `coverage`, `typecheck`) is Turbo's
+job: each package implements its own script and the root simply calls `mturbo`.
+Work that is monorepo-wide stays at the root — git hooks (`prepare`), workflow
+generation (`docs:sync`), agent skills (`skills`), and the coverage merge that
+runs after the per-package reports exist.
 
 ## Package Architecture
 

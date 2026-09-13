@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { mkdir } from "node:fs/promises";
+import { existsSync, readdirSync, rmSync } from "node:fs";
 import { spawnSync, which } from "bun";
 import { defineCommand, runMain } from "citty";
 
@@ -14,6 +14,8 @@ async function runCoverage() {
     process.exit(1);
   }
 
+  // Per-package coverage is turbo's job; merging is mcoverage's
+  // (`bun run coverage` = mturbo coverage && mcoverage merge).
   console.log("Running per-package coverage via mturbo...\n");
   const turboResult = spawnSync([mturbo, "coverage"], {
     stdout: "inherit",
@@ -21,43 +23,29 @@ async function runCoverage() {
     stdin: "inherit",
   });
 
-  if (turboResult.exitCode !== 0) {
-    process.exit(turboResult.exitCode);
+  process.exit(turboResult.exitCode);
+}
+
+/** Removes workspace node_modules dirs (never the root one — we run from it). */
+function cleanModules(): void {
+  const roots = ["apps", "packages", "configs"];
+  let removed = 0;
+  for (const root of roots) {
+    if (!existsSync(root)) continue;
+    for (const entry of readdirSync(root, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const dir = `${root}/${entry.name}/node_modules`;
+      if (!existsSync(dir)) continue;
+      rmSync(dir, { recursive: true, force: true });
+      removed++;
+    }
   }
-
-  const reports = new Bun.Glob("{packages,apps}/*/coverage/lcov.info");
-  if (Array.from(reports.scanSync()).length === 0) {
-    console.warn("\nNo per-package coverage reports found; nothing to merge.");
-  }
-
-  console.log("\nMerging package coverage reports...");
-  await mkdir("coverage", { recursive: true });
-  const merger = Bun.fileURLToPath(
-    import.meta.resolve("lcov-result-merger/bin/lcov-result-merger.js"),
-  );
-  const mergeResult = spawnSync(
-    [
-      "bun",
-      merger,
-      "{packages,apps}/*/coverage/lcov.info",
-      "coverage/lcov.info",
-      "--prepend-source-files",
-    ],
-    { stdout: "inherit", stderr: "inherit", stdin: "inherit" },
-  );
-
-  if (mergeResult.exitCode !== 0) {
-    console.error("\nCoverage merge failed.");
-    process.exit(mergeResult.exitCode);
-  }
-
-  console.log("\nCoverage report: coverage/lcov.info");
-  process.exit(0);
+  console.log(`🧹 Removed ${removed} workspace node_modules dir(s) (root node_modules kept)`);
 }
 
 // Passthrough for bun commands that are not our subcommands — bypass citty to avoid "Unknown command"
 const rawArgs = process.argv.slice(2);
-const knownSubcommands = ["coverage", "test"];
+const knownSubcommands = ["coverage", "test", "clean:modules"];
 const isHelp = rawArgs.includes("--help") || rawArgs.includes("-h");
 const isVersion = rawArgs.includes("--version") || rawArgs.includes("-v");
 const firstArg = rawArgs[0];
@@ -87,6 +75,17 @@ const coverageCommand = defineCommand({
   },
 });
 
+const cleanModulesCommand = defineCommand({
+  meta: {
+    name: "clean:modules",
+    description: "Remove workspace node_modules dirs (keeps the root one)",
+  },
+  run() {
+    cleanModules();
+    process.exit(0);
+  },
+});
+
 const testCommand = defineCommand({
   meta: { name: "test", description: "Run bun test with shared bunfig.toml config" },
   run() {
@@ -103,14 +102,23 @@ const main = defineCommand({
     version: "1.0.0",
     description: "Bun wrapper — injects shared bunfig.toml for test, provides coverage merging",
   },
-  subCommands: { coverage: coverageCommand, test: testCommand },
-  run: async ({ args }) => {
+  subCommands: {
+    coverage: coverageCommand,
+    test: testCommand,
+    "clean:modules": cleanModulesCommand,
+  },
+  async run() {
     const raw = process.argv.slice(2);
     const subcommand = raw[0];
 
     if (subcommand === "coverage") {
       await runCoverage();
       return;
+    }
+
+    if (subcommand === "clean:modules") {
+      cleanModules();
+      process.exit(0);
     }
 
     let cmd: string[];

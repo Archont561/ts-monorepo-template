@@ -17,8 +17,21 @@ function cargoExistsOrWarn(): boolean {
   return true;
 }
 
+/**
+ * The native package is optional (`native=none` prunes it), so every cargo and
+ * napi call has to be a no-op when it is absent — otherwise the root scripts
+ * would need `test -f packages/native/...` guards again.
+ */
+function nativeExistsOrWarn(): boolean {
+  if (existsSync(`${NATIVE_DIR}/Cargo.toml`) || existsSync(`${NATIVE_DIR}/package.json`)) {
+    return true;
+  }
+  console.warn("⚠️ packages/native not present, skipping (enable the native config)");
+  return false;
+}
+
 function runCargo(args: string[], opts: { cwd?: string } = {}): number {
-  if (!cargoExistsOrWarn()) return 0;
+  if (!nativeExistsOrWarn() || !cargoExistsOrWarn()) return 0;
   const cwd = opts.cwd ?? NATIVE_DIR;
   // Check if manifest exists in cwd, else fallback to root (should not happen after refactor)
   const result = spawnSync({
@@ -32,7 +45,7 @@ function runCargo(args: string[], opts: { cwd?: string } = {}): number {
 }
 
 function runNapi(args: string[]): number {
-  if (!cargoExistsOrWarn()) return 0;
+  if (!nativeExistsOrWarn() || !cargoExistsOrWarn()) return 0;
   // napi bin from @napi-rs/cli
   const napiBin = Bun.fileURLToPath(import.meta.resolve("@napi-rs/cli/scripts/index.js"));
   const result = spawnSync({

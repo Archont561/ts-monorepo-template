@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
+import { dirname } from "node:path";
 import { cp } from "node:fs/promises";
 import { spawnSync, which } from "bun";
 import { defineCommand, runMain } from "citty";
@@ -217,38 +218,59 @@ const pagesCommand = defineCommand({
 });
 
 const mergeCommand = defineCommand({
-  meta: { name: "merge", description: "Merge {packages,apps}/*/coverage/lcov.info via lcov --add-tracefile" },
-  run() {
+  meta: {
+    name: "merge",
+    description: "Merge {packages,apps}/*/coverage/lcov.info into coverage/lcov.info",
+  },
+  args: {
+    output: {
+      type: "string",
+      description: "Merged output file (default: coverage/lcov.info)",
+      default: LCOV,
+    },
+  },
+  run({ args }) {
+    const glob = new Bun.Glob("{packages,apps}/*/coverage/lcov.info");
+    const files = Array.from(glob.scanSync()).filter(Boolean);
+    if (files.length === 0) {
+      console.warn("No per-package lcov.info found — nothing to merge");
+      process.exit(0);
+    }
+
+    const output = (args.output as string) || LCOV;
+    mkdirSync(dirname(output), { recursive: true });
+    console.log(`Merging ${files.length} report(s) → ${output}`);
+
+    // lcov-result-merger first: it is a JS package, so merging works on a plain
+    // `bun install` with no lcov binary (CI installs one, laptops often do not).
+    let merger: string | null = null;
+    try {
+      merger = Bun.fileURLToPath(import.meta.resolve("lcov-result-merger/bin/lcov-result-merger.js"));
+    } catch {
+      merger = null;
+    }
+    if (merger) {
+      const code = run(["bun", merger, "{packages,apps}/*/coverage/lcov.info", output, "--prepend-source-files"]);
+      if (code === 0) {
+        console.log(`✅ Merged: ${output}`);
+        process.exit(0);
+      }
+      console.warn("⚠️ lcov-result-merger failed — falling back to lcov --add-tracefile");
+    }
+
     if (!has("lcov")) {
       console.error("❌ lcov not found — run `mcoverage setup` first");
       process.exit(1);
     }
-    const glob = new Bun.Glob("{packages,apps}/*/coverage/lcov.info");
-    const files = Array.from(glob.scanSync()).filter(Boolean);
-    if (files.length === 0) {
-      console.warn("No per-package lcov.info found");
-      process.exit(0);
+    const merged = "coverage/merged.lcov";
+    const addArgs = files.flatMap((f) => ["--add-tracefile", f]).concat(["--output-file", merged]);
+    if (run(["lcov", ...addArgs]) !== 0) {
+      console.error("❌ Coverage merge failed");
+      process.exit(1);
     }
-    console.log(`Merging ${files.length} files:`, files);
-    const args = files
-      .flatMap((f) => ["--add-tracefile", f])
-      .concat(["--output-file", "coverage/merged.lcov"]);
-    const result = run(["lcov", ...args]);
-    if (result === 0) {
-      console.log("✅ Merged: coverage/merged.lcov");
-      run([
-        "genhtml",
-        "coverage/merged.lcov",
-        "--output-directory",
-        HTML_DIR,
-        "--title",
-        "Coverage Report",
-        "--show-details",
-        "--highlight",
-        "--legend",
-      ]);
-    }
-    process.exit(result);
+    renameSync(merged, output);
+    console.log(`✅ Merged: ${output}`);
+    process.exit(0);
   },
 });
 

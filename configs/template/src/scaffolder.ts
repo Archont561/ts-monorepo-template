@@ -19,6 +19,11 @@ const PACKAGE_JSON_KEYS_TO_REMOVE = ["bun-create"];
 const PACKAGE_JSON_SCRIPTS_TO_REMOVE = [
   "build:template",
   "search:tools",
+  // Template-only test entry points — configs/template is pruned on scaffold.
+  "test:template",
+  "test:template:cases",
+  "test:template:coverage",
+  "test:template:watch",
   // Template-only VitePress site in docs/ — pruned by configs/template.
   "docs:dev",
   "docs:build",

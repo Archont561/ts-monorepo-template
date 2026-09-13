@@ -15,12 +15,15 @@
 
 | Command | Description |
 | :--- | :--- |
-| `bun run skills:sync` | Sync curated → vendored + validate + index |
-| `bun run skills:list` | List installed (curated + vendored + skills.sh) |
-| `bun run skills:add <pkg>` | Add via skills.sh (`vercel-labs/agent-skills` or `https://skills.sh/p/<id>`) |
-| `bun run skills:update` | Update all via skills.sh |
-| `bun run skills:validate` | Validate all `SKILL.md` frontmatter |
-| `bun run skills:index` | Build `skills.index.json` |
+| `bun run skills sync` | Sync curated → vendored + validate + index |
+| `bun run skills list` | List installed (curated + vendored + skills.sh) |
+| `bun run skills add <pkg>` | Add via skills.sh (`vercel-labs/agent-skills` or `https://skills.sh/p/<id>`) |
+| `bun run skills update` | Update all via skills.sh |
+| `bun run skills validate` | Validate all `SKILL.md` frontmatter |
+| `bun run skills index` | Build `skills.index.json` |
+
+One root script (`skills` → `mskills`) — skills are monorepo-wide, so there is
+no per-package variant and no need for six near-identical root scripts.
 | `mskills add <pkg>` | Direct |
 | `mskills update` | Direct |
 
@@ -82,4 +85,4 @@ graph TD
 ```
 
 > [!TIP]
-> After adding new skill in `configs/skills/skills/<name>/SKILL.md`, run `skills:sync` to validate and index.
+> After adding new skill in `configs/skills/skills/<name>/SKILL.md`, run `bun run skills sync` to validate and index.
