@@ -20,7 +20,7 @@ rustup --version
 bun --version
 ```
 
-## 3. Monorepo Structure (Proposed)
+## 3. Monorepo Structure (Refactored — no root Cargo.toml)
 
 ```
 my-monorepo/
@@ -31,25 +31,24 @@ my-monorepo/
         native.ts     # Native import with fallback
     internal/         # Private TS impl
     native/           # Rust + napi-rs (opt-in, only when selected)
-      Cargo.toml      # Rust crate (cdylib)
+      Cargo.toml      # Self-contained Rust crate (cdylib, edition 2021, direct deps, profiles) — NO root Cargo.toml
       build.rs        # napi-build
       src/
         lib.rs        # Rust code with #[napi] macros
-      package.json    # napi config + scripts (targets, binaryName)
+      package.json    # napi config + scripts (targets, binaryName) + cargo:* via mnative
       npm/            # per-platform optional packages (generated)
       index.js        # generated JS loader (auto picks .node)
       index.d.ts      # generated TS types
       index.wasi.cjs  # WASM loader (if wasm target)
       *.node          # native binaries (per-platform, gitignored)
   configs/
-    native/           # Opt-in config, provides @napi-rs/cli + scaffolding
-      package.json    # scaffold metadata (none/publish/docker)
+    native/           # Opt-in config, provides @napi-rs/cli + mnative CLI
+      package.json    # scaffold metadata (none/publish/docker) + bin: mnative
       src/
-        setup.ts      # Setup script that scaffolds packages/native when enabled
-      templates/      # Template files for native package
-        Cargo.toml.tpl
-        lib.rs.tpl
-        package.json.tpl
+        cli.ts        # mnative CLI (cargo wrapper: check, clippy, fmt, test, build, napi:build)
+        setup.ts      # Setup script that scaffolds packages/native self-contained when enabled
+  rust-toolchain.toml # stable + rustfmt, clippy, wasm32-wasip1-threads (root, removed when native=none)
+  .cargo/config.toml  # optional build config (root)
   apps/
     example/          # Demo app, can import from external which may use native
 ```

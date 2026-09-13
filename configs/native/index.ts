@@ -10,10 +10,11 @@ export const NATIVE_TARGETS = [
 
 export type NativeTarget = (typeof NATIVE_TARGETS)[number];
 
-export const CARGO_WORKSPACE_CONFIG = {
-  resolver: "2",
-  members: ["packages/native"],
+export const CARGO_CONFIG = {
   edition: "2021",
+  members: ["packages/native"],
+  manifest: "packages/native/Cargo.toml",
+  selfContained: true,
 } as const;
 
 export const CARGO_PROFILES = {
@@ -23,12 +24,18 @@ export const CARGO_PROFILES = {
 } as const;
 
 export const CARGO_COMMANDS = {
-  check: "cargo check --workspace",
-  clippy: "cargo clippy --workspace -- -D warnings",
-  fmtCheck: "cargo fmt --all -- --check",
-  fmt: "cargo fmt --all",
-  test: "cargo test --workspace",
-  build: "cargo build --workspace",
-  buildRelease: "cargo build --workspace --release",
-  buildCi: "cargo build --workspace --profile ci",
+  check: "mnative check",
+  clippy: "mnative clippy",
+  fmtCheck: "mnative fmt:check",
+  fmt: "mnative fmt",
+  test: "mnative test",
+  build: "mnative build",
+  buildRelease: "mnative build:release",
+  buildCi: "mnative build:ci",
+} as const;
+
+export const NAPI_COMMANDS = {
+  build: "mnative napi:build",
+  buildDebug: "mnative napi:build:debug",
+  buildWasm: "mnative napi:build:wasm",
 } as const;

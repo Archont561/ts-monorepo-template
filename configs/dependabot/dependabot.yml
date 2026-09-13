@@ -42,9 +42,9 @@
       prefix: "chore"
       include: "scope"
 
-  # Cargo — Rust workspace (Cargo.toml)
+  # Cargo — Rust package (packages/native/Cargo.toml) self-contained, no root Cargo.toml
   - package-ecosystem: "cargo"
-    directory: "/"
+    directory: "/packages/native"
     schedule:
       interval: "weekly"
       day: "monday"

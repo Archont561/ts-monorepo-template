@@ -1,60 +1,33 @@
 # @myorg/native
 
-> Native Rust bindings via Cargo + napi-rs — with WASM fallback and platform-specific binaries.
+> Native Rust bindings via Cargo + napi-rs — self-contained `Cargo.toml`, no root workspace, with WASM fallback and platform-specific binaries. Built via `mnative` CLI.
 
 ## What it provides
 
-- Rust crate (`Cargo.toml`, `cdylib`, `edition = "2021"`) with `#[napi]` macros, uses workspace dependencies (`workspace = true`)
-- `add`, `fibonacci`, `reverse_string`, `Counter` class, `primes_up_to`, async `fetch_data_simulated`
-- Cargo-first: `cargo check`, `cargo clippy -- -D warnings`, `cargo fmt`, `cargo test --workspace`, `cargo build --release` (lto, codegen-units=1, strip)
-- napi-rs build: native `.node` + WASI `.wasi.cjs` fallback (built via `napi build` which uses cargo)
+- Rust crate (`Cargo.toml` self-contained, `cdylib`, `edition = "2021"`) with `#[napi]` macros, direct deps (no `workspace = true`)
+- `add`, `fibonacci`, `reverse_string`, `Counter` class, `primes_up_to`
+- Cargo via `mnative` CLI: `mnative check`, `mnative clippy -- -D warnings`, `mnative fmt`, `mnative test`, `mnative build --release` (lto, codegen-units=1, strip)
+- napi-rs build: native `.node` + WASI `.wasi.cjs` fallback via `mnative napi:build`
 - Platform-specific npm packages via `napi create-npm-dirs` + `artifacts` + `pre-publish`
-- Workspace root `Cargo.toml` with `resolver = "2"` and `workspace.dependencies`
+- No root `Cargo.toml` — everything in `packages/native/Cargo.toml`
 
 > [!IMPORTANT]
 > Opt-in — selected during `bun create Archont561/ts-monorepo-template` via `Set up native Node-API bindings?`
 
-## Cargo Handling
+## Cargo Handling — self-contained, no workspace
 
-### Workspace Structure
+### Structure
 
 ```
-Cargo.toml (root)               # [workspace] members = ["packages/native"], resolver=2
-rust-toolchain.toml             # stable + rustfmt, clippy, wasm32-wasip1-threads
+rust-toolchain.toml             # stable + rustfmt, clippy, wasm32-wasip1-threads (root)
+.cargo/config.toml              # optional build config (root)
 packages/native/
-  Cargo.toml                    # edition=2021, workspace=true deps, cdylib
+  Cargo.toml                    # self-contained, edition=2021, direct deps, profiles, cdylib
   build.rs                      # napi_build::setup()
   src/lib.rs                    # #[napi] impl
 ```
 
-Root `Cargo.toml`:
-
-```toml
-[workspace]
-members = ["packages/native"]
-resolver = "2"
-
-[workspace.dependencies]
-napi = { version = "3.0.0", features = ["napi4"] }
-napi-derive = "3.0.0"
-napi-build = "2"
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = "symbols"
-
-[profile.dev]
-opt-level = 0
-debug = true
-
-[profile.ci]
-inherits = "dev"
-opt-level = 1
-```
-
-Member `packages/native/Cargo.toml`:
+`packages/native/Cargo.toml`:
 
 ```toml
 [package]
@@ -63,67 +36,74 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib"]
 [dependencies]
-napi = { workspace = true }
-napi-derive = { workspace = true }
+napi = { version = "3.0.0", features = ["napi4"] }
+napi-derive = "3.0.0"
 [build-dependencies]
-napi-build = { workspace = true }
+napi-build = "2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = "symbols"
 ```
 
-### Core Commands (Cargo-first)
+No `[workspace]`, no `workspace = true` — simpler for JS monorepo.
+
+### Core Commands via mnative CLI
 
 ```bash
 # Fast inner loop — type-check only, no codegen
-cargo check --workspace
-cargo check -p native
+mnative check
+cargo check --manifest-path packages/native/Cargo.toml
 
 # Lint & format
-cargo clippy --workspace -- -D warnings   # deny warnings, CI
-cargo fmt --all -- --check                # check
-cargo fmt --all                           # write
+mnative clippy                # cargo clippy -- -D warnings
+mnative fmt:check             # cargo fmt --all -- --check
+mnative fmt                   # cargo fmt --all
 
 # Test
-cargo test --workspace
-cargo test -p native
-cargo test my_fn                          # filter
-cargo nextest run --workspace             # faster parallel (install: cargo install cargo-nextest)
+mnative test
+cargo test --manifest-path packages/native/Cargo.toml
 
 # Build
-cargo build --workspace                   # debug
-cargo build --workspace --release         # optimized (lto, strip)
-cargo build --workspace --profile ci      # ci profile (opt-level=1)
+mnative build                 # cargo build
+mnative build:release         # cargo build --release (lto, strip)
+mnative build:ci              # cargo build --profile ci
 
 # Deps
-cargo tree
-cargo tree -d                             # duplicates
-cargo add serde --features derive         # add dep (requires cargo-edit)
-cargo update -p serde
+mnative tree
+cargo tree --manifest-path packages/native/Cargo.toml
+cargo tree -d
 
 # Docs
-cargo doc --no-deps --workspace
-cargo doc --open
+mnative doc
 ```
 
-### Bun Scripts (wrapping cargo + napi)
+### Bun Scripts (wrapping mnative + napi)
 
 ```bash
 # Native for current host (cargo check + napi build --platform)
-bun run build:native
-bun --filter @myorg/native run build
+bun run build:native          # → bun --filter @myorg/native run build
+mnative napi:build            # → cargo check && napi build --release --platform
 
-# Cargo wrappers
+# Cargo wrappers via mnative
+bun run cargo:check           # → mnative check
+bun run cargo:clippy          # → mnative clippy
+bun run cargo:fmt:check       # → mnative fmt:check
+bun run cargo:test            # → mnative test
+bun run cargo:build:release   # → mnative build:release
+
+# Via filter
 bun --filter @myorg/native run cargo:check
-bun --filter @myorg/native run cargo:clippy
-bun --filter @myorg/native run cargo:fmt:check
-bun --filter @myorg/native run cargo:test
-bun --filter @myorg/native run cargo:build:release
+bun --filter @myorg/native run build
 
 # Debug
 bun --filter @myorg/native run build:debug
 
-# WASM fallback (requires Rust WASI target)
+# WASM fallback
 rustup target add wasm32-wasip1-threads
-bun run build:wasm
-bun --filter @myorg/native run build:wasm
+bun run build:wasm            # → mnative napi:build:wasm
 ```
 
 Output:
@@ -137,11 +117,11 @@ Output:
 
 ```mermaid
 graph TD
-    A["Rust src/lib.rs<br/>#[napi]"] --> B["cargo check<br/>fast"]
-    B --> C["napi build --platform<br/>cargo build --release"]
+    A["Rust src/lib.rs<br/>#[napi]"] --> B["mnative check<br/>cargo check fast"]
+    B --> C["mnative napi:build<br/>cargo build --release + napi"]
     C --> D["*.node<br/>native binary"]
     C --> E["index.js<br/>loader"]
-    A --> F["napi build --target wasm32-wasip1-threads<br/>*.wasi.cjs"]
+    A --> F["mnative napi:build:wasm<br/>*.wasi.cjs"]
     D --> G["@myorg/external<br/>tries native"]
     F --> G
     G --> H["JS fallback if no native"]
@@ -192,20 +172,6 @@ rustup target add wasm32-wasip1-threads
 bun run build:wasm
 ```
 
-Generates `native.wasi.cjs` + browser/worker files.
-
-Config in `package.json` `napi.wasm`:
-
-```json
-{
-  "wasm": {
-    "initialMemory": 16,
-    "maximumMemory": 65536,
-    "browser": { "fs": false, "asyncInit": true }
-  }
-}
-```
-
 ## Platform Packages (Publish)
 
 ```bash
@@ -219,11 +185,6 @@ napi pre-publish
 npm publish --access public
 ```
 
-Root `package.json` gets `optionalDependencies` for each platform.
-
-> [!IMPORTANT]
-> Use npm scope (`@myorg/native`) — required for per-target model.
-
 ## Cross-Compilation
 
 - `--use-napi-cross`: Linux glibc on Linux x64/arm64
@@ -232,10 +193,10 @@ Root `package.json` gets `optionalDependencies` for each platform.
 
 ```bash
 cargo install cargo-zigbuild
-cargo zigbuild --target aarch64-unknown-linux-gnu --release
+cargo zigbuild --target aarch64-unknown-linux-gnu --release --manifest-path packages/native/Cargo.toml
 ```
 
-## CI Matrix
+## CI Matrix (no root Cargo.toml)
 
 ```yaml
 - uses: dtolnay/rust-toolchain@stable
@@ -243,11 +204,13 @@ cargo zigbuild --target aarch64-unknown-linux-gnu --release
     components: clippy, rustfmt
     targets: wasm32-wasip1-threads
 - uses: Swatinem/rust-cache@v2
-- run: cargo fmt --all -- --check
-- run: cargo clippy --workspace -- -D warnings
-- run: cargo check --workspace
-- run: cargo test --workspace
-- run: cargo build --workspace --release
+  with:
+    workspaces: "packages/native"
+- run: mnative fmt:check
+- run: mnative clippy
+- run: mnative check
+- run: mnative test
+- run: mnative build:release
 - run: bun run build:native
 
 strategy:
@@ -260,21 +223,6 @@ strategy:
         target: aarch64-apple-darwin
         build: napi build --release --target aarch64-apple-darwin
 ```
-
-## Debugging
-
-```bash
-DEBUG="napi:*" napi build
-NAPI_RS_ENFORCE_VERSION_CHECK=1 bun run build
-cargo tree
-cargo tree -d
-```
-
-Common missing binary causes:
-
-- `--no-optional` omitted optional deps
-- Lockfile generated on another platform
-- Deployment copied only JS, discarded `.node`
 
 ## References
 

@@ -1,5 +1,5 @@
-# Cargo config — per guide best practices
-# Workspace target dir is shared (target/ at root)
+# Cargo config — self-contained, no root Cargo.toml
+# All Rust code lives in packages/native/Cargo.toml
 
 [build]
 # Uncomment to use faster linker if available (mold, lld)
@@ -10,9 +10,4 @@
 # linker = "aarch64-linux-gnu-gcc"
 
 [env]
-# Example: set env vars for build
 # RUST_BACKTRACE = "1"
-
-# Cargo registry caching
-# [source.crates-io]
-# replace-with = "vendored-sources"

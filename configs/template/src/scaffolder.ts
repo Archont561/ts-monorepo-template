@@ -156,6 +156,12 @@ export class MonorepoScaffolder {
       "packages/external/src/user.ts",
       "packages/external/src/native.ts",
 
+      // Native package (self-contained, no root Cargo.toml)
+      "packages/native/package.json",
+      "packages/native/Cargo.toml",
+      "packages/native/src/lib.rs",
+      "packages/native/README.md",
+
       // Example app
       "apps/example/package.json",
       "apps/example/tsconfig.json",

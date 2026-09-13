@@ -3,6 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "mnative": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch"
+  },
   "scaffold": {
     "default": "none",
     "flag": "native",
@@ -27,7 +34,6 @@
         "extraRemovals": [
           "packages/native",
           "rust-toolchain.toml",
-          "Cargo.toml",
           "Cargo.lock",
           ".cargo",
           "apps/example/src/pages/api/native"
@@ -37,7 +43,6 @@
           "**/*.napi.*",
           "**/*.wasi.cjs",
           "rust-toolchain.toml",
-          "Cargo.toml",
           "Cargo.lock",
           ".cargo/**",
           "**/native/**",
@@ -47,7 +52,6 @@
           "\\\\.node$",
           "napi",
           "rust-toolchain",
-          "Cargo\\.toml",
           "api/native"
         ],
         "appDepsToRemove": [
@@ -62,7 +66,13 @@
   "exports": {
     ".": "./index.ts"
   },
+  "dependencies": {
+    "citty": "^0.2.2"
+  },
   "devDependencies": {
+    "@myorg/bunup": "workspace:*",
+    "@myorg/citty": "workspace:*",
+    "@myorg/ts": "workspace:*",
     "@napi-rs/cli": "^3.9.1"
   }
 }

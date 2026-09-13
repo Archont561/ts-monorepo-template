@@ -1,40 +1,42 @@
 # TEMPLATE-ONLY:START(native)
 - name: Setup Rust toolchain
-  if: hashFiles('Cargo.toml') != '' || hashFiles('packages/native/Cargo.toml') != ''
+  if: hashFiles('packages/native/Cargo.toml') != ''
   uses: dtolnay/rust-toolchain@stable
   with:
     components: clippy, rustfmt
     targets: wasm32-wasip1-threads
 
 - name: Rust cache
-  if: hashFiles('Cargo.toml') != '' || hashFiles('packages/native/Cargo.toml') != ''
+  if: hashFiles('packages/native/Cargo.toml') != ''
   uses: Swatinem/rust-cache@v2
+  with:
+    workspaces: "packages/native"
 
 - name: Cargo fmt check
-  if: hashFiles('Cargo.toml') != '' || hashFiles('packages/native/Cargo.toml') != ''
-  run: cargo fmt --all -- --check
+  if: hashFiles('packages/native/Cargo.toml') != ''
+  run: mnative fmt:check
   shell: bash
 
 - name: Cargo clippy (deny warnings)
-  if: hashFiles('Cargo.toml') != '' || hashFiles('packages/native/Cargo.toml') != ''
-  run: cargo clippy --workspace -- -D warnings
+  if: hashFiles('packages/native/Cargo.toml') != ''
+  run: mnative clippy
   shell: bash
 
 - name: Cargo check (fast type-check)
-  if: hashFiles('Cargo.toml') != '' || hashFiles('packages/native/Cargo.toml') != ''
-  run: cargo check --workspace
+  if: hashFiles('packages/native/Cargo.toml') != ''
+  run: mnative check
   shell: bash
 
-- name: Cargo test (workspace)
-  if: hashFiles('Cargo.toml') != '' || hashFiles('packages/native/Cargo.toml') != ''
-  run: cargo test --workspace --profile ci || cargo test --workspace
+- name: Cargo test
+  if: hashFiles('packages/native/Cargo.toml') != ''
+  run: mnative test || cargo test --manifest-path packages/native/Cargo.toml --profile ci || cargo test --manifest-path packages/native/Cargo.toml
   shell: bash
 
 - name: Build native bindings (host)
   if: hashFiles('packages/native/Cargo.toml') != ''
   run: |
-    echo "🦀 Building native bindings for current host"
-    bun run build:native || echo "native build skipped (install Rust)"
+    echo "🦀 Building native bindings for current host (self-contained, no root Cargo.toml)"
+    bun run build:native || mnative napi:build || echo "native build skipped (install Rust)"
   shell: bash
 
 - name: Check native package types

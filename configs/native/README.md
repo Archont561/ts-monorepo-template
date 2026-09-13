@@ -1,20 +1,30 @@
 # @myorg/native-config
 
-> Opt-in Cargo + NAPI-RS native bindings with Rust — native speed, WASM fallback, platform-specific binaries + conditional example routes.
+> Opt-in Cargo + NAPI-RS native bindings with Rust — native speed, WASM fallback, platform-specific binaries + conditional example routes. **No root Cargo.toml** — self-contained `packages/native/Cargo.toml` + `mnative` CLI.
 
 ## What it provides
 
 - A `select` scaffold prompt (`none` / `publish` / `docker`) that decides whether a generated project ships native bindings
-- **Cargo-first handling**: root `Cargo.toml` workspace with `resolver = "2"`, `workspace.dependencies`, profiles `dev` / `release` (lto, codegen-units=1, strip) / `ci`
-- `@napi-rs/cli` as shared devDependency for projects that opt in
-- Setup script `src/setup.ts` that scaffolds `packages/native/` + root workspace + ensures example native routes
-- Template files for Rust crate (`Cargo.toml` with `workspace = true`, `src/lib.rs`, `build.rs`, `package.json` napi config + `cargo:*` scripts)
+- **Self-contained Cargo**: `packages/native/Cargo.toml` only — edition 2021, direct deps (`napi`, `napi-derive`, `napi-build`), profiles `dev` / `release` (lto, codegen-units=1, strip) / `ci` — no root workspace
+- `@napi-rs/cli` as shared devDependency + `mnative` CLI (`configs/native/src/cli.ts`) wrapping cargo + napi
+- Setup script `src/setup.ts` that scaffolds `packages/native/` (self-contained) + ensures example native routes
+- Template files for Rust crate (`Cargo.toml` standalone, `src/lib.rs`, `build.rs`, `package.json` napi config + `cargo:*` scripts via `mnative`)
 - Integration with `packages/external` via `native.ts` wrapper with JS fallback
-- Example app `apps/example/src/pages/api/native/**` — conditional routes that are deleted when native disabled
-- CI: `rust-toolchain` + `rust-cache` + `cargo fmt --check` + `cargo clippy -- -D warnings` + `cargo check` + `cargo test --workspace`
+- Example app `apps/example/src/pages/api/native/**` — conditional routes deleted when native disabled
+- CI: `rust-toolchain` + `rust-cache` (workspaces: packages/native) + `mnative fmt:check` + `mnative clippy` + `mnative check` + `mnative test`
 
 > [!IMPORTANT]
 > Opt-in — choose `Set up native Node-API bindings?` during `bun create Archont561/ts-monorepo-template`.
+
+## Why no root Cargo.toml?
+
+Previously root `Cargo.toml` defined `[workspace]` with `members = ["packages/native"]` and `workspace.dependencies`. This added an extra file that needed removal when native disabled and required `--workspace` flags.
+
+Refactored:
+- `packages/native/Cargo.toml` is standalone — all deps versions directly, profiles inside
+- All cargo operations via `mnative` CLI (or `bun --filter @myorg/native run cargo:*`) which runs in `packages/native` dir
+- Root `Cargo.toml` deleted — simpler template, no workspace indirection
+- If you later add more Rust crates, you can re-introduce a workspace root, but for single crate self-contained is simpler
 
 ## Cargo Guide (Agent-Ready)
 
@@ -26,25 +36,29 @@ Cargo is official Rust package manager, build system, test runner, doc generator
 
 | File | Purpose |
 |---|---|
-| `Cargo.toml` | Manifest: metadata, dependencies, features, profiles |
-| `Cargo.lock` | Pinned versions (commit for binaries, gitignore for libraries) |
-| `src/lib.rs` | Library crate entry (cdylib for napi) |
-| `build.rs` | Build script (napi_build::setup) |
+| `packages/native/Cargo.toml` | Manifest: metadata, dependencies, features, profiles (self-contained) |
+| `Cargo.lock` | Pinned versions (commit for binaries, gitignore for libraries) — gitignored for cdylib |
+| `packages/native/src/lib.rs` | Library crate entry (cdylib for napi) |
+| `packages/native/build.rs` | Build script (napi_build::setup) |
 | `rust-toolchain.toml` | Toolchain, components (rustfmt, clippy), targets (wasm32-wasip1-threads) |
 | `.cargo/config.toml` | Optional build config |
 
-### Workspace (Monorepo)
-
-Root `Cargo.toml`:
+### Self-contained Cargo.toml
 
 ```toml
-[workspace]
-members = ["packages/native"]
-resolver = "2"
+[package]
+name = "native"
+version = "0.1.0"
+edition = "2021"
 
-[workspace.dependencies]
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
 napi = { version = "3.0.0", features = ["napi4"] }
 napi-derive = "3.0.0"
+
+[build-dependencies]
 napi-build = "2"
 
 [profile.release]
@@ -53,48 +67,34 @@ lto = true
 codegen-units = 1
 strip = "symbols"
 
-[profile.dev]
-opt-level = 0
-debug = true
-
 [profile.ci]
 inherits = "dev"
 opt-level = 1
 ```
 
-Member `packages/native/Cargo.toml`:
+No `workspace = true`, no root workspace — simpler.
 
-```toml
-[package]
-name = "native"
-version = "0.1.0"
-edition = "2021" # always 2021
-
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-napi = { workspace = true }
-napi-derive = { workspace = true }
-
-[build-dependencies]
-napi-build = { workspace = true }
-```
-
-### Core Cargo Commands
+### Core Cargo Commands via mnative CLI
 
 ```bash
-cargo check --workspace          # fast type-check, no codegen (inner loop)
-cargo clippy -- -D warnings      # lint, deny warnings (CI)
-cargo fmt --all -- --check       # format check
-cargo fmt --all                  # format write
-cargo test --workspace           # all tests
-cargo test my_fn                 # filter
-cargo build --workspace --release # optimized (lto, strip)
-cargo tree                       # dep tree
-cargo tree -d                    # duplicates
-cargo doc --no-deps --workspace  # docs
-cargo update -p serde            # update one crate
+mnative check          # cargo check (fast type-check, no codegen) — inner loop
+mnative clippy         # cargo clippy -- -D warnings
+mnative fmt --all -- --check   # via mnative fmt:check
+mnative fmt            # cargo fmt --all
+mnative test           # cargo test
+mnative build          # cargo build
+mnative build:release  # cargo build --release (lto, strip)
+mnative build:ci       # cargo build --profile ci
+mnative tree           # cargo tree
+mnative napi:build     # cargo check && napi build --release --platform
+```
+
+Root package.json also exposes:
+
+```bash
+bun run cargo:check    # → mnative check
+bun run cargo:clippy   # → mnative clippy
+bun run build:native   # → bun --filter @myorg/native run build
 ```
 
 ### Build Profiles
@@ -111,16 +111,6 @@ inherits = "dev"
 opt-level = 1
 ```
 
-### Features
-
-```toml
-[features]
-default = []
-json = ["dep:serde_json"]
-```
-
-Use `#[cfg(feature = "json")]` to gate.
-
 ### CI Checklist (GitHub Actions)
 
 ```yaml
@@ -129,34 +119,26 @@ Use `#[cfg(feature = "json")]` to gate.
     components: clippy, rustfmt
     targets: wasm32-wasip1-threads
 - uses: Swatinem/rust-cache@v2
-- run: cargo fmt --all -- --check
-- run: cargo clippy --workspace -- -D warnings
-- run: cargo check --workspace
-- run: cargo test --workspace
-- run: cargo build --workspace --release
+  with:
+    workspaces: "packages/native"
+- run: mnative fmt:check
+- run: mnative clippy
+- run: mnative check
+- run: mnative test
+- run: mnative build:release
 ```
-
-### Agent Checklist
-
-- ✅ Always `edition = "2021"` and `resolver = "2"` in workspace roots
-- ✅ Use `cargo check` in inner dev loops (fastest)
-- ✅ Commit `Cargo.lock` for binaries, gitignore for libraries (native is cdylib lib → ignore)
-- ✅ Use `[workspace.dependencies]` to centralise versions
-- ✅ Use `cargo clippy -- -D warnings` and `cargo fmt --check` in CI
-- ✅ Use `cargo nextest` for faster parallel tests in CI
-- ✅ Use `lto = true` + `codegen-units = 1` + `strip = "symbols"` in release
 
 ## Architecture
 
 ```mermaid
 graph TD
     A[bun create] --> B{native?}
-    B -->|none| C["prune native<br/>Cargo.toml + packages/native + *.node + api/native/**<br/>via glob+regex+extraRemovals"]
-    B -->|publish| D["setup.ts<br/>root Cargo.toml workspace + packages/native/"]
+    B -->|none| C["prune native<br/>packages/native + *.node + api/native/**<br/>via glob+regex+extraRemovals<br/>no root Cargo.toml to remove"]
+    B -->|publish| D["setup.ts<br/>packages/native/ self-contained Cargo.toml<br/>+ src/lib.rs + napi config + mnative CLI"]
     B -->|docker| E["setup.ts + Docker"]
     D --> F["Rust src/lib.rs<br/>#[napi] add, fibonacci, Counter, primes_up_to"]
-    F --> G["cargo check → napi build --platform<br/>*.node"]
-    F --> H["napi build --target wasm32-wasip1-threads<br/>*.wasi.cjs"]
+    F --> G["mnative check → mnative napi:build<br/>*.node"]
+    F --> H["mnative napi:build:wasm<br/>*.wasi.cjs"]
     G --> I["@myorg/external<br/>native.ts with fallback"]
     H --> I
     I --> J["example/api/native/**<br/>add, fibonacci, primes, status"]
@@ -172,8 +154,8 @@ graph TD
 
 | Option | Description | Result |
 | :--- | :--- | :--- |
-| `none` | No native bindings (default) | Removes `Cargo.toml`, `packages/native/`, `rust-toolchain.toml`, `*.node`, `apps/example/src/pages/api/native/**` via glob+regex+extraRemovals |
-| `publish` | Publish with prebuilt binaries | Keeps + runs `setup.ts` → root workspace + `packages/native/` + example routes + CI matrix |
+| `none` | No native bindings (default) | Removes `packages/native/`, `rust-toolchain.toml`, `Cargo.lock`, `*.node`, `apps/example/src/pages/api/native/**` via glob+regex+extraRemovals — no root Cargo.toml exists |
+| `publish` | Publish with prebuilt binaries | Keeps + runs `setup.ts` → `packages/native/` self-contained + example routes + CI matrix + `mnative` CLI |
 | `docker` | Build in Docker | Keeps + Docker cross-compilation |
 
 ### Data-driven removals
@@ -182,12 +164,12 @@ When `none` selected:
 
 | Field | Patterns | Purpose |
 | :--- | :--- | :--- |
-| `extraRemovals` | `packages/native`, `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `.cargo`, `apps/example/src/pages/api/native` | Exact paths |
-| `filePatternsToRemove` | `**/*.node`, `**/*.napi.*`, `**/*.wasi.cjs`, `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `.cargo/**`, `**/native/**`, `**/api/native/**` | Glob via `Bun.Glob` |
-| `fileRegexesToRemove` | `\.node$`, `napi`, `rust-toolchain`, `Cargo\.toml`, `api/native` | Regex |
+| `extraRemovals` | `packages/native`, `Cargo.lock`, `rust-toolchain.toml`, `.cargo`, `apps/example/src/pages/api/native` | Exact paths — no root Cargo.toml |
+| `filePatternsToRemove` | `**/*.node`, `**/*.napi.*`, `**/*.wasi.cjs`, `rust-toolchain.toml`, `Cargo.lock`, `.cargo/**`, `**/native/**`, `**/api/native/**` | Glob via `Bun.Glob` |
+| `fileRegexesToRemove` | `\.node$`, `napi`, `rust-toolchain`, `api/native` | Regex |
 | `appDepsToRemove` | `@myorg/native` | Remove from example |
 
-When `publish`/`docker` selected, `setup: configs/native/src/setup.ts` runs to scaffold root `Cargo.toml` workspace + `packages/native/` + ensure example routes exist.
+When `publish`/`docker` selected, `setup: configs/native/src/setup.ts` runs to scaffold `packages/native/` self-contained + ensure example routes exist + set root scripts to `mnative`.
 
 ## Usage
 
@@ -195,26 +177,27 @@ When `publish`/`docker` selected, `setup: configs/native/src/setup.ts` runs to s
 bun create Archont561/ts-monorepo-template my-app   # choose "Set up native Node-API bindings?"
 cd my-app
 
-# Cargo-first inner loop (fast)
-cargo check --workspace          # type-check only, no codegen
-cargo clippy --workspace -- -D warnings
-cargo fmt --all -- --check
-cargo test --workspace
+# mnative CLI (Cargo wrapper, no root Cargo.toml)
+mnative check          # fast type-check
+mnative clippy
+mnative fmt:check
+mnative test
 
-# Build native for current host (cargo check + napi build)
-bun run build:native
-# or
-bun --filter @myorg/native run build
-# or cargo directly:
-cargo build --workspace --release
+# Build native for current host
+bun run build:native          # → bun --filter @myorg/native run build → cargo check && napi build --platform
+# or directly:
+mnative napi:build
+# or cargo directly in package dir:
+cargo check --manifest-path packages/native/Cargo.toml
+cargo build --manifest-path packages/native/Cargo.toml --release
 
 # WASM fallback
 rustup target add wasm32-wasip1-threads
-bun run build:wasm
+bun run build:wasm            # → mnative napi:build:wasm
 
 # Test
 bun run test:native
-cargo test --workspace
+mnative test
 
 # Example app with native routes
 bun run dev
@@ -224,18 +207,17 @@ bun run dev
 ```
 
 <details>
-<summary>After enabling — package structure</summary>
+<summary>After enabling — package structure (no root Cargo.toml)</summary>
 
 ```
-Cargo.toml                # Workspace root (resolver=2, workspace.dependencies, profiles)
 rust-toolchain.toml       # stable + rustfmt, clippy, wasm32-wasip1-threads
-.cargo/config.toml        # optional build config
+.cargo/config.toml        # optional build config (no workspace)
 packages/native/
-  Cargo.toml          # Rust crate (cdylib, workspace=true deps, edition 2021)
+  Cargo.toml          # Self-contained Rust crate (edition 2021, direct deps, cdylib, profiles)
   build.rs            # napi-build setup
   src/
     lib.rs            # Rust with #[napi] — add, fibonacci, Counter, primes_up_to
-  package.json        # napi config + cargo:* scripts (check, clippy, fmt, test, build)
+  package.json        # napi config + cargo:* scripts via mnative / cargo
   tsconfig.json       # extends @myorg/ts/library.json
   README.md           # docs
   index.js            # generated loader (auto picks .node)
@@ -245,11 +227,16 @@ packages/native/
 
 apps/example/src/pages/api/native/
   index.ts, add.ts, status.ts, fibonacci/[n].ts, primes/[n].ts, reverse.ts
+
+configs/native/
+  src/cli.ts          # mnative CLI (cargo wrapper)
+  src/setup.ts        # scaffolds self-contained Cargo.toml
+  package.json        # bin: mnative → dist/cli.js
 ```
 
 </details>
 
-## NAPI Config (Monorepo-Adapted)
+## NAPI Config
 
 ```json
 {
@@ -303,7 +290,7 @@ npm publish --access public
 
 ```bash
 cargo install cargo-zigbuild
-cargo zigbuild --target aarch64-unknown-linux-gnu --release
+cargo zigbuild --target aarch64-unknown-linux-gnu --release --manifest-path packages/native/Cargo.toml
 ```
 
 ## CI Matrix
@@ -320,17 +307,20 @@ strategy:
         build: napi build --release --target aarch64-apple-darwin
 ```
 
-Full CI checklist:
+Full CI checklist (no root Cargo.toml):
 
 ```yaml
 - uses: dtolnay/rust-toolchain@stable
   with:
     components: clippy, rustfmt
 - uses: Swatinem/rust-cache@v2
-- run: cargo fmt --all -- --check
-- run: cargo clippy --workspace -- -D warnings
-- run: cargo test --workspace
-- run: cargo build --workspace --release
+  with:
+    workspaces: "packages/native"
+- run: mnative fmt:check
+- run: mnative clippy
+- run: mnative check
+- run: mnative test
+- run: mnative build:release
 ```
 
 See [PLAN.md](./PLAN.md) for full integration plan.
