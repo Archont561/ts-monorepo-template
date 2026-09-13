@@ -182,25 +182,30 @@ Tool configs and their agent-facing docs (reference, not concatenated):
 | Commitlint | [AGENT.md](configs/commitlint/AGENT.md) | Commit messages |
 | GitHub Actions | [AGENT.md](configs/gh-actions/AGENT.md) | CI workflow validation and local act (citty) |
 | Lefthook | [AGENT.md](configs/lefthook/AGENT.md) | Git hooks (citty) |
-<!-- TEMPLATE-ONLY:START(devcontainer) -->
-| Devcontainer | [AGENT.md](configs/devcontainer/AGENT.md) | Codespaces / Dev Containers, opt-in |
-<!-- TEMPLATE-ONLY:END(devcontainer) -->
-<!-- TEMPLATE-ONLY:START(native) -->
-| Native | [AGENT.md](configs/native/AGENT.md) | NAPI-RS opt-in |
-<!-- TEMPLATE-ONLY:END(native) -->
-<!-- TEMPLATE-ONLY:START(playwright) -->
-| Playwright | [AGENT.md](configs/playwright/AGENT.md) | E2E testing |
-<!-- TEMPLATE-ONLY:END(playwright) -->
-<!-- TEMPLATE-ONLY:START(skills) -->
-| Skills | [AGENT.md](configs/skills/AGENT.md) | AI agent skills, opt-in |
-<!-- TEMPLATE-ONLY:END(skills) -->
-<!-- TEMPLATE-ONLY:START(template) -->
-| Template | [AGENT.md](configs/template/AGENT.md) | Scaffolder, template-only |
-<!-- TEMPLATE-ONLY:END(template) -->
 | TypeScript | [AGENT.md](configs/ts/AGENT.md) | Shared tsconfigs |
 | Turbo | [AGENT.md](configs/turbo/AGENT.md) | Task orchestration |
+
+<!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer) -->
+#### Opt-in configs (present only when selected)
+
+<!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer) -->
+<!-- TEMPLATE-ONLY:START(devcontainer) -->
+- Devcontainer | [AGENT.md](configs/devcontainer/AGENT.md) | Codespaces / Dev Containers, opt-in
+<!-- TEMPLATE-ONLY:END(devcontainer) -->
+<!-- TEMPLATE-ONLY:START(native) -->
+- Native | [AGENT.md](configs/native/AGENT.md) | NAPI-RS opt-in
+<!-- TEMPLATE-ONLY:END(native) -->
+<!-- TEMPLATE-ONLY:START(playwright) -->
+- Playwright | [AGENT.md](configs/playwright/AGENT.md) | E2E testing
+<!-- TEMPLATE-ONLY:END(playwright) -->
+<!-- TEMPLATE-ONLY:START(skills) -->
+- Skills | [AGENT.md](configs/skills/AGENT.md) | AI agent skills, opt-in
+<!-- TEMPLATE-ONLY:END(skills) -->
+<!-- TEMPLATE-ONLY:START(template) -->
+- Template | [AGENT.md](configs/template/AGENT.md) | Scaffolder, template-only
+<!-- TEMPLATE-ONLY:END(template) -->
 <!-- TEMPLATE-ONLY:START(unocss) -->
-| UnoCSS | [AGENT.md](configs/unocss/AGENT.md) | Atomic CSS, opt-in |
+- UnoCSS | [AGENT.md](configs/unocss/AGENT.md) | Atomic CSS, opt-in
 <!-- TEMPLATE-ONLY:END(unocss) -->
 
 ## Workflows

@@ -158,25 +158,30 @@ Tool configs and their docs (reference, not concatenated):
 | [Commitlint](configs/commitlint/README.md) | — | Conventional Commits |
 | [GitHub Actions](configs/gh-actions/README.md) | `mci` | CI workflows, `mci lint` / `mci act` |
 | [Lefthook](configs/lefthook/README.md) | `msetup` | Git hooks |
-<!-- TEMPLATE-ONLY:START(playwright) -->
-| [Playwright](configs/playwright/README.md) | `me2e` | E2E testing |
-<!-- TEMPLATE-ONLY:END(playwright) -->
-<!-- TEMPLATE-ONLY:START(skills) -->
-| [Skills](configs/skills/README.md) | `mskills` | AI agent skills (opt-in) |
-<!-- TEMPLATE-ONLY:END(skills) -->
-<!-- TEMPLATE-ONLY:START(template) -->
-| [Template](configs/template/README.md) | `mdocs` | Scaffolder, template-only |
-<!-- TEMPLATE-ONLY:END(template) -->
 | [TypeScript](configs/ts/README.md) | `mtsc` | Shared tsconfigs |
 | [Turbo](configs/turbo/README.md) | `mturbo` | Task orchestration |
+
+<!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer) -->
+#### Opt-in tooling (present only when selected)
+
+<!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer) -->
+<!-- TEMPLATE-ONLY:START(playwright) -->
+- [Playwright](configs/playwright/README.md) (`me2e`) — E2E testing
+<!-- TEMPLATE-ONLY:END(playwright) -->
+<!-- TEMPLATE-ONLY:START(skills) -->
+- [Skills](configs/skills/README.md) (`mskills`) — AI agent skills (opt-in)
+<!-- TEMPLATE-ONLY:END(skills) -->
+<!-- TEMPLATE-ONLY:START(template) -->
+- [Template](configs/template/README.md) (`mdocs`) — Scaffolder, template-only
+<!-- TEMPLATE-ONLY:END(template) -->
 <!-- TEMPLATE-ONLY:START(unocss) -->
-| [UnoCSS](configs/unocss/README.md) | — | Atomic CSS, opt-in |
+- [UnoCSS](configs/unocss/README.md) — Atomic CSS, opt-in
 <!-- TEMPLATE-ONLY:END(unocss) -->
 <!-- TEMPLATE-ONLY:START(native) -->
-| [Native](configs/native/README.md) | — | NAPI-RS, opt-in |
+- [Native](configs/native/README.md) — NAPI-RS, opt-in
 <!-- TEMPLATE-ONLY:END(native) -->
 <!-- TEMPLATE-ONLY:START(devcontainer) -->
-| [Devcontainer](configs/devcontainer/README.md) | — | Codespaces / Dev Containers, opt-in |
+- [Devcontainer](configs/devcontainer/README.md) — Codespaces / Dev Containers, opt-in
 <!-- TEMPLATE-ONLY:END(devcontainer) -->
 
 See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow.
