@@ -154,6 +154,7 @@ export class MonorepoScaffolder {
       "packages/external/bunup.config.ts",
       "packages/external/src/index.ts",
       "packages/external/src/user.ts",
+      "packages/external/src/native.ts",
 
       // Example app
       "apps/example/package.json",
@@ -163,7 +164,14 @@ export class MonorepoScaffolder {
       "apps/example/src/pages/api/index.ts",
       "apps/example/src/pages/api/greet/[name].ts",
       "apps/example/src/pages/api/shout/[name].ts",
+      "apps/example/src/pages/api/native/index.ts",
+      "apps/example/src/pages/api/native/add.ts",
+      "apps/example/src/pages/api/native/status.ts",
+      "apps/example/src/pages/api/native/fibonacci/[n].ts",
+      "apps/example/src/pages/api/native/primes/[n].ts",
+      "apps/example/src/pages/api/native/reverse.ts",
       "apps/example/playwright.config.ts",
+      "uno.config.ts",
     ];
 
     // Config package manifests and config files carry the @myorg scope in
@@ -532,7 +540,12 @@ export class MonorepoScaffolder {
         const proc = Bun.spawn({
           cmd: ["bun", setupPath],
           cwd: this.targetDir,
-          env: { ...process.env, NATIVE_SCOPE: this.scope },
+          env: {
+            ...process.env,
+            NATIVE_SCOPE: this.scope,
+            UNOCSS_SCOPE: this.scope,
+            DEVCONTAINER_SCOPE: this.scope,
+          },
           stdout: "inherit",
           stderr: "inherit",
         });

@@ -1,19 +1,26 @@
 # @myorg/example
 
-Demo HTTP application built with Bun.serve and file-based routing.
+Demo HTTP application built with Bun.serve and file-based routing, with optional UnoCSS and native Rust bindings.
 
 > [!NOTE]
 > This app is **private** — not bundled, not published. Bun runs TypeScript directly with `--hot`.
 
 ## Endpoints
 
-| Route | Tier | Handler | Description |
-| :--- | :--- | :--- | :--- |
-| `GET /health` | 1 (static) | `src/index.ts` | Health probe |
-| `GET /` | 2 (file-based) | `src/pages/index.ts` | HTML welcome page |
-| `GET /api` | 2 (file-based) | `src/pages/api/index.ts` | API endpoint list |
-| `GET /api/greet/:name` | 2 (file-based) | `src/pages/api/greet/[name].ts` | Greeting |
-| `GET /api/shout/:name` | 2 (file-based) | `src/pages/api/shout/[name].ts` | Uppercased greeting |
+| Route | Tier | Handler | Description | Opt-in |
+| :--- | :--- | :--- | :--- | :--- |
+| `GET /health` | 1 (static) | `src/index.ts` | Health probe | always |
+| `GET /` | 2 (file-based) | `src/pages/index.ts` | HTML welcome page (plain or UnoCSS) | always, but content varies |
+| `GET /uno.css` | 1 (static) | `src/index.ts` | UnoCSS generated CSS | unocss |
+| `GET /api` | 2 (file-based) | `src/pages/api/index.ts` | API endpoint list (includes native when enabled) | always |
+| `GET /api/greet/:name` | 2 (file-based) | `src/pages/api/greet/[name].ts` | Greeting | always |
+| `GET /api/shout/:name` | 2 (file-based) | `src/pages/api/shout/[name].ts` | Uppercased greeting | always |
+| `GET /api/native` | 2 (file-based) | `src/pages/api/native/index.ts` | Native bindings info | native |
+| `GET /api/native/add?a=&b=` | 2 (file-based) | `src/pages/api/native/add.ts` | Rust add (or JS fallback) | native |
+| `GET /api/native/fibonacci/:n` | 2 (file-based) | `src/pages/api/native/fibonacci/[n].ts` | Fibonacci benchmark | native |
+| `GET /api/native/primes/:n` | 2 (file-based) | `src/pages/api/native/primes/[n].ts` | Primes sieve | native |
+| `GET /api/native/reverse?text=` | 2 (file-based) | `src/pages/api/native/reverse.ts` | Reverse string | native |
+| `GET /api/native/status` | 2 (file-based) | `src/pages/api/native/status.ts` | Native availability + benchmark | native |
 
 ## Development
 
@@ -21,26 +28,47 @@ Demo HTTP application built with Bun.serve and file-based routing.
 bun run dev              # hot-reloading server on :3000
 bun run test             # unit tests (routes + integration)
 bun run test:e2e         # Playwright E2E (requires browsers)
+bun run build:css        # generate public/uno.css (when unocss enabled)
 ```
 
 ```mermaid
 graph TD
     A[Request] --> B{Bun.serve routes}
-    B -->|/health| C[Tier 1<br/>static handler]
-    B -->|/*| D[Tier 2<br/>FileSystemRouter]
-    D --> E[src/pages/**/*.ts]
-    E --> F[Response]
+    B -->|/health| C[Tier 1<br/>static]
+    B -->|/uno.css| D[Tier 1<br/>UnoCSS - unocss only]
+    B -->|/api/native/health| E[Tier 1<br/>Native - native only]
+    B -->|/*| F[Tier 2<br/>FileSystemRouter]
+    F --> G[src/pages/**/*.ts]
+    G --> H{Opt-in?}
+    H -->|unocss| I[index-unocss.html → index.html]
+    H -->|native| J[/api/native/**]
+    H -->|plain| K[index.html]
 
     style B fill:#0969DA,color:#fff
+    style H fill:#f6f8fa,stroke:#0969DA
 ```
 
 ## Architecture
 
 > [!TIP]
-> Two-tier routing for performance and DX.
+> Two-tier routing + opt-in handling.
 
-- **Tier 1** (`routes:` in `Bun.serve`) — static endpoints, sub-millisecond dispatch
-- **Tier 2** (`fetch` + `FileSystemRouter`) — Next.js-style file-based routing
+- **Tier 1** (`routes:` in `Bun.serve`) — static endpoints, sub-millisecond dispatch. Includes `/uno.css` when unocss enabled, `/api/native/health` when native enabled.
+- **Tier 2** (`fetch` + `FileSystemRouter`) — Next.js-style file-based routing. `src/pages/api/native/**` only exists when native enabled.
+
+### Opt-in handling
+
+**UnoCSS:**
+- Template has `public/index.html` (plain) + `public/index-unocss.html` (UnoCSS utility classes)
+- When `unocss` enabled during scaffolding, `setup.ts` copies `index-unocss.html` → `index.html` (replaces)
+- When disabled, `index-unocss.html` + `uno.css` + `uno.config.ts` deleted via `filePatternsToRemove`
+- Bundle: `src/index.ts` serves `/uno.css` route that returns generated CSS or fallback note, `src/pages/index.ts` tries unocss version first
+
+**Native:**
+- Template has `src/pages/api/native/**` routes (add, fibonacci, primes, reverse, status)
+- When `native=none`, those routes deleted via `extraRemovals` + `filePatternsToRemove` + `fileRegexesToRemove` + `appDepsToRemove`
+- When `publish`/`docker`, routes kept, `packages/native/` scaffolded via `setup.ts`, `external` wrapper provides JS fallback
+- Bundle: `src/index.ts` has native health route, `api/index.ts` lists native endpoints conditionally
 
 <details>
 <summary>Adding a new endpoint</summary>
@@ -58,6 +86,7 @@ graph TD
   ```
 
 - [ ] Dynamic route: `src/pages/api/greet/[name].ts` → `/api/greet/:name`
+- [ ] For opt-in routes, wrap with scoped markers like `// START(unocss)` / `// END(unocss)` (see template scaffolder) or use native/unocss scopes
 - [ ] Test: add unit test in `tests/` and e2e in `e2e/` if enabled
 
 File-based routing conventions:
@@ -67,6 +96,7 @@ File-based routing conventions:
 | `src/pages/index.ts` | `/` |
 | `src/pages/api/index.ts` | `/api` |
 | `src/pages/api/greet/[name].ts` | `/api/greet/:name` |
+| `src/pages/api/native/add.ts` | `/api/native/add` |
 | `src/pages/blog/[...slug].ts` | `/blog/*` |
 
 </details>
@@ -75,7 +105,7 @@ File-based routing conventions:
 
 | Command | Description |
 | :--- | :--- |
-| `bun run test` | Unit tests (routes + integration) |
+| `bun run test` | Unit tests (routes + integration, handles optional features) |
 | `bun run test:e2e` | Playwright E2E (requires `me2e` + browsers) |
 
 > [!WARNING]

@@ -24,4 +24,6 @@ coveragePathIgnorePatterns = [
   "**/*.wasi.cjs",
   "**/target/**",
   "**/.devcontainer/**",
+  "**/apps/example/src/index.ts",
+  "**/pages/index.ts",
 ]

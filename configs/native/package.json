@@ -24,18 +24,29 @@
     ],
     "removals": {
       "none": {
+        "extraRemovals": [
+          "packages/native",
+          "rust-toolchain.toml",
+          ".cargo",
+          "apps/example/src/pages/api/native"
+        ],
         "filePatternsToRemove": [
           "**/*.node",
-          "**/native/**",
           "**/*.napi.*",
+          "**/*.wasi.cjs",
           "rust-toolchain.toml",
-          ".cargo/**"
+          ".cargo/**",
+          "**/native/**",
+          "**/api/native/**"
         ],
         "fileRegexesToRemove": [
-          "native",
-          "\\.node$",
+          "\\\\.node$",
           "napi",
-          "rust-toolchain"
+          "rust-toolchain",
+          "api/native"
+        ],
+        "appDepsToRemove": [
+          "@myorg/native"
         ]
       },
       "publish": {},

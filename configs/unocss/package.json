@@ -12,23 +12,31 @@
       "true": {},
       "false": {
         "extraRemovals": [
-          "uno.config.ts"
+          "uno.config.ts",
+          "apps/example/public/index-unocss.html",
+          "apps/example/public/index-plain.html",
+          "apps/example/public/uno.css"
         ],
         "filePatternsToRemove": [
           "uno.config.*",
           "**/*.unocss.*",
-          "**/unocss/**"
+          "**/unocss/**",
+          "**/index-unocss.html",
+          "**/uno.css"
         ],
         "fileRegexesToRemove": [
           "unocss",
-          "uno\\.config"
+          "uno\\.config",
+          "index-unocss"
         ],
         "appDepsToRemove": [
           "@unocss/reset",
-          "unocss"
+          "unocss",
+          "@myorg/unocss"
         ]
       }
-    }
+    },
+    "setup": "configs/unocss/src/setup.ts"
   },
   "exports": {
     ".": "./index.ts"

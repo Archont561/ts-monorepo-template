@@ -9,13 +9,16 @@
     "typecheck": "mtsc --noEmit",
     "test": "mbun test tests/",
     "coverage": "mbun test tests/ --coverage",
-    "test:e2e": "me2e"
+    "test:e2e": "me2e",
+    "build:css": "bunx unocss --out-file public/uno.css || echo 'UnoCSS not enabled or build failed'"
   },
   "dependencies": {
     "@myorg/external": "workspace:*"
   },
   "devDependencies": {
     "@myorg/ts": "workspace:*",
-    "@myorg/playwright": "workspace:*"
+    "@myorg/playwright": "workspace:*",
+    "@myorg/unocss": "workspace:*",
+    "@myorg/native": "workspace:*"
   }
 }
