@@ -11,7 +11,7 @@
 ## Usage
 
 ```bash
-bun create <user>/<repo> my-app   # choose "Set up native Node-API bindings?"
+bun create Archont561/ts-monorepo-template my-app   # choose "Set up native Node-API bindings?"
 ```
 
 Selecting `none` removes the config (and its artifacts) from the generated

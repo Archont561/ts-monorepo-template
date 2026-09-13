@@ -90,7 +90,8 @@ describe("aggregate", () => {
       expect(agents).not.toContain("<!-- AGENT:biome:START -->");
 
       const readme = await file(`${result.templateDir}/README.md`).text();
-      expect(readme).toContain("# @agent-test/external");
+      expect(readme).toContain("# Monorepo");
+      expect(readme).not.toContain("TypeScript Monorepo Template");
       expect(readme).not.toContain("TEMPLATE-ONLY");
       expect(readme).not.toContain("<!-- PACKAGE:biome:START -->");
       // Should reference config docs

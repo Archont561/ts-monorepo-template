@@ -8,7 +8,7 @@ This repository is a **template**, not a regular monorepo. Use it to scaffold a 
 ## Using this template
 
 ```bash
-bun create <your-github-user>/ts-monorepo-template my-app
+bun create Archont561/ts-monorepo-template my-app
 cd my-app
 bun install
 bun run dev
@@ -28,7 +28,7 @@ After scaffolding, this README will describe your monorepo (see below).
 ---
 
 <!-- TEMPLATE-ONLY:END(template) -->
-# @myorg/external
+# Monorepo
 
 A TypeScript library monorepo built with Bun, Turborepo, and Bunup.
 
@@ -45,9 +45,9 @@ The example server starts at [http://localhost:3000](http://localhost:3000).
 
 ```
 apps/
-  example/          Bun.serve HTTP server (imports from @myorg/external)
+  example/          Bun.serve HTTP server
 packages/
-  external/         Public library (published to npm, exports . and subpaths)
+  external/         Public library (published to npm)
   internal/         Private implementation (inlined into external by Bunup)
 configs/
   biome/            Lint and format (mbiome)

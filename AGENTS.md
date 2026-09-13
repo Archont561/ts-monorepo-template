@@ -8,7 +8,7 @@ This repository is a **template** for TypeScript monorepos. It contains opt-in c
 ## Using this template
 
 ```bash
-bun create <your-github-user>/ts-monorepo-template my-app
+bun create Archont561/ts-monorepo-template my-app
 cd my-app
 bun install
 ```
