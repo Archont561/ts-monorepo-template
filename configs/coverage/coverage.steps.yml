@@ -1,0 +1,75 @@
+      - name: Run tests with coverage (Bun + Rust)
+        run: |
+          echo "📊 Running tests with coverage"
+          bun run coverage || echo "bun coverage failed"
+          # Rust coverage via cargo-llvm-cov if native enabled and tool installed
+          if [ -f "packages/native/Cargo.toml" ]; then
+            if command -v cargo-llvm-cov >/dev/null 2>&1; then
+              echo "🦀 Running Rust coverage via cargo-llvm-cov"
+              cargo llvm-cov --manifest-path packages/native/Cargo.toml --lcov --output-path coverage/rust-lcov.info || echo "rust coverage failed"
+              # Merge Rust LCOV into main if exists
+              if [ -f "coverage/rust-lcov.info" ] && [ -f "coverage/lcov.info" ]; then
+                echo "Merging Rust + JS LCOV"
+                lcov --add-tracefile coverage/lcov.info --add-tracefile coverage/rust-lcov.info --output-file coverage/merged.lcov || echo "merge failed"
+                mv coverage/merged.lcov coverage/lcov.info || true
+              elif [ -f "coverage/rust-lcov.info" ]; then
+                cp coverage/rust-lcov.info coverage/lcov.info
+              fi
+            else
+              echo "⚠️ cargo-llvm-cov not installed, skipping Rust coverage (install: cargo install cargo-llvm-cov)"
+            fi
+          fi
+        shell: bash
+
+      - name: Install lcov
+        run: sudo apt-get update && sudo apt-get install -y lcov bc
+        shell: bash
+
+      - name: Generate coverage HTML (genhtml)
+        run: |
+          if [ -f "coverage/lcov.info" ]; then
+            genhtml coverage/lcov.info \
+              --output-directory coverage/html \
+              --title "Coverage Report" \
+              --show-details \
+              --highlight \
+              --legend
+          else
+            echo "⚠️ coverage/lcov.info not found"
+            mkdir -p coverage/html
+            echo "<h1>No coverage data</h1>" > coverage/html/index.html
+          fi
+        shell: bash
+
+      - name: Upload coverage HTML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/html/
+          retention-days: 14
+
+      - name: Check coverage threshold (80%)
+        run: |
+          if [ ! -f "coverage/lcov.info" ]; then
+            echo "⚠️ No lcov.info, skipping threshold"
+            exit 0
+          fi
+          COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | awk '{print $2}' | tr -d '%')
+          echo "Coverage: $COVERAGE%"
+          if [ -z "$COVERAGE" ]; then
+            echo "⚠️ Could not parse coverage"
+            exit 0
+          fi
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "::error::Coverage ${COVERAGE}% is below 80% threshold"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Report coverage to PR
+        if: github.event_name == 'pull_request'
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          lcov-file: ./coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          delete-old-comments: true

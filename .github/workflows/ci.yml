@@ -33,6 +33,63 @@ jobs:
           files: coverage/lcov.info
           fail_ci_if_error: false
 
+      # Coverage reporting — LCOV + HTML + artifact + threshold + PR comment
+      - name: Install lcov
+        run: sudo apt-get update && sudo apt-get install -y lcov bc
+        shell: bash
+
+      - name: Generate coverage HTML (genhtml)
+        run: |
+          echo "📊 Generating HTML coverage report from coverage/lcov.info"
+          if [ -f "coverage/lcov.info" ]; then
+            genhtml coverage/lcov.info \
+              --output-directory coverage/html \
+              --title "Coverage Report" \
+              --show-details \
+              --highlight \
+              --legend || echo "genhtml failed, continuing"
+            ls -lh coverage/html/ | head -20
+          else
+            echo "⚠️ coverage/lcov.info not found, skipping genhtml"
+          fi
+        shell: bash
+
+      - name: Upload coverage HTML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/html/
+          retention-days: 14
+
+      - name: Check coverage threshold (80%)
+        run: |
+          if [ ! -f "coverage/lcov.info" ]; then
+            echo "⚠️ coverage/lcov.info not found, skipping threshold check"
+            exit 0
+          fi
+          COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | awk '{print $2}' | tr -d '%')
+          echo "Line coverage: $COVERAGE%"
+          echo "Threshold: 80%"
+          if [ -z "$COVERAGE" ]; then
+            echo "⚠️ Could not parse coverage, skipping threshold check"
+            exit 0
+          fi
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "::error::Coverage ${COVERAGE}% is below 80% threshold"
+            exit 1
+          else
+            echo "✅ Coverage ${COVERAGE}% meets threshold"
+          fi
+        shell: bash
+
+      - name: Report coverage to PR (lcov-reporter-action)
+        if: github.event_name == 'pull_request'
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          lcov-file: ./coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          delete-old-comments: true
+
       - name: Validate workflows
         run: bun run ci:lint
 

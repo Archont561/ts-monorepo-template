@@ -10,6 +10,7 @@
         "@myorg/bunup": "workspace:*",
         "@myorg/changeset": "workspace:*",
         "@myorg/citty": "workspace:*",
+        "@myorg/coverage": "workspace:*",
         "@myorg/dependabot": "workspace:*",
         "@myorg/devcontainer": "workspace:*",
         "@myorg/gh-actions": "workspace:*",
@@ -106,6 +107,21 @@
       "devDependencies": {
         "@commitlint/cli": "^21.2.2",
         "@commitlint/config-conventional": "^21.2.2",
+      },
+    },
+    "configs/coverage": {
+      "name": "@myorg/coverage",
+      "version": "0.0.0",
+      "bin": {
+        "mcoverage": "./src/cli.ts",
+      },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
+      "devDependencies": {
+        "@myorg/bunup": "workspace:*",
+        "@myorg/citty": "workspace:*",
+        "@myorg/ts": "workspace:*",
       },
     },
     "configs/dependabot": {
@@ -463,6 +479,8 @@
     "@myorg/citty": ["@myorg/citty@workspace:configs/citty"],
 
     "@myorg/commitlint": ["@myorg/commitlint@workspace:configs/commitlint"],
+
+    "@myorg/coverage": ["@myorg/coverage@workspace:configs/coverage"],
 
     "@myorg/dependabot": ["@myorg/dependabot@workspace:configs/dependabot"],
 

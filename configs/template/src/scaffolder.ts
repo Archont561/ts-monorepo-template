@@ -532,6 +532,19 @@ export class MonorepoScaffolder {
         console.log(`🗑️ Removed ${pagesWorkflow} (pages disabled)`);
       }
     }
+    // Coverage: standalone coverage.yml when pages disabled, otherwise included in pages.yml
+    const coverageConfigExists = await file(`${this.targetDir}/configs/coverage/package.json`).exists();
+    if (coverageConfigExists) {
+      if (!pagesConfigExists) {
+        await aggregateWorkflow(this.targetDir, "coverage.base.yml", "coverage.steps.yml");
+      } else {
+        const coverageWorkflow = `${this.targetDir}/.github/workflows/coverage.yml`;
+        if (await file(coverageWorkflow).exists()) {
+          await $`rm -rf ${coverageWorkflow}`.quiet();
+          console.log(`🗑️ Removed ${coverageWorkflow} (coverage included in pages.yml)`);
+        }
+      }
+    }
     // Dependabot is always generated (always config), but check existence for safety
     const dependabotConfigExists = await file(
       `${this.targetDir}/configs/dependabot/package.json`,

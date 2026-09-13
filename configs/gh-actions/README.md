@@ -14,13 +14,16 @@
 
 ### Workflow generation
 
-| Skeleton | Fragments | Output |
-| :--- | :--- | :--- |
-| `ci.base.yml` | `*/ci.steps.yml` | `.github/workflows/ci.yml` |
-| `release.base.yml` | `*/release.steps.yml` | `.github/workflows/release.yml` |
-| `pages.base.yml` | `*/pages.steps.yml` | `.github/workflows/pages.yml` |
-| `dependabot.base.yml` | `*/dependabot.yml` | `.github/dependabot.yml` |
-| `dependabot-auto-merge.base.yml` | `*/dependabot-auto-merge.steps.yml` | `.github/workflows/dependabot-auto-merge.yml` |
+| Skeleton | Fragments | Output | When |
+| :--- | :--- | :--- | :--- |
+| `ci.base.yml` | `*/ci.steps.yml` | `.github/workflows/ci.yml` | Always |
+| `release.base.yml` | `*/release.steps.yml` | `.github/workflows/release.yml` | Always |
+| `pages.base.yml` | `*/pages.steps.yml` | `.github/workflows/pages.yml` | Pages enabled |
+| `coverage.base.yml` | `*/coverage.steps.yml` | `.github/workflows/coverage.yml` | Pages **disabled** (standalone coverage site) |
+| `dependabot.base.yml` | `*/dependabot.yml` | `.github/dependabot.yml` | Always |
+| `dependabot-auto-merge.base.yml` | `*/dependabot-auto-merge.steps.yml` | `.github/workflows/dependabot-auto-merge.yml` | Always |
+
+Coverage reporting: when Pages enabled, coverage HTML is included at `/coverage/` via `pages.steps.yml` in `pages.yml`; when Pages disabled, standalone `coverage.yml` deploys coverage HTML to Pages.
 
 ## Usage
 

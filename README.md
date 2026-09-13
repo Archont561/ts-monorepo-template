@@ -106,8 +106,9 @@ configs/
   bunup/            Bundling presets (mbunup)
   changeset/        Versioning and releases (mchangeset)
   commitlint/       Conventional Commits (commitlint)
+  coverage/         LCOV coverage reporting (HTML, artifact, Pages, threshold, PR comment)
   dependabot/       Automated dependency updates (npm, cargo, actions, docker)
-  gh-actions/       GitHub Actions CI + act + Pages skeletons (mci)
+  gh-actions/       GitHub Actions CI + act + Pages + Coverage skeletons (mci)
   lefthook/         Git hooks (msetup)
   ts/               TypeScript presets (mtsc)
   turbo/            Task orchestration (mturbo)
@@ -155,11 +156,12 @@ Tool configs and their docs (reference, not concatenated):
 | Config | Bin | Description |
 | :--- | :--- | :--- |
 | [Biome](configs/biome/README.md) | `mbiome` | Lint and format |
-| [Bun Config](configs/bun-config/README.md) | `mbun` | Bun runtime, test, coverage |
+| [Bun Config](configs/bun-config/README.md) | `mbun` | Bun runtime, test, coverage (LCOV generation) |
 | [Bunup](configs/bunup/README.md) | `mbunup` | Bundling presets |
 | [Changeset](configs/changeset/README.md) | `mchangeset` | Versioning and releases |
 | [Citty](configs/citty/README.md) | `mcitty` | Elegant CLI builder (citty) |
 | [Commitlint](configs/commitlint/README.md) | — | Conventional Commits |
+| [Coverage](configs/coverage/README.md) | — | LCOV coverage reporting (HTML via genhtml, artifact, Pages, threshold, PR comment) |
 | [Dependabot](configs/dependabot/README.md) | — | Automated dependency updates (npm, cargo, actions, docker) |
 | [GitHub Actions](configs/gh-actions/README.md) | `mci` | CI workflows, `mci lint` / `mci act` |
 | [Lefthook](configs/lefthook/README.md) | `msetup` | Git hooks |
@@ -256,9 +258,10 @@ sequenceDiagram
 <details>
 <summary>Workflow files</summary>
 
-- `ci.yml` — generated from `ci.base.yml` + all `ci.steps.yml`
+- `ci.yml` — generated from `ci.base.yml` + all `ci.steps.yml` (includes coverage: LCOV + HTML + artifact + threshold + PR comment)
 - `release.yml` — generated from `release.base.yml` + all `release.steps.yml`
-- `pages.yml` — generated from `pages.base.yml` + all `pages.steps.yml` (GitHub Pages, opt-in)
+- `pages.yml` — generated from `pages.base.yml` + all `pages.steps.yml` (GitHub Pages, opt-in) — when enabled, includes coverage at `/coverage/` via coverage config
+- `coverage.yml` — generated from `coverage.base.yml` + all `coverage.steps.yml` (standalone coverage Pages site) — only when Pages **disabled**, otherwise coverage is in `pages.yml`
 - `dependabot.yml` — generated from `dependabot.base.yml` + all `dependabot.yml` fragments (npm, cargo, actions, docker)
 - `dependabot-auto-merge.yml` — generated from `dependabot-auto-merge.base.yml` + `dependabot-auto-merge.steps.yml` (auto-merge patch/minor)
 - Fragments are discovered via `discoverConfigs()` scanning `configs/*/package.json` `scaffold` metadata

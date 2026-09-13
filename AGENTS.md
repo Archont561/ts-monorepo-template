@@ -175,13 +175,14 @@ Tool configs and their agent-facing docs (reference, not concatenated):
 | Config | File | Purpose |
 | :--- | :--- | :--- |
 | Biome | [AGENT.md](configs/biome/AGENT.md) | Lint and format |
-| Bun Config | [AGENT.md](configs/bun-config/AGENT.md) | Bun runtime and coverage (citty) |
+| Bun Config | [AGENT.md](configs/bun-config/AGENT.md) | Bun runtime and coverage generation (citty) — LCOV via bunfig.toml |
 | Bunup | [AGENT.md](configs/bunup/AGENT.md) | Bundling presets |
 | Changeset | [AGENT.md](configs/changeset/AGENT.md) | Releases (citty) |
 | Citty | [AGENT.md](configs/citty/AGENT.md) | CLI builder (citty) |
 | Commitlint | [AGENT.md](configs/commitlint/AGENT.md) | Commit messages |
+| Coverage | [AGENT.md](configs/coverage/AGENT.md) | LCOV reporting — HTML via genhtml, artifact, Pages (/coverage/ or standalone), threshold 80%, PR comment |
 | Dependabot | [AGENT.md](configs/dependabot/AGENT.md) | Automated dependency updates (npm, cargo, actions, docker) |
-| GitHub Actions | [AGENT.md](configs/gh-actions/AGENT.md) | CI workflow validation and local act (citty) |
+| GitHub Actions | [AGENT.md](configs/gh-actions/AGENT.md) | CI workflow validation and local act (citty) + coverage/pages skeletons |
 | Lefthook | [AGENT.md](configs/lefthook/AGENT.md) | Git hooks (citty) |
 | TypeScript | [AGENT.md](configs/ts/AGENT.md) | Shared tsconfigs |
 | Turbo | [AGENT.md](configs/turbo/AGENT.md) | Task orchestration |

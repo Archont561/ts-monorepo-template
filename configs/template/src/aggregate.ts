@@ -16,6 +16,8 @@ import { $, file, write } from "bun";
  * - `.github/workflows/pages.yml` is `configs/gh-actions/pages.base.yml`
  *   with `{{STEPS}}` filled from every `configs/<dir>/pages.steps.yml`
  *   (sorted, concatenated) — GitHub Pages deployment.
+ * - `.github/workflows/coverage.yml` is `configs/gh-actions/coverage.base.yml`
+ *   with `{{STEPS}}` filled from `coverage.steps.yml` — LCOV + HTML + artifact + Pages.
  * - `.github/dependabot.yml` is `configs/gh-actions/dependabot.base.yml`
  *   with `{{UPDATES}}` filled from every `configs/<dir>/dependabot.yml`
  *   (sorted, concatenated) — Dependabot version updates.
@@ -88,6 +90,7 @@ export async function aggregateWorkflow(
     stepsFileName === "ci.steps.yml" ||
     stepsFileName === "release.steps.yml" ||
     stepsFileName === "pages.steps.yml" ||
+    stepsFileName === "coverage.steps.yml" ||
     stepsFileName === "dependabot.yml" ||
     stepsFileName === "dependabot-auto-merge.steps.yml"
   ) {
@@ -134,6 +137,23 @@ export async function regenerateAll(targetDir: string): Promise<void> {
     if (await file(pagesWorkflow).exists()) {
       await $`rm -rf ${pagesWorkflow}`.quiet();
       console.log(`🗑️ Removed ${pagesWorkflow} (pages disabled)`);
+    }
+  }
+  // Coverage workflow: standalone coverage Pages when pages disabled, otherwise coverage is included in pages.yml via pages.steps
+  const coverageConfigExists = await file(`${targetDir}/configs/coverage/package.json`).exists();
+  const pagesExistsForCoverage = pagesConfigExists;
+  if (coverageConfigExists) {
+    if (!pagesExistsForCoverage) {
+      // No pages app — deploy coverage HTML as standalone Pages site
+      await aggregateWorkflow(targetDir, "coverage.base.yml", "coverage.steps.yml");
+    } else {
+      // Pages app exists — coverage is included at /coverage/ via pages.steps.yml
+      // Remove stale standalone coverage.yml if it exists (to avoid Pages conflict)
+      const coverageWorkflow = `${targetDir}/.github/workflows/coverage.yml`;
+      if (await file(coverageWorkflow).exists()) {
+        await $`rm -rf ${coverageWorkflow}`.quiet();
+        console.log(`🗑️ Removed ${coverageWorkflow} (coverage included in pages.yml)`);
+      }
     }
   }
   // Dependabot is always generated (always config), but check existence for safety
