@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { readdirSync } from "node:fs";
 import { $, file } from "bun";
+
+/** Minimal shape of a generated workflow, used to assert YAML validity. */
+type WorkflowFile = { jobs?: Record<string, { steps?: unknown[] }> };
+
 import { TemplateHarness } from "../src/harness";
 import { MonorepoScaffolder } from "../src/scaffolder";
 
@@ -60,6 +65,81 @@ describe("aggregate", () => {
       const second = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
 
       expect(second).toBe(first);
+    },
+    { timeout: 60_000 },
+  );
+
+  test(
+    "generated workflows are valid YAML with steps nested under each job",
+    async () => {
+      const result = await new TemplateHarness({ skipInstall: true }).prepare();
+      cleanup = result.cleanup;
+
+      await $`bun ${result.templateDir}/configs/template/src/aggregate.ts ${result.templateDir}`.quiet();
+
+      for (const name of ["ci", "release", "pages", "stale"]) {
+        const path = `${result.templateDir}/.github/workflows/${name}.yml`;
+        if (!(await file(path).exists())) continue;
+
+        const raw = await file(path).text();
+        let parsed: WorkflowFile;
+        try {
+          parsed = Bun.YAML.parse(raw) as WorkflowFile;
+        } catch (error) {
+          throw new Error(`${name}.yml is not valid YAML: ${String(error)}`);
+        }
+
+        const jobs = Object.entries(parsed.jobs ?? {});
+        expect(jobs.length, `${name}.yml has no jobs`).toBeGreaterThan(0);
+
+        for (const [jobName, job] of jobs) {
+          const steps = job.steps ?? [];
+          expect(Array.isArray(steps), `${name}.yml → ${jobName} has no steps list`).toBe(true);
+          expect(steps.length, `${name}.yml → ${jobName} has no steps`).toBeGreaterThan(0);
+          for (const step of steps) {
+            expect(
+              step !== null && typeof step === "object",
+              `${name}.yml → ${jobName} has a malformed step`,
+            ).toBe(true);
+          }
+        }
+      }
+    },
+    { timeout: 60_000 },
+  );
+
+  test(
+    "step fragments are indented so they splice under a job's steps: key",
+    async () => {
+      const result = await new TemplateHarness({ skipInstall: true }).prepare();
+      cleanup = result.cleanup;
+
+      const configsDir = `${result.templateDir}/configs`;
+      const fragments = readdirSync(configsDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .flatMap((entry) =>
+          readdirSync(`${configsDir}/${entry.name}`)
+            .filter((name) => name.endsWith(".steps.yml") || name === "dependabot.yml")
+            .map((name) => `${configsDir}/${entry.name}/${name}`),
+        )
+        .sort();
+      expect(fragments.length).toBeGreaterThan(0);
+
+      // Fragments are concatenated verbatim into {{STEPS}}/{{UPDATES}}, which sit
+      // at column 0 of a job's `steps:` list — a fragment line starting at column 0
+      // silently produces a workflow GitHub refuses to parse.
+      const unindented: string[] = [];
+      for (const fragment of fragments) {
+        const lines = (await file(fragment).text()).split("\n");
+        for (const [index, line] of lines.entries()) {
+          if (/^[^\s#]/.test(line)) {
+            unindented.push(
+              `${fragment.replace(`${result.templateDir}/`, "")}:${index + 1}: ${line}`,
+            );
+          }
+        }
+      }
+      expect(unindented).toEqual([]);
     },
     { timeout: 60_000 },
   );

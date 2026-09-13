@@ -33,22 +33,22 @@ jobs:
           files: coverage/lcov.info
           fail_ci_if_error: false
 
-# TEMPLATE-ONLY:START(codeql)
-# CodeQL — SAST for JS/TS (opt-in, default true)
-- name: Initialize CodeQL (JS/TS)
-  uses: github/codeql-action/init@v3
-  with:
-    languages: javascript-typescript
-    queries: security-and-quality
+      # TEMPLATE-ONLY:START(codeql)
+      # CodeQL — SAST for JS/TS (opt-in, default true)
+      - name: Initialize CodeQL (JS/TS)
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
 
-- name: Autobuild (CodeQL)
-  uses: github/codeql-action/autobuild@v3
+      - name: Autobuild (CodeQL)
+        uses: github/codeql-action/autobuild@v3
 
-- name: Perform CodeQL Analysis
-  uses: github/codeql-action/analyze@v3
-  with:
-    category: "/language:javascript-typescript"
-# TEMPLATE-ONLY:END(codeql)
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
+      # TEMPLATE-ONLY:END(codeql)
 
       # Coverage reporting via mcoverage CLI — LCOV + HTML + artifact + threshold + PR comment
       - name: Install lcov
@@ -100,100 +100,100 @@ jobs:
       - name: Validate workflows
         run: bun run ci:lint
 
-# Gitleaks — secret scanning in CI (always, security baseline)
-- name: Gitleaks — secret scanning (mgitleaks via action)
-  uses: gitleaks/gitleaks-action@v2
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Gitleaks — secret scanning in CI (always, security baseline)
+      - name: Gitleaks — secret scanning (mgitleaks via action)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# TEMPLATE-ONLY:START(native)
-- name: Setup Rust toolchain
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  uses: dtolnay/rust-toolchain@stable
-  with:
-    components: clippy, rustfmt
-    targets: wasm32-wasip1-threads
+      # TEMPLATE-ONLY:START(native)
+      - name: Setup Rust toolchain
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: wasm32-wasip1-threads
 
-- name: Rust cache
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  uses: Swatinem/rust-cache@v2
-  with:
-    workspaces: "packages/native"
+      - name: Rust cache
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "packages/native"
 
-- name: Cargo fmt check (mnative)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  run: mnative fmt:check
-  shell: bash
+      - name: Cargo fmt check (mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: mnative fmt:check
+        shell: bash
 
-- name: Cargo clippy (deny warnings, mnative)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  run: mnative clippy
-  shell: bash
+      - name: Cargo clippy (deny warnings, mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: mnative clippy
+        shell: bash
 
-- name: Cargo check (fast, mnative)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  run: mnative check
-  shell: bash
+      - name: Cargo check (fast, mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: mnative check
+        shell: bash
 
-- name: Cargo test (mnative)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  run: mnative test
-  shell: bash
+      - name: Cargo test (mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: mnative test
+        shell: bash
 
-- name: Build native bindings (host, mnative)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  run: |
-    echo "🦀 Building native bindings via mnative (self-contained)"
-    bun run build:native || echo "native build skipped (install Rust)"
-  shell: bash
+      - name: Build native bindings (host, mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: |
+          echo "🦀 Building native bindings via mnative (self-contained)"
+          bun run build:native || echo "native build skipped (install Rust)"
+        shell: bash
 
-- name: Check native package types
-  if: hashFiles('packages/native/package.json') != ''
-  run: bun --filter @myorg/native run typecheck || echo "native typecheck skipped"
-  shell: bash
-# TEMPLATE-ONLY:END(native)
+      - name: Check native package types
+        if: hashFiles('packages/native/package.json') != ''
+        run: bun --filter @myorg/native run typecheck || echo "native typecheck skipped"
+        shell: bash
+      # TEMPLATE-ONLY:END(native)
 
       - name: E2E tests
         run: bun run test:e2e
 
-# TEMPLATE-ONLY:START(trivy)
-# Trivy — filesystem + container vulnerability scanning (opt-in)
-- name: Run Trivy FS scan (HIGH, CRITICAL)
-  uses: aquasecurity/trivy-action@0.24.0
-  with:
-    scan-type: fs
-    scan-ref: .
-    severity: HIGH,CRITICAL
-    format: sarif
-    output: trivy-fs-results.sarif
+      # TEMPLATE-ONLY:START(trivy)
+      # Trivy — filesystem + container vulnerability scanning (opt-in)
+      - name: Run Trivy FS scan (HIGH, CRITICAL)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          format: sarif
+          output: trivy-fs-results.sarif
 
-- name: Upload Trivy FS SARIF to GitHub Security
-  uses: github/codeql-action/upload-sarif@v3
-  if: always()
-  with:
-    sarif_file: trivy-fs-results.sarif
+      - name: Upload Trivy FS SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-fs-results.sarif
 
-- name: Build image for Trivy scan (if Dockerfile exists)
-  if: hashFiles('apps/example/Dockerfile') != ''
-  run: |
-    echo "🐳 Building image for Trivy scan"
-    docker build -t app:trivy-scan -f apps/example/Dockerfile . || echo "docker build failed, skipping image scan"
+      - name: Build image for Trivy scan (if Dockerfile exists)
+        if: hashFiles('apps/example/Dockerfile') != ''
+        run: |
+          echo "🐳 Building image for Trivy scan"
+          docker build -t app:trivy-scan -f apps/example/Dockerfile . || echo "docker build failed, skipping image scan"
 
-- name: Trivy image scan (if Dockerfile)
-  if: hashFiles('apps/example/Dockerfile') != ''
-  uses: aquasecurity/trivy-action@0.24.0
-  with:
-    image-ref: app:trivy-scan
-    severity: HIGH,CRITICAL
-    format: sarif
-    output: trivy-image-results.sarif
+      - name: Trivy image scan (if Dockerfile)
+        if: hashFiles('apps/example/Dockerfile') != ''
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: app:trivy-scan
+          severity: HIGH,CRITICAL
+          format: sarif
+          output: trivy-image-results.sarif
 
-- name: Upload Trivy image SARIF to GitHub Security
-  if: always() && hashFiles('apps/example/Dockerfile') != ''
-  uses: github/codeql-action/upload-sarif@v3
-  with:
-    sarif_file: trivy-image-results.sarif
-# TEMPLATE-ONLY:END(trivy)
+      - name: Upload Trivy image SARIF to GitHub Security
+        if: always() && hashFiles('apps/example/Dockerfile') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image-results.sarif
+      # TEMPLATE-ONLY:END(trivy)
 
       - name: Typecheck
         run: bun run typecheck

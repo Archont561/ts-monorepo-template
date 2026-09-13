@@ -27,68 +27,68 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-# TEMPLATE-ONLY:START(pages)
-- name: Generate coverage HTML for Pages (include at /coverage/ via mcoverage)
-  run: |
-    echo "📊 Generating coverage HTML for inclusion in Pages site (via mcoverage)"
-    if [ ! -f "coverage/lcov.info" ]; then
-      echo "⚠️ coverage/lcov.info not found, running coverage first"
-      bun run coverage || echo "coverage failed"
-    fi
-    if [ -f "coverage/lcov.info" ]; then
-      sudo apt-get update && sudo apt-get install -y lcov bc || echo "lcov install failed"
-      mcoverage html || genhtml coverage/lcov.info --output-directory coverage/html --title "Coverage Report" --show-details --highlight --legend || echo "genhtml failed"
-      mkdir -p apps/example/public/coverage
-      cp -r coverage/html/* apps/example/public/coverage/ || echo "copy coverage to public/coverage failed"
-      echo "✅ Coverage included at /coverage/ in Pages site"
-      ls -lh apps/example/public/coverage/ | head -20
-    else
-      echo "⚠️ No coverage/lcov.info, skipping Pages coverage inclusion"
-    fi
-  shell: bash
-# TEMPLATE-ONLY:END(pages)
+      # TEMPLATE-ONLY:START(pages)
+      - name: Generate coverage HTML for Pages (include at /coverage/ via mcoverage)
+        run: |
+          echo "📊 Generating coverage HTML for inclusion in Pages site (via mcoverage)"
+          if [ ! -f "coverage/lcov.info" ]; then
+            echo "⚠️ coverage/lcov.info not found, running coverage first"
+            bun run coverage || echo "coverage failed"
+          fi
+          if [ -f "coverage/lcov.info" ]; then
+            sudo apt-get update && sudo apt-get install -y lcov bc || echo "lcov install failed"
+            mcoverage html || genhtml coverage/lcov.info --output-directory coverage/html --title "Coverage Report" --show-details --highlight --legend || echo "genhtml failed"
+            mkdir -p apps/example/public/coverage
+            cp -r coverage/html/* apps/example/public/coverage/ || echo "copy coverage to public/coverage failed"
+            echo "✅ Coverage included at /coverage/ in Pages site"
+            ls -lh apps/example/public/coverage/ | head -20
+          else
+            echo "⚠️ No coverage/lcov.info, skipping Pages coverage inclusion"
+          fi
+        shell: bash
+      # TEMPLATE-ONLY:END(pages)
 
-# TEMPLATE-ONLY:START(pages)
-- name: Build static site for Pages
-  run: |
-    echo "📄 Building static site for GitHub Pages"
-    # Build UnoCSS if enabled
-    if [ -f "configs/unocss/uno.config.ts" ]; then
-      echo "→ Building UnoCSS"
-      bunx unocss --config configs/unocss/uno.config.ts || echo "UnoCSS build skipped"
-    fi
-    # Build JS packages (if any dist needed)
-    bun run build || echo "JS build skipped"
-    # Ensure public dir exists for Pages
-    ls -la apps/example/public/ || echo "public dir missing"
-    # If example has a static export, run it here
-    # bun --filter @myorg/example run build:static || true
-  shell: bash
+      # TEMPLATE-ONLY:START(pages)
+      - name: Build static site for Pages
+        run: |
+          echo "📄 Building static site for GitHub Pages"
+          # Build UnoCSS if enabled
+          if [ -f "configs/unocss/uno.config.ts" ]; then
+            echo "→ Building UnoCSS"
+            bunx unocss --config configs/unocss/uno.config.ts || echo "UnoCSS build skipped"
+          fi
+          # Build JS packages (if any dist needed)
+          bun run build || echo "JS build skipped"
+          # Ensure public dir exists for Pages
+          ls -la apps/example/public/ || echo "public dir missing"
+          # If example has a static export, run it here
+          # bun --filter @myorg/example run build:static || true
+        shell: bash
 
-- name: Configure base path for Pages (repo name)
-  run: |
-    echo "🔧 Configuring base path for GitHub Pages"
-    # For non-root repo deploys (username.github.io/repo-name), set base path
-    # Example: if your static generator needs base: "/repo-name/"
-    # Adjust apps/example/public/index.html base if needed
-    REPO_NAME=$(basename ${{ github.repository }})
-    echo "Repo name: $REPO_NAME"
-    echo "Default Pages URL will be https://${{ github.repository_owner }}.github.io/$REPO_NAME"
-    # Uncomment to inject base path into index.html if needed:
-    # sed -i \"s|href=\\\"/|href=\\\"/$REPO_NAME/|g\" apps/example/public/index.html || true
-  shell: bash
-# TEMPLATE-ONLY:END(pages)
+      - name: Configure base path for Pages (repo name)
+        run: |
+          echo "🔧 Configuring base path for GitHub Pages"
+          # For non-root repo deploys (username.github.io/repo-name), set base path
+          # Example: if your static generator needs base: "/repo-name/"
+          # Adjust apps/example/public/index.html base if needed
+          REPO_NAME=$(basename ${{ github.repository }})
+          echo "Repo name: $REPO_NAME"
+          echo "Default Pages URL will be https://${{ github.repository_owner }}.github.io/$REPO_NAME"
+          # Uncomment to inject base path into index.html if needed:
+          # sed -i \"s|href=\\\"/|href=\\\"/$REPO_NAME/|g\" apps/example/public/index.html || true
+        shell: bash
+      # TEMPLATE-ONLY:END(pages)
 
-# TEMPLATE-ONLY:START(unocss,pages)
-- name: Build UnoCSS for Pages
-  run: |
-    echo "🎨 Building UnoCSS for GitHub Pages"
-    if [ -f "configs/unocss/uno.config.ts" ]; then
-      bunx unocss --config configs/unocss/uno.config.ts || echo "UnoCSS build skipped"
-      ls -la apps/example/public/uno.css || echo "uno.css not found"
-    fi
-  shell: bash
-# TEMPLATE-ONLY:END(unocss,pages)
+      # TEMPLATE-ONLY:START(unocss,pages)
+      - name: Build UnoCSS for Pages
+        run: |
+          echo "🎨 Building UnoCSS for GitHub Pages"
+          if [ -f "configs/unocss/uno.config.ts" ]; then
+            bunx unocss --config configs/unocss/uno.config.ts || echo "UnoCSS build skipped"
+            ls -la apps/example/public/uno.css || echo "uno.css not found"
+          fi
+        shell: bash
+      # TEMPLATE-ONLY:END(unocss,pages)
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

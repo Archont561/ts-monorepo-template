@@ -1,30 +1,30 @@
-# TEMPLATE-ONLY:START(pages)
-- name: Build static site for Pages
-  run: |
-    echo "📄 Building static site for GitHub Pages"
-    # Build UnoCSS if enabled
-    if [ -f "configs/unocss/uno.config.ts" ]; then
-      echo "→ Building UnoCSS"
-      bunx unocss --config configs/unocss/uno.config.ts || echo "UnoCSS build skipped"
-    fi
-    # Build JS packages (if any dist needed)
-    bun run build || echo "JS build skipped"
-    # Ensure public dir exists for Pages
-    ls -la apps/example/public/ || echo "public dir missing"
-    # If example has a static export, run it here
-    # bun --filter @myorg/example run build:static || true
-  shell: bash
+      # TEMPLATE-ONLY:START(pages)
+      - name: Build static site for Pages
+        run: |
+          echo "📄 Building static site for GitHub Pages"
+          # Build UnoCSS if enabled
+          if [ -f "configs/unocss/uno.config.ts" ]; then
+            echo "→ Building UnoCSS"
+            bunx unocss --config configs/unocss/uno.config.ts || echo "UnoCSS build skipped"
+          fi
+          # Build JS packages (if any dist needed)
+          bun run build || echo "JS build skipped"
+          # Ensure public dir exists for Pages
+          ls -la apps/example/public/ || echo "public dir missing"
+          # If example has a static export, run it here
+          # bun --filter @myorg/example run build:static || true
+        shell: bash
 
-- name: Configure base path for Pages (repo name)
-  run: |
-    echo "🔧 Configuring base path for GitHub Pages"
-    # For non-root repo deploys (username.github.io/repo-name), set base path
-    # Example: if your static generator needs base: "/repo-name/"
-    # Adjust apps/example/public/index.html base if needed
-    REPO_NAME=$(basename ${{ github.repository }})
-    echo "Repo name: $REPO_NAME"
-    echo "Default Pages URL will be https://${{ github.repository_owner }}.github.io/$REPO_NAME"
-    # Uncomment to inject base path into index.html if needed:
-    # sed -i \"s|href=\\\"/|href=\\\"/$REPO_NAME/|g\" apps/example/public/index.html || true
-  shell: bash
-# TEMPLATE-ONLY:END(pages)
+      - name: Configure base path for Pages (repo name)
+        run: |
+          echo "🔧 Configuring base path for GitHub Pages"
+          # For non-root repo deploys (username.github.io/repo-name), set base path
+          # Example: if your static generator needs base: "/repo-name/"
+          # Adjust apps/example/public/index.html base if needed
+          REPO_NAME=$(basename ${{ github.repository }})
+          echo "Repo name: $REPO_NAME"
+          echo "Default Pages URL will be https://${{ github.repository_owner }}.github.io/$REPO_NAME"
+          # Uncomment to inject base path into index.html if needed:
+          # sed -i \"s|href=\\\"/|href=\\\"/$REPO_NAME/|g\" apps/example/public/index.html || true
+        shell: bash
+      # TEMPLATE-ONLY:END(pages)

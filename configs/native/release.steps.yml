@@ -1,28 +1,28 @@
-# TEMPLATE-ONLY:START(native)
-- name: Setup Rust toolchain (release)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  uses: dtolnay/rust-toolchain@stable
-  with:
-    components: clippy, rustfmt
-    targets: wasm32-wasip1-threads
+      # TEMPLATE-ONLY:START(native)
+      - name: Setup Rust toolchain (release)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: wasm32-wasip1-threads
 
-- name: Rust cache (release)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  uses: Swatinem/rust-cache@v2
-  with:
-    workspaces: "packages/native"
+      - name: Rust cache (release)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "packages/native"
 
-- name: Cargo build release (mnative)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  run: |
-    echo "🦀 Building Rust release via mnative"
-    mnative build:release || echo "cargo build failed"
-  shell: bash
+      - name: Cargo build release (mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: |
+          echo "🦀 Building Rust release via mnative"
+          mnative build:release || echo "cargo build failed"
+        shell: bash
 
-- name: Build native bindings for release (napi via mnative)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  run: |
-    echo "🦀 Building native bindings for release (napi via mnative)"
-    bun run build:native || mnative napi:build || echo "native build failed, continuing with JS fallback"
-  shell: bash
-# TEMPLATE-ONLY:END(native)
+      - name: Build native bindings for release (napi via mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: |
+          echo "🦀 Building native bindings for release (napi via mnative)"
+          bun run build:native || mnative napi:build || echo "native build failed, continuing with JS fallback"
+        shell: bash
+      # TEMPLATE-ONLY:END(native)

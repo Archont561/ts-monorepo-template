@@ -1,46 +1,46 @@
-# TEMPLATE-ONLY:START(native)
-- name: Setup Rust toolchain
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  uses: dtolnay/rust-toolchain@stable
-  with:
-    components: clippy, rustfmt
-    targets: wasm32-wasip1-threads
+      # TEMPLATE-ONLY:START(native)
+      - name: Setup Rust toolchain
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: wasm32-wasip1-threads
 
-- name: Rust cache
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  uses: Swatinem/rust-cache@v2
-  with:
-    workspaces: "packages/native"
+      - name: Rust cache
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "packages/native"
 
-- name: Cargo fmt check (mnative)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  run: mnative fmt:check
-  shell: bash
+      - name: Cargo fmt check (mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: mnative fmt:check
+        shell: bash
 
-- name: Cargo clippy (deny warnings, mnative)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  run: mnative clippy
-  shell: bash
+      - name: Cargo clippy (deny warnings, mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: mnative clippy
+        shell: bash
 
-- name: Cargo check (fast, mnative)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  run: mnative check
-  shell: bash
+      - name: Cargo check (fast, mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: mnative check
+        shell: bash
 
-- name: Cargo test (mnative)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  run: mnative test
-  shell: bash
+      - name: Cargo test (mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: mnative test
+        shell: bash
 
-- name: Build native bindings (host, mnative)
-  if: hashFiles('packages/native/Cargo.toml') != ''
-  run: |
-    echo "🦀 Building native bindings via mnative (self-contained)"
-    bun run build:native || echo "native build skipped (install Rust)"
-  shell: bash
+      - name: Build native bindings (host, mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: |
+          echo "🦀 Building native bindings via mnative (self-contained)"
+          bun run build:native || echo "native build skipped (install Rust)"
+        shell: bash
 
-- name: Check native package types
-  if: hashFiles('packages/native/package.json') != ''
-  run: bun --filter @myorg/native run typecheck || echo "native typecheck skipped"
-  shell: bash
-# TEMPLATE-ONLY:END(native)
+      - name: Check native package types
+        if: hashFiles('packages/native/package.json') != ''
+        run: bun --filter @myorg/native run typecheck || echo "native typecheck skipped"
+        shell: bash
+      # TEMPLATE-ONLY:END(native)
