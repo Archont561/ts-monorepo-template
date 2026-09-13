@@ -20,6 +20,15 @@
           "apps/example/playwright.config.ts",
           "apps/example/e2e"
         ],
+        "filePatternsToRemove": [
+          "**/e2e/**",
+          "**/*.e2e.ts",
+          "**/playwright.config.ts"
+        ],
+        "fileRegexesToRemove": [
+          "playwright",
+          ".*\\.spec\\.e2e\\..*"
+        ],
         "appDepsToRemove": [
           "@myorg/playwright"
         ]

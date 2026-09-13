@@ -23,7 +23,18 @@
       }
     ],
     "removals": {
-      "none": {},
+      "none": {
+        "filePatternsToRemove": [
+          "**/*.node",
+          "**/native/**",
+          "**/*.napi.*"
+        ],
+        "fileRegexesToRemove": [
+          "native",
+          "\\.node$",
+          "napi"
+        ]
+      },
       "publish": {},
       "docker": {}
     }

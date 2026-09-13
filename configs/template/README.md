@@ -30,13 +30,55 @@ graph TD
     style E fill:#f6f8fa,stroke:#0969DA
 ```
 
+## Scaffold Metadata (Data-Driven)
+
+> [!TIP]
+> The scaffolder is **fully data-driven** — no config is hardcoded. Each `configs/*/package.json` declares `scaffold` metadata.
+
+```json
+{
+  "scaffold": {
+    "default": "always | true | false | \"none\"",
+    "flag": "playwright",
+    "prompt": "Include E2E testing?",
+    "type": "confirm | select",
+    "options": [{ "value": "none", "label": "None" }],
+    "removals": {
+      "false": {
+        "extraRemovals": ["apps/example/e2e"],
+        "filePatternsToRemove": ["**/e2e/**", "**/*.e2e.ts"],
+        "fileRegexesToRemove": ["playwright", ".*\\.spec\\.e2e\\..*"],
+        "scriptsToRemove": ["test:e2e"],
+        "turboTasksToRemove": ["test:e2e"],
+        "appDepsToRemove": ["@myorg/playwright"]
+      }
+    },
+    "selfDestruct": true
+  }
+}
+```
+
+### Removal fields
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `extraRemovals` | `string[]` | Exact paths (`rm -rf`) |
+| `filePatternsToRemove` | `string[]` | Glob patterns via `Bun.Glob` (e.g. `**/e2e/**`) |
+| `fileRegexesToRemove` | `string[]` | Regex against relative paths (e.g. `playwright`) |
+| `scriptsToRemove` | `string[]` | Root `package.json` scripts |
+| `turboTasksToRemove` | `string[]` | `turbo.base.json` tasks |
+| `appDepsToRemove` | `string[]` | `apps/example/package.json` devDeps |
+
+> [!NOTE]
+> `filePatternsToRemove` uses `Bun.Glob` with `dot:true`, skips `node_modules/.git/dist/.turbo`. `fileRegexesToRemove` compiles to `RegExp` and scans all files via `find`.
+
 ## Source map
 
 | File | Role |
 | :--- | :--- |
 | `src/index.ts` | CLI entry (bundled) |
 | `src/collector.ts` | `OptionsCollector` — Clack prompts + repo-root discovery |
-| `src/scaffolder.ts` | `MonorepoScaffolder` — the pipeline engine |
+| `src/scaffolder.ts` | `MonorepoScaffolder` — pipeline + glob/regex removal |
 | `src/configs.ts` | `discoverConfigs` / `ScaffoldMeta` types |
 | `src/harness.ts` | `TemplateHarness` — full-pipeline integration helper (`BUN_CREATE_DIR`) |
 | `src/aggregate.ts` | `docs:sync` — aggregates CI workflows from `configs/*` |

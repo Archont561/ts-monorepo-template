@@ -14,6 +14,15 @@
         "extraRemovals": [
           "uno.config.ts"
         ],
+        "filePatternsToRemove": [
+          "uno.config.*",
+          "**/*.unocss.*",
+          "**/unocss/**"
+        ],
+        "fileRegexesToRemove": [
+          "unocss",
+          "uno\\.config"
+        ],
         "appDepsToRemove": [
           "@unocss/reset",
           "unocss"

@@ -12,6 +12,15 @@
         "extraRemovals": [
           ".agents"
         ],
+        "filePatternsToRemove": [
+          ".agents/**",
+          "**/.claude/**",
+          "**/skills/**"
+        ],
+        "fileRegexesToRemove": [
+          "\\.agents",
+          "skills"
+        ],
         "scriptsToRemove": [
           "skills:sync",
           "skills:list"

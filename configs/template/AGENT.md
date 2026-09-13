@@ -5,7 +5,33 @@
 
 - The `configs/template/` workspace turns this repo into a reusable monorepo template. `bun create Archont561/ts-monorepo-template my-app` runs `bun-create.preinstall` (`bun configs/template/dist/index.js` — the committed bundle), which scaffolds a project (replaces `@myorg` scope, strips `TEMPLATE-ONLY` blocks, removes template-only files, prunes opt-in configs, regenerates workflows from survivors, initializes Git) *before* `bun install`, so only what survives gets installed. Lefthook hooks are installed by the root `prepare` script during that `bun install`. Regular `bun install` in this repo does **not** trigger scaffolding.
 
-- The scaffolder is **data-driven**: `discoverConfigs()` (in `configs/template/src/configs.ts`) scans every `configs/*/package.json` for a `scaffold` metadata field (`default`, `flag`, `prompt`, `type: "confirm" | "select"`, `options`, `removals`, `scriptsToRemove`, `setup`, `selfDestruct`). Configs with `"default": "always"` are always kept — except `selfDestruct` ones (the template itself), which are always removed. No config is hardcoded in the scaffolder.
+- The scaffolder is **fully data-driven**: `discoverConfigs()` (in `configs/template/src/configs.ts`) scans every `configs/*/package.json` for a `scaffold` metadata field (`default`, `flag`, `prompt`, `type: "confirm" | "select"`, `options`, `removals`, `extraRemovals`, `filePatternsToRemove`, `fileRegexesToRemove`, `scriptsToRemove`, `turboTasksToRemove`, `appDepsToRemove`, `setup`, `selfDestruct`). Configs with `"default": "always"` are always kept — except `selfDestruct` ones (the template itself), which are always removed. No config is hardcoded in the scaffolder.
+
+  - `extraRemovals`: exact paths (`rm -rf`)
+  - `filePatternsToRemove`: glob patterns via `Bun.Glob` (e.g. `**/e2e/**`, `**/*.e2e.ts`, `**/playwright.config.ts`) — data-driven file removal
+  - `fileRegexesToRemove`: regex strings matched against relative paths (e.g. `playwright`, `.*\.spec\.e2e\..*`) — data-driven regex removal
+  - `scriptsToRemove`, `turboTasksToRemove`, `appDepsToRemove`: root scripts, turbo tasks, app deps
+
+  Example:
+
+  ```json
+  {
+    "scaffold": {
+      "default": true,
+      "flag": "playwright",
+      "removals": {
+        "false": {
+          "extraRemovals": ["apps/example/e2e"],
+          "filePatternsToRemove": ["**/e2e/**", "**/*.e2e.ts"],
+          "fileRegexesToRemove": ["playwright"],
+          "scriptsToRemove": ["test:e2e"],
+          "turboTasksToRemove": ["test:e2e"],
+          "appDepsToRemove": ["@myorg/playwright"]
+        }
+      }
+    }
+  }
+  ```
 
 - After pruning, the scaffolder calls `regenerateCI()` (`.github/workflows/*.yml`) by re-running the discovery-driven aggregation, so a generated project only contains CI steps for the configs that survived. Root `README.md` and `AGENTS.md` are now static reference files (not concatenated) with `TEMPLATE-ONLY` blocks for template vs monorepo descriptions — they are NOT regenerated.
 
@@ -26,17 +52,17 @@ sequenceDiagram
     Disc-->>Scaff: config list
     Scaff->>FS: replace @myorg scope
     Scaff->>FS: strip TEMPLATE-ONLY
-    Scaff->>FS: prune disabled
+    Scaff->>FS: prune disabled (exact + glob + regex)
     Scaff->>FS: regenerateCI
     Scaff->>FS: setupGitHooks
     FS-->>User: ready for bun install
 ```
 
-- Sources: `src/index.ts` (CLI entry), `src/collector.ts` (`OptionsCollector` — Clack prompts, marker-based repo-root discovery), `src/scaffolder.ts` (`MonorepoScaffolder` — engine), `src/configs.ts` (`discoverConfigs`), `src/harness.ts` (`TemplateHarness` — full-pipeline integration helper using `BUN_CREATE_DIR`), `src/aggregate.ts` (`bun run docs:sync` — regenerates workflows from `configs/*`), `src/docs.ts` (`mdocs` bin — single bin for this package). All tests live in `tests/`: unit suites per source file plus the full-pipeline integration suite in `tests/index.test.ts`.
+- Sources: `src/index.ts` (CLI entry), `src/collector.ts` (`OptionsCollector` — Clack prompts, marker-based repo-root discovery), `src/scaffolder.ts` (`MonorepoScaffolder` — engine + glob/regex removal), `src/configs.ts` (`discoverConfigs`), `src/harness.ts` (`TemplateHarness` — full-pipeline integration helper using `BUN_CREATE_DIR`), `src/aggregate.ts` (`bun run docs:sync` — regenerates workflows from `configs/*`), `src/docs.ts` (`mdocs` bin — single bin for this package). All tests live in `tests/`: unit suites per source file plus the full-pipeline integration suite in `tests/index.test.ts`.
 
 - Root `prepare` links the m-command bins and regenerates `lefthook.yml` (`msetup lefthook`) and `.changeset/config.json` (`mchangeset init`) instead of committing generated state.
 
-- The scaffolder uses only Bun-native APIs in the bundle (`Bun.file`, `Bun.write`, `Bun.$`) — no external runtime deps (they are bundled with `--packages bundle`).
+- The scaffolder uses only Bun-native APIs in the bundle (`Bun.file`, `Bun.write`, `Bun.$`, `Bun.Glob`) — no external runtime deps (they are bundled with `--packages bundle`).
 
 - Run `bun run docs:sync` after editing workflow skeletons, and `bun run ci:lint` after regenerating workflows.
 
@@ -44,8 +70,8 @@ sequenceDiagram
 | :--- | :--- |
 | `src/index.ts` | CLI entry |
 | `src/collector.ts` | Prompts + root discovery |
-| `src/scaffolder.ts` | Pipeline engine |
-| `src/configs.ts` | `discoverConfigs` |
+| `src/scaffolder.ts` | Pipeline engine + glob/regex |
+| `src/configs.ts` | `discoverConfigs` + `ScaffoldRemovals` |
 | `src/harness.ts` | Integration helper |
 | `src/aggregate.ts` | Workflow aggregator |
 | `src/docs.ts` | `mdocs` bin |
@@ -62,8 +88,18 @@ sequenceDiagram
 4. `replaceScopePlaceholders` — `@myorg` → custom scope
 5. `stripTemplateMarkers` — remove `TEMPLATE-ONLY` blocks
 6. `removeTemplateFiles` — delete pruned configs + removals
-7. `handleConfig` — self-destruct handling
+7. `handleConfig` — self-destruct + data-driven removals (exact + glob + regex)
 8. `regenerateCI` — aggregate workflows from survivors
 9. `setupGitHooks` — `git init` if needed
+
+</details>
+
+<details>
+<summary>Glob vs Regex removal</summary>
+
+- **Glob** (`filePatternsToRemove`): Uses `Bun.Glob` with `dot:true`, `onlyFiles:false`. Supports `**/e2e/**`, `**/*.e2e.ts`, `**/playwright.config.ts`. Skips `node_modules/.git/dist/.turbo` for safety.
+- **Regex** (`fileRegexesToRemove`): Compiles to `RegExp`, scans all files via `find -type f` (excluding `node_modules/.git/dist/.turbo`), matches against relative path. Supports `playwright`, `.*\.spec\.e2e\..*`, `uno\.config\.ts$`.
+
+Both are evaluated only when config is disabled (or `selfDestruct`).
 
 </details>

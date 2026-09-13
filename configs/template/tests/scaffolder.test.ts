@@ -609,6 +609,85 @@ describe("MonorepoScaffolder (unit)", () => {
       expect(appPkg.devDependencies["@myorg/playwright"]).toBeUndefined();
     });
 
+    test("removes files matching glob patterns when config disabled", async () => {
+      await mkdir(`${workDir}/configs/playwright`, { recursive: true });
+      await mkdir(`${workDir}/apps/example/e2e`, { recursive: true });
+      await mkdir(`${workDir}/apps/example/src`, { recursive: true });
+      await write(
+        `${workDir}/configs/playwright/package.json`,
+        JSON.stringify({
+          name: "@myorg/playwright",
+          scaffold: {
+            default: true,
+            flag: "playwright",
+            filePatternsToRemove: ["apps/example/e2e/**", "**/*.e2e.ts"],
+          },
+        }),
+      );
+      await write(`${workDir}/apps/example/e2e/test.spec.ts`, "test");
+      await write(`${workDir}/apps/example/src/app.e2e.ts`, "test");
+      await write(`${workDir}/apps/example/src/keep.ts`, "keep");
+      await write(`${workDir}/package.json`, JSON.stringify({ name: "test" }));
+
+      const s = new MonorepoScaffolder({ targetDir: workDir, configs: { playwright: false } });
+      await s.handleConfig();
+
+      expect(await pathExists(`${workDir}/apps/example/e2e/test.spec.ts`)).toBe(false);
+      expect(await pathExists(`${workDir}/apps/example/src/app.e2e.ts`)).toBe(false);
+      expect(await pathExists(`${workDir}/apps/example/src/keep.ts`)).toBe(true);
+    });
+
+    test("removes files matching regex patterns when config disabled", async () => {
+      await mkdir(`${workDir}/configs/unocss`, { recursive: true });
+      await mkdir(`${workDir}/apps/example/src`, { recursive: true });
+      await write(
+        `${workDir}/configs/unocss/package.json`,
+        JSON.stringify({
+          name: "@myorg/unocss",
+          scaffold: {
+            default: false,
+            flag: "unocss",
+            fileRegexesToRemove: ["uno\\.config\\.ts$", ".*\\.unocss\\..*", "unocss"],
+          },
+        }),
+      );
+      await write(`${workDir}/uno.config.ts`, "export default {}");
+      await write(`${workDir}/apps/example/src/styles.unocss.css`, ".test{}");
+      await write(`${workDir}/apps/example/src/keep.ts`, "keep");
+      await write(`${workDir}/package.json`, JSON.stringify({ name: "test" }));
+
+      const s = new MonorepoScaffolder({ targetDir: workDir, configs: { unocss: false } });
+      await s.handleConfig();
+
+      expect(await pathExists(`${workDir}/uno.config.ts`)).toBe(false);
+      expect(await pathExists(`${workDir}/apps/example/src/styles.unocss.css`)).toBe(false);
+      expect(await pathExists(`${workDir}/apps/example/src/keep.ts`)).toBe(true);
+    });
+
+    test("removes files via both glob and regex in same config", async () => {
+      await mkdir(`${workDir}/configs/skills`, { recursive: true });
+      await mkdir(`${workDir}/.agents/skills`, { recursive: true });
+      await write(
+        `${workDir}/configs/skills/package.json`,
+        JSON.stringify({
+          name: "@myorg/skills",
+          scaffold: {
+            default: false,
+            flag: "skills",
+            filePatternsToRemove: [".agents/**"],
+            fileRegexesToRemove: ["skills"],
+          },
+        }),
+      );
+      await write(`${workDir}/.agents/skills/test.md`, "skill");
+      await write(`${workDir}/package.json`, JSON.stringify({ name: "test" }));
+
+      const s = new MonorepoScaffolder({ targetDir: workDir, configs: { skills: false } });
+      await s.handleConfig();
+
+      expect(await pathExists(`${workDir}/.agents/skills/test.md`)).toBe(false);
+    });
+
     test("self-destructs template-only configs and their scripts", async () => {
       await mkdir(`${workDir}/configs/template/src`, { recursive: true });
       await mkdir(`${workDir}/configs/biome`, { recursive: true });

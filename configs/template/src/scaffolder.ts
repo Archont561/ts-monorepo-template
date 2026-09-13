@@ -340,6 +340,83 @@ export class MonorepoScaffolder {
   }
 
   /**
+   * Removes files matching glob patterns (data-driven, via Bun.Glob).
+   */
+  private async removeByGlobPatterns(patterns: string[]): Promise<void> {
+    for (const pattern of patterns) {
+      try {
+        const glob = new Bun.Glob(pattern);
+        for await (const relativePath of glob.scan({
+          cwd: this.targetDir,
+          dot: true,
+          absolute: false,
+          onlyFiles: false,
+        })) {
+          // Skip node_modules, .git, dist to avoid accidental mass deletion
+          if (
+            relativePath.includes("node_modules") ||
+            relativePath.includes(".git/") ||
+            relativePath.startsWith(".git") ||
+            relativePath.includes("/dist/") ||
+            relativePath.endsWith("/dist")
+          ) {
+            continue;
+          }
+          await $`rm -rf ${this.targetDir}/${relativePath}`.quiet();
+        }
+      } catch {
+        // Invalid glob — fallback to direct rm for backward compat
+        await $`rm -rf ${this.targetDir}/${pattern}`.quiet();
+      }
+    }
+  }
+
+  /**
+   * Removes files matching regex patterns (data-driven).
+   * Regexes are matched against relative paths from targetDir.
+   */
+  private async removeByRegexPatterns(regexes: string[]): Promise<void> {
+    if (regexes.length === 0) return;
+
+    const compiled = regexes.map((r) => {
+      try {
+        return new RegExp(r);
+      } catch {
+        // If not a valid regex, treat as literal substring
+        return new RegExp(r.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+      }
+    });
+
+    // Find all files (text-readable) to test against regexes
+    const findArgs = [
+      this.targetDir,
+      "-type",
+      "f",
+      "-not",
+      "-path",
+      "*/node_modules/*",
+      "-not",
+      "-path",
+      "*/.git/*",
+      "-not",
+      "-path",
+      "*/dist/*",
+      "-not",
+      "-path",
+      "*/.turbo/*",
+    ];
+    const result = await $`find ${findArgs}`.text().catch(() => "");
+    const files = result.trim().split("\n").filter(Boolean);
+
+    for (const absolutePath of files) {
+      const relativePath = absolutePath.replace(`${this.targetDir}/`, "");
+      if (compiled.some((re) => re.test(relativePath))) {
+        await $`rm -rf ${absolutePath}`.quiet();
+      }
+    }
+  }
+
+  /**
    * Applies config removals entirely from discovered scaffold metadata.
    * Always-on configs survive unless they `selfDestruct` (the template);
    * opt-in configs are removed when their selection evaluates to disabled.
@@ -368,9 +445,19 @@ export class MonorepoScaffolder {
       // 2. Remove the workspace dependency from root
       delete rootPkg.devDependencies?.[config.name];
 
-      // 3. Extra removals
+      // 3. Extra removals (exact paths, backward compat)
       for (const relativePath of removals.extraRemovals ?? []) {
         await $`rm -rf ${this.targetDir}/${relativePath}`.quiet();
+      }
+
+      // 3b. File patterns (glob) — data-driven
+      if (removals.filePatternsToRemove) {
+        await this.removeByGlobPatterns(removals.filePatternsToRemove);
+      }
+
+      // 3c. File regexes — data-driven
+      if (removals.fileRegexesToRemove) {
+        await this.removeByRegexPatterns(removals.fileRegexesToRemove);
       }
 
       // 4. Root scripts

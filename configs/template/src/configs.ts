@@ -5,6 +5,10 @@ export interface ScaffoldRemovals {
   scriptsToRemove?: string[];
   turboTasksToRemove?: string[];
   appDepsToRemove?: string[];
+  /** Glob patterns (relative to targetDir) for files to remove when config is disabled. */
+  filePatternsToRemove?: string[];
+  /** Regex patterns (matched against relative paths) for files to remove when config is disabled. */
+  fileRegexesToRemove?: string[];
 }
 
 export interface ScaffoldMeta extends ScaffoldRemovals {
