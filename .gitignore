@@ -26,5 +26,13 @@ lefthook-local.yml
 # act secrets (never commit)
 .secrets
 
-# AI agent skills (synced via `bun run skills:sync`)
-.agents/
+# AI agent skills — vendored via skills.sh + curated
+# .agents/ is the skills.sh ecosystem folder:
+# - .agents/skills/ — vendored skills (committed for reproducibility)
+# - .agents/skills.index.json — generated index (committed)
+# Other .agents/* (e.g. Claude, Cursor) may be local and are ignored
+.agents/*
+!.agents/skills/
+!.agents/skills/**
+!.agents/skills.index.json
+!.agents/README.md

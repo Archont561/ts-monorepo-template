@@ -192,8 +192,25 @@ See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](
 | `bun run ci:dry` | Dry-run CI locally (`mci act push -n`) |
 | `bun run ci:local` | Run CI locally in Docker (`mci act push`) |
 | `bun run skills:list` | List available AI agent skills |
-| `bun run skills:sync` | Sync AI agent skills into `.agents/skills/` |
+| `bun run skills:sync` | Sync curated → vendored + validate + index |
+| `bun run skills:add <pkg>` | Add skill via skills.sh (`vercel-labs/agent-skills`) |
+| `bun run skills:update` | Update skills via skills.sh |
+| `bun run skills:validate` | Validate `SKILL.md` frontmatter |
+| `bun run skills:index` | Build `skills.index.json` |
 | `bun run docs:sync` | Regenerate workflows from `configs/*` (`mdocs`) |
+
+### Agent Skills (skills.sh)
+
+We use the [skills.sh](https://skills.sh) ecosystem to vendor skills into this repo.
+
+- Install: `bun run skills:add vercel-labs/agent-skills`
+- Update: `bun run skills:update`
+- Sync: `bun run skills:sync`
+
+Skills live in: `.agents/skills/` — each is a folder containing `SKILL.md` with YAML frontmatter (`name`, `description`). See [.agents/README.md](.agents/README.md).
+
+> [!CAUTION]
+> Review skill content before use; skills.sh cannot guarantee every skill is safe.
 
 ## Workflows
 

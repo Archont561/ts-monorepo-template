@@ -103,7 +103,11 @@ bun run check          # Lint and format check (Biome)
 bun run check:fix      # Auto-fix lint and format issues
 bun run ci:lint        # Validate GitHub Actions workflows (mci lint)
 bun run skills:list    # List available AI agent skills
-bun run skills:sync    # Sync AI agent skills into .agents/skills/
+bun run skills:sync    # Sync curated → vendored + validate + index
+bun run skills:add <pkg> # Add via skills.sh (e.g. vercel-labs/agent-skills)
+bun run skills:update  # Update via skills.sh
+bun run skills:validate # Validate SKILL.md frontmatter
+bun run skills:index   # Build skills.index.json
 bun run docs:sync      # Regenerate workflows from configs/* (mdocs)
 ```
 
