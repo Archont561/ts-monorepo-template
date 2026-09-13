@@ -137,32 +137,47 @@ export async function regenerateAll(targetDir: string): Promise<void> {
   await mkdir(`${targetDir}/.github`, { recursive: true });
   await aggregateWorkflow(targetDir, "ci.base.yml", "ci.steps.yml");
   await aggregateWorkflow(targetDir, "release.base.yml", "release.steps.yml");
-  // Only generate pages.yml if pages config is enabled (exists)
+  // Only generate pages.yml if pages config is enabled (exists).
+  //
+  // Exception: this repository ships its own template-only docs site (docs/),
+  // deployed by template-docs.yml. Two workflows cannot deploy to one Pages
+  // site, so pages.yml is skipped here and `mdocs site` nests the demo app
+  // under /example/ instead. Scaffolded monorepos have no docs/ (removed by
+  // extraRemovals before CI is regenerated), so they still get pages.yml
+  // whenever the pages config is opted in.
   const pagesConfigExists = await file(`${targetDir}/configs/pages/package.json`).exists();
-  if (pagesConfigExists) {
+  // The template-only docs site deploys Pages via template-docs.yml.
+  const templateDocsExists = await file(`${targetDir}/docs/.vitepress/config.mts`).exists();
+  const pagesDeploysToSite = pagesConfigExists && !templateDocsExists;
+  if (pagesDeploysToSite) {
     await aggregateWorkflow(targetDir, "pages.base.yml", "pages.steps.yml");
   } else {
-    // Ensure no stale pages.yml remains when pages disabled
+    // Ensure no stale pages.yml remains when pages is disabled or the docs site
+    // owns the Pages deployment
     const pagesWorkflow = `${targetDir}/.github/workflows/pages.yml`;
     if (await file(pagesWorkflow).exists()) {
       await $`rm -rf ${pagesWorkflow}`.quiet();
-      console.log(`🗑️ Removed ${pagesWorkflow} (pages disabled)`);
+      console.log(
+        `🗑️ Removed ${pagesWorkflow} (${templateDocsExists ? "template docs site deploys Pages" : "pages disabled"})`,
+      );
     }
   }
-  // Coverage workflow: standalone coverage Pages when pages disabled, otherwise coverage is included in pages.yml via pages.steps
+  // Coverage workflow: a standalone coverage Pages site only when nothing else
+  // deploys Pages. pages.yml includes coverage at /coverage/ via
+  // pages.steps.yml, and the template docs site renders it with `mdocs site`.
   const coverageConfigExists = await file(`${targetDir}/configs/coverage/package.json`).exists();
-  const pagesExistsForCoverage = pagesConfigExists;
   if (coverageConfigExists) {
-    if (!pagesExistsForCoverage) {
-      // No pages app — deploy coverage HTML as standalone Pages site
+    if (!pagesDeploysToSite && !templateDocsExists) {
+      // No pages app and no docs site — deploy coverage HTML as its own site
       await aggregateWorkflow(targetDir, "coverage.base.yml", "coverage.steps.yml");
     } else {
-      // Pages app exists — coverage is included at /coverage/ via pages.steps.yml
-      // Remove stale standalone coverage.yml if it exists (to avoid Pages conflict)
+      // Remove stale standalone coverage.yml (it would fight over the same site)
       const coverageWorkflow = `${targetDir}/.github/workflows/coverage.yml`;
       if (await file(coverageWorkflow).exists()) {
         await $`rm -rf ${coverageWorkflow}`.quiet();
-        console.log(`🗑️ Removed ${coverageWorkflow} (coverage included in pages.yml)`);
+        console.log(
+          `🗑️ Removed ${coverageWorkflow} (${templateDocsExists ? "coverage published by the docs site" : "coverage included in pages.yml"})`,
+        );
       }
     }
   }

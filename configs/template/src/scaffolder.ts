@@ -23,6 +23,7 @@ const PACKAGE_JSON_SCRIPTS_TO_REMOVE = [
   "docs:dev",
   "docs:build",
   "docs:preview",
+  "docs:site",
 ];
 
 export class MonorepoScaffolder {

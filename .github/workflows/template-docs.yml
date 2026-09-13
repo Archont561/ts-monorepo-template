@@ -1,9 +1,11 @@
 # TEMPLATE-ONLY:START(template)
 # Template-only docs Pages — deploys docs/ to GitHub Pages
 # Removed during scaffolding via configs/template extraRemovals
-# This is separate from configs/pages/pages.yml (which deploys apps/example)
-# For template repo: docs/ is static template documentation
-# For generated monorepos: this file is removed, pages.yml is used if opt-in
+# This is the ONLY Pages deployment for this repository: `mdocs site` assembles
+# docs + the coverage report (/coverage/) + the demo app (/example/) into one
+# artifact, so pages.yml and coverage.yml are not generated here (see
+# configs/template/src/aggregate.ts). Generated monorepos, which have no docs/,
+# get pages.yml (and coverage.yml when Pages is off) as usual.
 name: Template Docs
 
 on:
@@ -11,6 +13,9 @@ on:
     branches: ["main"]
     paths:
       - "docs/**"
+      - "packages/**"
+      - "apps/**"
+      - "configs/**"
       - ".github/workflows/template-docs.yml"
       - "README.md"
       - "AGENTS.md"
@@ -42,8 +47,10 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build docs
-        run: bun run docs:build
+      # Runs the suite with coverage, renders the HTML report into the site,
+      # builds the docs and nests the demo app under /example/.
+      - name: Build the site (docs + coverage + demo app)
+        run: mdocs site
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

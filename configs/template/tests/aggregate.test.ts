@@ -187,6 +187,44 @@ describe("aggregate", () => {
     },
     { timeout: 60_000 },
   );
+
+  test(
+    "pages.yml and coverage.yml are skipped when the template-only docs site owns Pages",
+    async () => {
+      const result = await new TemplateHarness({ skipInstall: true }).prepare();
+      cleanup = result.cleanup;
+
+      const aggregate = async (dir: string) => {
+        const proc = Bun.spawn({
+          cmd: ["bun", `${dir}/configs/template/src/aggregate.ts`, dir],
+          stdout: "pipe",
+          stderr: "pipe",
+        });
+        const stderr = await new Response(proc.stderr).text();
+        expect(await proc.exited, stderr).toBe(0);
+      };
+
+      const pages = `${result.templateDir}/.github/workflows/pages.yml`;
+      const coverage = `${result.templateDir}/.github/workflows/coverage.yml`;
+
+      // docs/ present (this repo): template-docs.yml is the single deployer and
+      // `mdocs site` publishes coverage at /coverage/ inside that artifact.
+      expect(await file(`${result.templateDir}/docs/.vitepress/config.mts`).exists()).toBe(true);
+      await aggregate(result.templateDir);
+      expect(await file(pages).exists(), "pages.yml would fight template-docs.yml").toBe(false);
+      expect(await file(coverage).exists(), "coverage.yml would fight template-docs.yml").toBe(
+        false,
+      );
+
+      // No docs/ (a scaffolded monorepo): pages.yml is generated again, and
+      // coverage rides along as /coverage/ inside the Pages artifact.
+      await $`rm -rf ${result.templateDir}/docs`.quiet();
+      await aggregate(result.templateDir);
+      expect(await file(pages).exists(), "pages.yml must exist for a Pages opt-in").toBe(true);
+      expect(await file(coverage).exists(), "coverage is included in pages.yml").toBe(false);
+    },
+    { timeout: 120_000 },
+  );
 });
 
 async function scanForLeaks(
