@@ -1,27 +1,59 @@
 # @myorg/commitlint
 
-> Conventional Commit validation, shared.
+> Conventional Commits enforcement.
 
 ## What it provides
 
-- `@commitlint/cli` and `@commitlint/config-conventional` as shared devDependencies.
-- `index.js` — the single commitlint config, consumed with
-  `--config configs/commitlint/index.js`.
+- `@commitlint/cli` + `@commitlint/config-conventional`
+- `commitlint.config.js` — shared config
+- Lefthook integration — validates commit messages on `commit-msg` hook
 
-## Enforced rules
+> [!IMPORTANT]
+> Commit messages must follow Conventional Commits. The hook blocks invalid messages.
 
-- **Scopes** (`scope-enum`): `config`, `internal`, `external`, `example`,
-  `deps`, `release`, `ci`.
-- **Types** (`type-enum`): `feat`, `fix`, `docs`, `style`, `refactor`, `test`,
-  `chore`, `ci`, `perf`.
+### Config
+
+| Rule | Description |
+| :--- | :--- |
+| `type` | `feat`, `fix`, `docs`, `chore`, `refactor`, etc. |
+| `scope` | Optional, e.g. `feat(external): ...` |
+| `subject` | Lowercase, no period |
 
 ## Usage
 
 ```bash
-bunx commitlint --config configs/commitlint/index.js --edit {1}
+# Valid
+feat(external): add new greet function
+fix(internal): handle edge case
+docs: update README
+
+# Invalid (blocked by hook)
+Add new feature
+WIP
 ```
 
-The commit-msg hook runs this on every commit, so messages are validated
-automatically.
+```mermaid
+graph LR
+    A[git commit] --> B[lefthook commit-msg]
+    B --> C[commitlint]
+    C -->|valid| D[commit created]
+    C -->|invalid| E[blocked + message]
+
+    style C fill:#0969DA,color:#fff
+```
+
+<details>
+<summary>Commit types</summary>
+
+- `feat`: New feature (minor bump)
+- `fix`: Bug fix (patch bump)
+- `docs`: Documentation only
+- `chore`: Maintenance, deps
+- `refactor`: Code refactor
+- `test`: Tests
+- `perf`: Performance improvement
+- `BREAKING CHANGE`: Major bump (in footer)
+
+</details>
 
 See [AGENT.md](./AGENT.md) for the agent-facing reference.

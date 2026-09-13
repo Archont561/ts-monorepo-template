@@ -1,42 +1,72 @@
 # @myorg/gh-actions
 
-> GitHub Actions CI + local `act` simulation.
+> GitHub Actions CI + local `act` runner.
 
 ## What it provides
 
-- `github-actionlint` as a shared devDependency.
-- `actionlint.yaml` — the shared actionlint config.
-- `ci.base.yml` / `release.base.yml` — the **workflow skeletons** whose
-  `{{STEPS}}` placeholder is filled from the configs' step fragments by
-  `bun run docs:sync` (generating `.github/workflows/ci.yml` + `release.yml`).
-- `mci` — single bin for this package with subcommands:
-  - `mci lint` — validates `.github/workflows/` syntax, baking in
-    `-config-file=<configs/gh-actions/actionlint.yaml>`.
-  - `mci act` — wraps `act` for local CI, baking in a feature-complete runner image
-    (`catthehacker/ubuntu:act-latest`) and `--container-architecture`; prints an
-    install guide when `act` is not installed.
+- `actionlint` + `act` as shared devDependencies
+- `ci.base.yml` + `release.base.yml` — workflow skeletons with `{{STEPS}}` placeholder
+- `mci` — CLI with subcommands `mci lint` and `mci act`
+- Per-config `ci.steps.yml` fragments aggregated by `mdocs`
+
+> [!NOTE]
+> Workflows in `.github/workflows/` are generated — don't edit them directly. Edit skeletons and fragments, then run `bun run docs:sync`.
+
+### Workflow generation
+
+| Skeleton | Fragments | Output |
+| :--- | :--- | :--- |
+| `ci.base.yml` | `*/ci.steps.yml` | `.github/workflows/ci.yml` |
+| `release.base.yml` | `*/ci.steps.yml` (release) | `.github/workflows/release.yml` |
 
 ## Usage
 
 ```bash
-bun run docs:sync     # regenerate .github/workflows/ from the skeletons + fragments
-bun run ci:lint       # validate workflow syntax (mci lint)
-bun run ci:list       # list workflows/jobs (mci act -l)
-bun run ci:dry        # dry-run plan (mci act push -n)
-bun run ci:local      # run CI in Docker (mci act push)
+bun run docs:sync   # mdocs → regenerate workflows
+bun run ci:lint     # mci lint → validate workflows
+bun run ci:list     # mci act -l → list jobs
+bun run ci:dry      # mci act push -n → dry-run
+bun run ci:local    # mci act push → run in Docker
 ```
 
-Other events: `mci act pull_request -n`, `mci act -W .github/workflows/release.yml -n`,
-`mci act -j actionlint -n`. Secrets are absent locally — pass `-s NPM_TOKEN` or
-use an untracked `.secrets` file.
+```mermaid
+sequenceDiagram
+    participant Dev
+    participant Mdocs as mdocs
+    participant Base as *.base.yml
+    participant Frag as */ci.steps.yml
+    participant GH as .github/workflows
 
-## Rules
+    Dev->>Base: Edit skeleton
+    Dev->>Frag: Edit fragment
+    Dev->>Mdocs: bun run docs:sync
+    Mdocs->>Base: Read
+    Mdocs->>Frag: Collect via discoverConfigs
+    Mdocs->>GH: Generate + replace {{STEPS}}
+    Dev->>GH: Validate with ci:lint
+```
 
-- Workflows are generated, never hand-edited: edit the base skeletons
-  (`configs/gh-actions/*.base.yml`) and the per-config `ci.steps.yml` /
-  `release.steps.yml` fragments, then run `bun run docs:sync`.
-- `if: ${{ !env.ACT }}` guards must live on **step-level** `if` (job-level
-  `if` cannot access the `env` context; actionlint enforces this).
-- Run `bun run ci:lint` after regenerating a workflow.
+<details>
+<summary>Fragment format</summary>
+
+```yaml
+# configs/biome/ci.steps.yml
+- name: Lint & Format
+  run: bun run check
+```
+
+Fragments are concatenated in discovery order and injected into `{{STEPS}}`.
+
+</details>
+
+## Commands
+
+| Command | Description |
+| :--- | :--- |
+| `bun run docs:sync` | Regenerate workflows |
+| `bun run ci:lint` | Validate with actionlint |
+| `bun run ci:list` | List act jobs |
+| `bun run ci:dry` | Dry-run locally |
+| `bun run ci:local` | Run in Docker |
 
 See [AGENT.md](./AGENT.md) for the agent-facing reference.

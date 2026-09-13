@@ -1,8 +1,27 @@
-## Bun Runtime & Test Coverage
+## Bun Config
 
-- `@myorg/bun-config` (`configs/bun-config`) owns `bunfig.toml`: coverage on for `bun test`, LCOV + text reporters, `coverage/lcov.info` output, 80% line/function threshold, and ignore patterns for test/bundle/config files.
-- `mbun` is the single bin for this package: wraps `bun` and passes `--config` for `bun test` (other commands pass through); `mbun coverage` runs `mturbo coverage` (Turbo runs every workspace's `coverage` script in dependency order) and merges the per-package LCOV reports into a single root report.
-- `bun run test` → `mturbo test` (Turbo runs each package's `mbun test`; `e2e/` Playwright specs are excluded by the config ignore patterns).
-- `bun run coverage` → `mbun coverage` → `mturbo coverage` + a merged `coverage/lcov.info`.
-- No per-package `bunfig.toml` symlinks; the shared config is always passed explicitly.
-- **Coverage rules**: Bun uses JavaScriptCore, not V8 — never use `NODE_V8_COVERAGE`, `v8.takeCoverage()`, or `Profiler.takePreciseCoverage`. `bun test --coverage` only tracks code executed within the test process; use in-process integration tests for server-side coverage.
+> [!NOTE]
+> Shared `bunfig.toml` — no per-package symlinks.
+
+- `mbun` (from `@myorg/bun-config`) wraps `bun` and injects `--config=<configs/bun-config/bunfig.toml>` for `bun test`; other commands pass through
+- `mbun coverage` runs `mturbo coverage` then merges per-package `coverage/lcov.info` into root `coverage/lcov.info` with `lcov-result-merger`
+- Config (`bunfig.toml`): LCOV + text reporters, 80% line/function threshold, ignores `*.test.ts`, `dist`, `node_modules`, `configs/*`, `cli.ts`, `e2e`, `aggregate.ts`
+- No per-package `bunfig.toml` — always passed explicitly for deterministic output
+
+| Command | Description |
+| :--- | :--- |
+| `bun run test` | Turbo → per-package `mbun test` |
+| `bun run coverage` | `mbun coverage` → merged LCOV |
+| `mbun test` | Direct, injects config |
+
+```mermaid
+graph TD
+    A[mbun test] --> B[bunfig.toml]
+    B --> C[coverage/lcov.info]
+    C --> D[mbun coverage<br/>merge]
+
+    style B fill:#0969DA,color:#fff
+```
+
+> [!WARNING]
+> JSC not V8 — don't use Node coverage APIs.

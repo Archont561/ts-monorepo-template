@@ -1,6 +1,27 @@
-## Git Hooks
+## Lefthook
 
-- Lefthook is configured in `configs/lefthook/lefthook.yml`; the root `lefthook.yml` is a two-line wrapper that `extends:` it (regenerated on every install so a renamed scope still resolves).
-- `msetup` (from `@myorg/lefthook`) regenerates the wrapper, links the config packages' `m`-prefixed bins into `node_modules/.bin`, and installs the hooks. The root `prepare` script invokes it directly (`bun configs/lefthook/setup.ts lefthook`) — the root ships zero `devDependencies`, so no bin is linked until `prepare` runs.
-- Pre-commit: Biome formats staged files (`mbiome check --write {staged_files}`), and `actionlint` validates workflow files when they are staged.
-- Commit-msg: `commitlint` validates Conventional Commits against `configs/commitlint/index.js`.
+> [!NOTE]
+> Git hooks — wrapper generated, source in `configs/lefthook/lefthook.yml`.
+
+- `msetup` (from `@myorg/lefthook`) does: link m-bins (`node_modules/.bin/m*`), regenerate root `lefthook.yml` wrapper from `configs/lefthook/lefthook.yml`, `lefthook install` hooks to `.git/hooks/`, `mchangeset init` ensures `.changeset/config.json`
+- Root `lefthook.yml` is generated — never edit manually; edit `configs/lefthook/lefthook.yml`
+- Hooks: `pre-commit` → `mbiome check --write {staged_files}`, `commit-msg` → `commitlint --edit {1}`
+- Root `prepare` script runs `msetup lefthook && mchangeset init` on `bun install`
+
+| Hook | Command |
+| :--- | :--- |
+| `pre-commit` | `mbiome check --write {staged_files}` |
+| `commit-msg` | `commitlint --edit {1}` |
+
+```mermaid
+graph TD
+    A[configs/lefthook/lefthook.yml] --> B[msetup lefthook]
+    B --> C[lefthook.yml]
+    B --> D[.git/hooks]
+    D --> E[pre-commit + commit-msg]
+
+    style B fill:#0969DA,color:#fff
+```
+
+> [!TIP]
+> After editing `configs/lefthook/lefthook.yml`, run `msetup lefthook`.

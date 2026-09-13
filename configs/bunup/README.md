@@ -1,49 +1,57 @@
 # @myorg/bunup
 
-> Shared [Bunup](https://bun.sh) bundling configuration for library and CLI packages.
+> Bundling presets for library packages.
 
 ## What it provides
 
-Re-exports Bunup's complete public API — `defineConfig`, `defineWorkspace`,
-`build`, and the full set of types (`BuildOptions`, `BuildResult`,
-`BunupPlugin`, `DefineConfigItem`, …) — so packages import from `@myorg/bunup`
-instead of `bunup` directly.
+- `bunup` as a shared devDependency
+- `baseConfig` + `defineConfig` helpers
+- `mbunup` — CLI alias that bakes in config resolution
+
+> [!IMPORTANT]
+> Library packages are bundled with Bunup. Apps are not bundled — Bun runs TypeScript directly.
 
 ### Presets
 
-| Preset | Extends | DTS | Purpose |
-| ------ | ------- | --- | ------- |
-| `baseConfig` | — | ✅ | Defaults: ESM, clean builds, Node target, no minification |
-| `libraryConfig` | `baseConfig` | ✅ | Published packages (adds source maps) |
-| `inlinedConfig` | `baseConfig` | ❌ | Internal packages inlined by Bunup |
-| `cliConfig` | `baseConfig` | — | Executables: minified, Bun target, deps bundled inline |
+| Preset | Description |
+| :--- | :--- |
+| `baseConfig` | ESM + d.ts, externalize deps, inlined internal |
+| `defineConfig` | Helper to merge with base |
 
 ## Usage
 
-```ts
-// packages/external/bunup.config.ts
-import { defineConfig, libraryConfig } from "@myorg/bunup";
+```bash
+bun run build      # mturbo build → per-package mbunup
+bun run dev        # watch mode via Turbo
+```
+
+```typescript
+// bunup.config.ts
+import { baseConfig, defineConfig } from "@myorg/bunup";
 
 export default defineConfig({
-  ...libraryConfig,
-  entry: ["src/index.ts"],
+  ...baseConfig,
+  entry: ["src/index.ts", "src/http.ts"],
 });
 ```
 
-```json
-{
-  "scripts": {
-    "build": "bunup",
-    "dev": "bunup --watch",
-    "typecheck": "tsc --noEmit"
-  }
-}
+```mermaid
+graph LR
+    A[src/index.ts] --> B[mbunup]
+    B --> C[dist/index.js + .d.ts]
+    A -.-> D[@myorg/internal<br/>inlined]
+    D --> C
+
+    style B fill:#0969DA,color:#fff
 ```
 
-## Rules
+<details>
+<summary>Internal inlining</summary>
 
-- Never depend on `bunup` from an individual package — it is owned here and
-  hoisted from `configs/bunup`.
-- Do not edit anything inside `dist/` (generated, never committed).
+- `external` declares `internal` as devDependency
+- Bunup inlines it — consumers see one bundle
+- `internal` must never depend on `external` (circular)
+
+</details>
 
 See [AGENT.md](./AGENT.md) for the agent-facing reference.

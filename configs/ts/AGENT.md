@@ -1,9 +1,31 @@
-## TypeScript Configuration
+## TypeScript
 
-- Shared tsconfigs live in `configs/ts` under the `@myorg/ts` workspace package (`base.json`, `library.json`, `app.json`).
-- `@myorg/ts` hosts the `typescript` and `@types/bun` devDependencies so individual packages never declare them.
-- Library packages extend `@myorg/ts/library.json` (`--declaration` + source maps); apps extend `@myorg/ts/app.json` (`noEmit` + `"types": ["bun"]`); both extend `base.json`.
-- All package tsconfigs must include `"types": ["bun"]` (required for TS 7.x).
-- Path aliases `@src/*` and `@tests/*` are defined per-package (never in the shared configs).
-- Never use `baseUrl` — it was removed in TypeScript 7.0 (TS5102).
-- Type-check with `bun run typecheck` (per-package `tsc --noEmit`, orchestrated by Turbo).
+> [!CAUTION]
+> Never add `typescript`, `bunup`, or `@types/bun` to individual packages. Owned by `@myorg/ts` and hoisted.
+
+- `@myorg/ts` (`configs/ts`) owns `typescript`, `@types/bun`, `bunup` — hoisted to root `node_modules`, no per-package devDeps
+- Presets: `library.json` for `packages/*` (`rootDir:.`, `outDir:dist`, `types:[bun]`, `@src/*` + `@tests/*` paths), `app.json` for `apps/*` (`noEmit`, `types:[bun]`)
+- `mtsc` bin wraps `tsc`; `bun run typecheck` → `mturbo typecheck` → per-package `mtsc --noEmit`
+- No `baseUrl` in any `tsconfig.json` — removed in TS 7.0 (TS5102), use `paths` only
+- `tsconfig.json` per package extends `@myorg/ts/library.json` or `app.json` with `rootDir`, `outDir`, `types`, `paths`
+
+| Package | Extends | Build |
+| :--- | :--- | :--- |
+| `external` | `library.json` | `mbunup` |
+| `internal` | `library.json` | `mbunup` |
+| `example` | `app.json` | `bun --hot` (no bundle) |
+
+```mermaid
+graph LR
+    A[ts/library.json] --> B[external]
+    A --> C[internal]
+    D[ts/app.json] --> E[example]
+    B --> F[mtsc]
+    C --> F
+    E --> F
+
+    style A fill:#0969DA,color:#fff
+```
+
+> [!WARNING]
+> `baseUrl` was removed in TS 7.0 — use `paths` with `@src/*`.

@@ -1,20 +1,34 @@
-## CI Workflow Validation
+## GitHub Actions
 
-- The workflows in `.github/workflows/` are **generated** by `bun run docs:sync`
-  — never hand edited. The skeletons
-  `configs/gh-actions/ci.base.yml` and `release.base.yml` hold the workflow
-  structure plus the shared bootstrap steps (for CI: checkout, setup-bun,
-  `bun install --frozen-lockfile`); their `{{STEPS}}` placeholder is filled from
-  the surviving configs' `ci.steps.yml` fragments (in sorted config-directory
-  order) and, for releases, `configs/changeset/release.steps.yml`.
-- To add CI steps for a tool, create a `ci.steps.yml` fragment in that config
-  package's directory — it is picked up automatically. Then run
-  `bun run docs:sync` and `bun run ci:lint`.
-- `mci` is the single bin for `@myorg/gh-actions`:
-  - `mci lint` (from `configs/gh-actions`) bakes in `-config-file=<configs/gh-actions/actionlint.yaml>`; there is no root config file.
-  - `mci act` wraps `act` (flags baked in, no `.actrc`): `bun run ci:list`, `bun run ci:dry` (`-n`, shows the plan), `bun run ci:local` (runs in Docker; requires `act` + Docker).
-- To simulate other events: `mci act pull_request -n`, `mci act -W .github/workflows/release.yml -n`, `mci act -j actionlint -n`.
-- Secrets are absent locally: pass them per-run (`mci act push -s NPM_TOKEN`) or via an untracked `.secrets` file.
-- The release workflow guards every step with `if: ${{ !env.ACT }}` (step-level `if` only — job-level cannot access the `env` context, and actionlint enforces this) so local `act` runs never publish to npm.
-- Local simulation ≠ GitHub: no OIDC, no environments, limited `GITHUB_TOKEN`. The real CI run is authoritative.
-- Run `bun run ci:lint` after regenerating a workflow.
+> [!IMPORTANT]
+> Workflows in `.github/workflows/` are generated — don't edit directly.
+
+- Skeletons: `configs/gh-actions/*.base.yml` contain `{{STEPS}}` placeholder
+- Fragments: `configs/*/ci.steps.yml` — each config contributes CI steps
+- Aggregation: `bun run docs:sync` (`mdocs` from `@myorg/template`) runs `discoverConfigs()` to collect fragments and generates `ci.yml` + `release.yml`
+- Validation: `mci lint` (`actionlint`) + `mci act` (`act`) for local runs
+- `mci` bin from `@myorg/gh-actions` wraps `actionlint` + `act` with config
+
+| Command | Description |
+| :--- | :--- |
+| `bun run docs:sync` | Regenerate workflows |
+| `bun run ci:lint` | `mci lint` — validate |
+| `bun run ci:list` | `mci act -l` — list jobs |
+| `bun run ci:dry` | `mci act push -n` — dry-run |
+| `bun run ci:local` | `mci act push` — Docker |
+
+```mermaid
+graph TD
+    A[*.base.yml] --> C[mdocs]
+    B[*/ci.steps.yml] --> C
+    C --> D[ci.yml + release.yml]
+    D --> E[mci lint]
+
+    style C fill:#0969DA,color:#fff
+```
+
+> [!TIP]
+> After editing skeletons or fragments, run `docs:sync` then `ci:lint`.
+
+- Adding a config with CI steps: create `configs/<name>/ci.steps.yml`
+- No root `.actrc` — config lives in `configs/gh-actions`
