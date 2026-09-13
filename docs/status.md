@@ -102,7 +102,12 @@ Releases are cut by `mchangeset` — see the `release.yml` workflow.
     <tr>
       <td><code>bun</code> <small>(runtime at build)</small></td>
       <td><code>{{ data.runtime.bun ?? '—' }}</code></td>
-      <td><code>{{ data.runtime.node ?? '—' }}</code> <small>(node)</small></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><code>node</code> <small>(bundler at build)</small></td>
+      <td><code>{{ data.runtime.node ?? '—' }}</code></td>
+      <td>—</td>
     </tr>
     <tr v-for="tool in data.tools" :key="tool.name">
       <td><code>{{ tool.name }}</code></td>

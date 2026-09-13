@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
 /**
@@ -121,19 +122,44 @@ function manifests(dir: string, kind: string): Manifest[] {
 }
 
 /** Declared range for a tool, as pinned by whichever config package owns it. */
-function declaredRange(tool: string): string | null {
+type Declared = { range: string; ownerDir: string };
+
+/**
+ * Declared range for a tool plus the config package that owns it. Tools live in
+ * `configs/*` workspaces, so their versions must be resolved from there too:
+ * Bun installs into `node_modules/.bun/<pkg>@<ver>` and only symlinks into the
+ * dependent package's own node_modules, so a root `node_modules/<tool>` usually
+ * does not exist.
+ */
+function declaredRange(tool: string): Declared | null {
   const configsDir = join(ROOT, "configs");
   if (!existsSync(configsDir)) return null;
   for (const entry of readdirSync(configsDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
+    const ownerDir = join(configsDir, entry.name);
     const pkg = readJson<{
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
-    }>(join(configsDir, entry.name, "package.json"));
+    }>(join(ownerDir, "package.json"));
     const range = pkg?.dependencies?.[tool] ?? pkg?.devDependencies?.[tool];
-    if (range) return range;
+    if (range) return { range, ownerDir };
   }
   return null;
+}
+
+function installedVersion(tool: string, ownerDir: string | null): string | null {
+  for (const from of [ownerDir, ROOT]) {
+    if (!from) continue;
+    const linked = readJson<{ version?: string }>(join(from, "node_modules", tool, "package.json"));
+    if (linked?.version) return linked.version;
+  }
+  // Root devDependencies (e.g. vitepress) resolve through Node instead.
+  try {
+    const resolved = createRequire(join(ROOT, "package.json")).resolve(`${tool}/package.json`);
+    return readJson<{ version?: string }>(resolved)?.version ?? null;
+  } catch {
+    return null;
+  }
 }
 
 function tools(): Tool[] {
@@ -148,13 +174,14 @@ function tools(): Tool[] {
     "@changesets/cli",
     "lefthook",
   ];
-  return names.map((name) => ({
-    name,
-    version:
-      readJson<{ version?: string }>(join(ROOT, "node_modules", name, "package.json"))?.version ??
-      null,
-    declared: declaredRange(name),
-  }));
+  return names.map((name) => {
+    const declared = declaredRange(name);
+    return {
+      name,
+      version: installedVersion(name, declared?.ownerDir ?? null),
+      declared: declared?.range ?? null,
+    };
+  });
 }
 
 function repo(): Repo {
