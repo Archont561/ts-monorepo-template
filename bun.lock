@@ -45,13 +45,21 @@
         "@myorg/playwright": "workspace:*",
         "@myorg/ts": "workspace:*",
         "@myorg/unocss": "workspace:*",
+        "@playwright/test": "^1.63.0",
       },
     },
     "configs/badges": {
       "name": "@myorg/badges",
       "version": "0.0.0",
+      "bin": {
+        "mbadges": "./src/cli.ts",
+      },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
       "devDependencies": {
         "@myorg/bunup": "workspace:*",
+        "@myorg/citty": "workspace:*",
         "@myorg/ts": "workspace:*",
       },
     },
@@ -173,6 +181,10 @@
     "configs/devcontainer": {
       "name": "@myorg/devcontainer",
       "version": "0.0.0",
+      "devDependencies": {
+        "@myorg/bunup": "workspace:*",
+        "@myorg/ts": "workspace:*",
+      },
     },
     "configs/editorconfig": {
       "name": "@myorg/editorconfig",

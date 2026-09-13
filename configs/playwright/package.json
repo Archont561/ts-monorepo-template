@@ -30,7 +30,8 @@
           ".*\\.spec\\.e2e\\..*"
         ],
         "appDepsToRemove": [
-          "@myorg/playwright"
+          "@myorg/playwright",
+          "@playwright/test"
         ]
       }
     },
