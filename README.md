@@ -2,6 +2,7 @@
 # TypeScript Monorepo Template
 
 [![CI](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-4d8cf5?logo=github&logoColor=white)](https://archont561.github.io/ts-monorepo-template/)
 [![Coverage](https://img.shields.io/codecov/c/github/Archont561/ts-monorepo-template?logo=codecov&label=Coverage)](https://codecov.io/gh/Archont561/ts-monorepo-template)
 [![Coverage Graph](https://codecov.io/gh/Archont561/ts-monorepo-template/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/Archont561/ts-monorepo-template)
 [![Coverage HTML](https://img.shields.io/badge/Coverage-HTML-brightgreen?logo=github)](https://Archont561.github.io/ts-monorepo-template/coverage/)
@@ -41,6 +42,8 @@ During scaffolding you will be prompted for:
 > [!TIP]
 > Use `bun create Archont561/ts-monorepo-template my-app -- --scope @acme --no-interactive` for CI.
 
+📖 **Documentation**: <https://archont561.github.io/ts-monorepo-template/> — guide, config matrix, and a [Status page](https://archont561.github.io/ts-monorepo-template/status) with coverage, CI status and versions.
+
 <details>
 <summary>What the scaffolder does</summary>
 
@@ -56,13 +59,34 @@ After scaffolding, this README will describe your monorepo (see below).
 
 #### Template-only GitHub Pages docs
 
-This template ships a **template-only** static docs site in `docs/` (landing page + config matrix) deployed via `.github/workflows/template-docs.yml` to GitHub Pages. It's **removed** during `bun create` via `configs/template` `extraRemovals: ["docs", ".github/workflows/template-docs.yml"]`, so generated monorepos use `configs/pages` → `pages.yml` for `apps/example` instead.
+This template ships a **template-only** docs site in `docs/`, deployed by `.github/workflows/template-docs.yml` to <https://archont561.github.io/ts-monorepo-template/>. It's **removed** during `bun create` via `configs/template` `extraRemovals: ["docs", ".github/workflows/template-docs.yml"]`, so generated monorepos use `configs/pages` → `pages.yml` for `apps/example` instead.
+
+| URL | What it serves |
+| :--- | :--- |
+| `/` | Landing page |
+| `/guide/` | Introduction + config matrix |
+| `/status` | Coverage %, CI status badges, package and toolchain versions |
+| `/coverage/` | HTML coverage report (`mcoverage html`) |
+| `/example/` | Demo app built from `apps/example` |
+
+One rule keeps this honest: **only one workflow may deploy to Pages**.
+`template-docs.yml` is that workflow here, so `bun run docs:sync` deliberately
+does not generate `pages.yml` or `coverage.yml` while `docs/` exists (see
+`configs/template/src/aggregate.ts`). Scaffolded monorepos have no `docs/`, so
+they get `pages.yml` — and `coverage.yml` when Pages is off — as usual.
+
+Everything the site ships is assembled by one command:
+
+```bash
+bun run docs:site   # mdocs site → coverage + demo app + VitePress build
+                    # (bun run docs:dev / docs:build / docs:preview also work)
+```
 
 To add your own template-only docs page:
-1. Put static files in `docs/` (or `docs/.vitepress/` for VitePress)
+1. Put markdown files in `docs/` (VitePress) — `docs/public/**` is copied to the site root
 2. Keep workflow `template-docs.yml` template-only (wrapped in `# TEMPLATE-ONLY:START(template)` or removed via `extraRemovals`)
-3. Enable Pages: Settings → Pages → Source: GitHub Actions
-4. Push to `main` — workflow uploads `docs/` artifact and deploys
+3. Enable Pages once: Settings → Pages → Source: GitHub Actions
+4. Push to `main` — `mdocs site` builds the whole artifact and deploys it
 
 ---
 

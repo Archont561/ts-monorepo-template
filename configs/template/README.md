@@ -82,7 +82,7 @@ graph TD
 | `src/configs.ts` | `discoverConfigs` / `ScaffoldMeta` types |
 | `src/harness.ts` | `TemplateHarness` — full-pipeline integration helper (`BUN_CREATE_DIR`) |
 | `src/aggregate.ts` | `docs:sync` — aggregates CI workflows from `configs/*` |
-| `src/docs.ts` | `mdocs` bin — single bin for this package |
+| `src/docs.ts` | `mdocs` bin — single bin for this package (`docs:sync` + `site`) |
 
 ## Development
 
@@ -92,6 +92,7 @@ bun run test:template                     # same via root script
 bun run test:template:cases               # only combination cases (cases.test.ts)
 bun run --filter @myorg/template build    # rebuild the committed dist bundle
 bun run docs:sync                          # regenerate workflows (mdocs)
+bun run docs:site                          # build the docs artifact (mdocs site)
 bun run ci:lint                            # after regenerating workflows
 ```
 

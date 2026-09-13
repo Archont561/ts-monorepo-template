@@ -14,6 +14,12 @@
 > [!IMPORTANT]
 > Opt-in — choose `Set up GitHub Pages deployment?` during `bun create Archont561/ts-monorepo-template`.
 
+> [!NOTE]
+> **This repository** is the exception: its template-only docs site owns Pages
+> (`template-docs.yml` → `mdocs site`), so `bun run docs:sync` does not generate
+> `pages.yml` here — two workflows cannot deploy to one site. Generated
+> monorepos have no `docs/`, so they get `pages.yml` whenever Pages is enabled.
+
 ## Architecture
 
 ```mermaid

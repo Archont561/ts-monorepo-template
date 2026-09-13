@@ -48,7 +48,12 @@ type Repo = { owner: string | null; repo: string | null; base: string | null; ur
 type Manifest = { name: string; version: string; private: boolean; kind: string; dir: string };
 type Tool = { name: string; version: string | null; declared: string | null };
 type Workflow = { file: string; name: string; url: string; badge: string };
-type Commit = { sha: string | null; short: string | null; date: string | null; branch: string | null };
+type Commit = {
+  sha: string | null;
+  short: string | null;
+  date: string | null;
+  branch: string | null;
+};
 
 export type Status = {
   generatedAt: string;
@@ -121,9 +126,10 @@ function declaredRange(tool: string): string | null {
   if (!existsSync(configsDir)) return null;
   for (const entry of readdirSync(configsDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    const pkg = readJson<{ dependencies?: Record<string, string>; devDependencies?: Record<string, string> }>(
-      join(configsDir, entry.name, "package.json"),
-    );
+    const pkg = readJson<{
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    }>(join(configsDir, entry.name, "package.json"));
     const range = pkg?.dependencies?.[tool] ?? pkg?.devDependencies?.[tool];
     if (range) return range;
   }
@@ -144,7 +150,9 @@ function tools(): Tool[] {
   ];
   return names.map((name) => ({
     name,
-    version: readJson<{ version?: string }>(join(ROOT, "node_modules", name, "package.json"))?.version ?? null,
+    version:
+      readJson<{ version?: string }>(join(ROOT, "node_modules", name, "package.json"))?.version ??
+      null,
     declared: declaredRange(name),
   }));
 }
@@ -172,7 +180,11 @@ function workflows(slug: Repo): Workflow[] {
     .filter((file) => file.endsWith(".yml"))
     .map((file) => {
       const first = readFileSync(join(dir, file), "utf8").split("\n");
-      const name = first.find((line) => line.startsWith("name:"))?.replace("name:", "").trim() ?? file;
+      const name =
+        first
+          .find((line) => line.startsWith("name:"))
+          ?.replace("name:", "")
+          .trim() ?? file;
       const runs = `https://github.com/${slug.owner}/${slug.repo}/actions/workflows/${file}`;
       return {
         file,

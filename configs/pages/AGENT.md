@@ -3,6 +3,7 @@
 > Opt-in — confirm prompt `Set up GitHub Pages deployment?` during scaffolding. Data-driven via `package.json` `scaffold` metadata.
 
 - `configs/pages` (`@myorg/pages`) provides GitHub Pages deployment via Actions, opt-in confirm
+- In the template repo only, `docs:sync` skips `pages.yml`: `template-docs.yml` deploys the docs site (which nests the demo app at `/example/`), and one Pages site has one deployer
 - When `false` (default), `.github/workflows/pages.yml` + `pages.base.yml`/`pages.steps.yml` removed via `extraRemovals` + `filePatternsToRemove` (`**/pages.yml`) + `fileRegexesToRemove` (`pages\.yml`, `github-pages`)
 - When `true`, keeps `configs/gh-actions/pages.base.yml` skeleton + `configs/pages/pages.steps.yml` fragment → generates `.github/workflows/pages.yml` via `bun run docs:sync` (`mdocs`)
 - `pages.base.yml` skeleton: `name: Deploy to GitHub Pages`, `on: push main + workflow_dispatch`, `permissions: contents read, pages write, id-token write`, `concurrency: group pages, cancel-in-progress false`, jobs `build` (checkout, setup-bun, install, {{STEPS}}, configure-pages, upload-pages-artifact path `./apps/example/public`) + `deploy` (needs build, environment github-pages, if main, deploy-pages)

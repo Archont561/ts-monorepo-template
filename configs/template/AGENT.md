@@ -65,6 +65,7 @@ sequenceDiagram
 - The scaffolder uses only Bun-native APIs in the bundle (`Bun.file`, `Bun.write`, `Bun.$`, `Bun.Glob`) — no external runtime deps (they are bundled with `--packages bundle`).
 
 - Run `bun run docs:sync` after editing workflow skeletons, and `bun run ci:lint` after regenerating workflows.
+- `docs:sync` skips `pages.yml` and `coverage.yml` while `docs/` exists — only one workflow may deploy to Pages, and here `template-docs.yml` (via `mdocs site`) is it. Scaffolded monorepos keep `docs/` out of the picture, so they get both back.
 
 | File | Role |
 | :--- | :--- |
@@ -74,7 +75,7 @@ sequenceDiagram
 | `src/configs.ts` | `discoverConfigs` + `ScaffoldRemovals` |
 | `src/harness.ts` | Integration helper |
 | `src/aggregate.ts` | Workflow aggregator |
-| `src/docs.ts` | `mdocs` bin |
+| `src/docs.ts` | `mdocs` bin — workflow regeneration + `site` (docs artifact) |
 
 > [!TIP]
 > After editing sources, run `bun run --filter @myorg/template build` to regenerate committed bundle.

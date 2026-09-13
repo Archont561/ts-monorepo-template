@@ -122,6 +122,7 @@ bun run skills:update  # Update via skills.sh
 bun run skills:validate # Validate SKILL.md frontmatter
 bun run skills:index   # Build skills.index.json
 bun run docs:sync      # Regenerate workflows from configs/* (mdocs)
+bun run docs:site      # Build the docs artifact: docs + coverage + demo app
 ```
 
 The root scripts are clean one-liners backed by the m-commands above. The shared tool configs live in `configs/*` and are never re-declared at root.
@@ -253,6 +254,8 @@ Tool configs and their agent-facing docs (reference, not concatenated):
 
 > [!NOTE]
 > Workflows in `.github/workflows/` are generated from skeletons in `configs/*/*.base.yml` with fragments from `configs/*/*.steps.yml` + `dependabot.yml` fragments → `.github/dependabot.yml`. Edit skeletons and fragments, then run `bun run docs:sync` (`mdocs`). `template-docs.yml` is template-only static file (docs/ → Pages) removed on scaffold.
+>
+> **Only one workflow may deploy to Pages.** Here that is `template-docs.yml`, which runs `mdocs site` (docs + `/coverage/` + `/example/`). While `docs/` exists, `docs:sync` skips `pages.yml` and `coverage.yml` so they cannot clobber the docs deployment; generated monorepos have no `docs/`, so they get them back.
 
 ```mermaid
 stateDiagram-v2
