@@ -183,6 +183,18 @@ export class MonorepoScaffolder {
       ".dockerignore",
       ".github/dependabot.yml",
       ".github/workflows/dependabot-auto-merge.yml",
+      // Community health (always)
+      ".github/CODEOWNERS",
+      ".github/PULL_REQUEST_TEMPLATE.md",
+      ".github/FUNDING.yml",
+      ".github/ISSUE_TEMPLATE/bug_report.yml",
+      ".github/ISSUE_TEMPLATE/feature_request.yml",
+      "SECURITY.md",
+      "CODE_OF_CONDUCT.md",
+      "SUPPORT.md",
+      // Editor / Git
+      ".editorconfig",
+      ".gitattributes",
     ];
 
     // Config package manifests and config files carry the @myorg scope in
@@ -533,7 +545,9 @@ export class MonorepoScaffolder {
       }
     }
     // Coverage: standalone coverage.yml when pages disabled, otherwise included in pages.yml
-    const coverageConfigExists = await file(`${this.targetDir}/configs/coverage/package.json`).exists();
+    const coverageConfigExists = await file(
+      `${this.targetDir}/configs/coverage/package.json`,
+    ).exists();
     if (coverageConfigExists) {
       if (!pagesConfigExists) {
         await aggregateWorkflow(this.targetDir, "coverage.base.yml", "coverage.steps.yml");
@@ -559,6 +573,16 @@ export class MonorepoScaffolder {
         "dependabot-auto-merge.base.yml",
         "dependabot-auto-merge.steps.yml",
       );
+    }
+    // Stale workflow — only when stale config is enabled
+    const staleConfigExists = await file(`${this.targetDir}/configs/stale/package.json`).exists();
+    if (staleConfigExists) {
+      await aggregateWorkflow(this.targetDir, "stale.base.yml", "stale.steps.yml");
+    } else {
+      const staleWorkflow = `${this.targetDir}/.github/workflows/stale.yml`;
+      if (await file(staleWorkflow).exists()) {
+        await $`rm -rf ${staleWorkflow}`.quiet();
+      }
     }
   }
 

@@ -1,0 +1,38 @@
+# Auto-detect text files, ensure LF line endings
+* text=auto eol=lf
+
+# Scripts — always LF
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Binary — never diff, keep as binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.mp4 binary
+*.mov binary
+*.zip binary
+*.tar binary
+*.gz binary
+
+# Lock files — binary for diff purposes (avoid noisy diffs)
+bun.lock binary
+package-lock.json binary
+yarn.lock binary
+pnpm-lock.yaml binary
+Cargo.lock binary
+
+# NAPI-RS generated binaries
+*.node binary
+*.wasi.cjs binary
+
+# Coverage — generated
+coverage/lcov.info binary
+coverage/html/** binary

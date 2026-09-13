@@ -1,0 +1,24 @@
+{
+  "name": "@myorg/gitleaks",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": "always",
+    "flag": "gitleaks",
+    "prompt": "Include Gitleaks (secret scanning via Lefthook + CI)?"
+  },
+  "bin": {
+    "mgitleaks": "./src/cli.ts"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "devDependencies": {
+    "@myorg/bunup": "workspace:*",
+    "@myorg/ts": "workspace:*"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
+  }
+}

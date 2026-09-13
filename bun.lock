@@ -10,17 +10,24 @@
         "@myorg/bunup": "workspace:*",
         "@myorg/changeset": "workspace:*",
         "@myorg/citty": "workspace:*",
+        "@myorg/codeql": "workspace:*",
+        "@myorg/community": "workspace:*",
         "@myorg/coverage": "workspace:*",
         "@myorg/dependabot": "workspace:*",
         "@myorg/devcontainer": "workspace:*",
+        "@myorg/editorconfig": "workspace:*",
         "@myorg/gh-actions": "workspace:*",
+        "@myorg/gitattributes": "workspace:*",
+        "@myorg/gitleaks": "workspace:*",
         "@myorg/lefthook": "workspace:*",
         "@myorg/native": "workspace:*",
         "@myorg/native-config": "workspace:*",
         "@myorg/pages": "workspace:*",
         "@myorg/playwright": "workspace:*",
         "@myorg/skills": "workspace:*",
+        "@myorg/stale": "workspace:*",
         "@myorg/template": "workspace:*",
+        "@myorg/trivy": "workspace:*",
         "@myorg/ts": "workspace:*",
         "@myorg/turbo": "workspace:*",
         "@myorg/unocss": "workspace:*",
@@ -101,12 +108,34 @@
         "citty": "^0.2.2",
       },
     },
+    "configs/codeql": {
+      "name": "@myorg/codeql",
+      "version": "0.0.0",
+      "bin": {
+        "mcodeql": "./src/cli.ts",
+      },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
+      "devDependencies": {
+        "@myorg/bunup": "workspace:*",
+        "@myorg/ts": "workspace:*",
+      },
+    },
     "configs/commitlint": {
       "name": "@myorg/commitlint",
       "version": "0.0.0",
       "devDependencies": {
         "@commitlint/cli": "^21.2.2",
         "@commitlint/config-conventional": "^21.2.2",
+      },
+    },
+    "configs/community": {
+      "name": "@myorg/community",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@myorg/bunup": "workspace:*",
+        "@myorg/ts": "workspace:*",
       },
     },
     "configs/coverage": {
@@ -136,6 +165,14 @@
       "name": "@myorg/devcontainer",
       "version": "0.0.0",
     },
+    "configs/editorconfig": {
+      "name": "@myorg/editorconfig",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@myorg/bunup": "workspace:*",
+        "@myorg/ts": "workspace:*",
+      },
+    },
     "configs/gh-actions": {
       "name": "@myorg/gh-actions",
       "version": "0.0.0",
@@ -147,6 +184,28 @@
       },
       "devDependencies": {
         "github-actionlint": "^1.7.12",
+      },
+    },
+    "configs/gitattributes": {
+      "name": "@myorg/gitattributes",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@myorg/bunup": "workspace:*",
+        "@myorg/ts": "workspace:*",
+      },
+    },
+    "configs/gitleaks": {
+      "name": "@myorg/gitleaks",
+      "version": "0.0.0",
+      "bin": {
+        "mgitleaks": "./src/cli.ts",
+      },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
+      "devDependencies": {
+        "@myorg/bunup": "workspace:*",
+        "@myorg/ts": "workspace:*",
       },
     },
     "configs/lefthook": {
@@ -212,6 +271,14 @@
         "skills": "^1.5.26",
       },
     },
+    "configs/stale": {
+      "name": "@myorg/stale",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@myorg/bunup": "workspace:*",
+        "@myorg/ts": "workspace:*",
+      },
+    },
     "configs/template": {
       "name": "@myorg/template",
       "version": "0.0.0",
@@ -223,6 +290,20 @@
       },
       "devDependencies": {
         "@clack/prompts": "^1.8.0",
+        "@myorg/ts": "workspace:*",
+      },
+    },
+    "configs/trivy": {
+      "name": "@myorg/trivy",
+      "version": "0.0.0",
+      "bin": {
+        "mtrivy": "./src/cli.ts",
+      },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
+      "devDependencies": {
+        "@myorg/bunup": "workspace:*",
         "@myorg/ts": "workspace:*",
       },
     },
@@ -480,7 +561,11 @@
 
     "@myorg/citty": ["@myorg/citty@workspace:configs/citty"],
 
+    "@myorg/codeql": ["@myorg/codeql@workspace:configs/codeql"],
+
     "@myorg/commitlint": ["@myorg/commitlint@workspace:configs/commitlint"],
+
+    "@myorg/community": ["@myorg/community@workspace:configs/community"],
 
     "@myorg/coverage": ["@myorg/coverage@workspace:configs/coverage"],
 
@@ -488,11 +573,17 @@
 
     "@myorg/devcontainer": ["@myorg/devcontainer@workspace:configs/devcontainer"],
 
+    "@myorg/editorconfig": ["@myorg/editorconfig@workspace:configs/editorconfig"],
+
     "@myorg/example": ["@myorg/example@workspace:apps/example"],
 
     "@myorg/external": ["@myorg/external@workspace:packages/external"],
 
     "@myorg/gh-actions": ["@myorg/gh-actions@workspace:configs/gh-actions"],
+
+    "@myorg/gitattributes": ["@myorg/gitattributes@workspace:configs/gitattributes"],
+
+    "@myorg/gitleaks": ["@myorg/gitleaks@workspace:configs/gitleaks"],
 
     "@myorg/internal": ["@myorg/internal@workspace:packages/internal"],
 
@@ -508,7 +599,11 @@
 
     "@myorg/skills": ["@myorg/skills@workspace:configs/skills"],
 
+    "@myorg/stale": ["@myorg/stale@workspace:configs/stale"],
+
     "@myorg/template": ["@myorg/template@workspace:configs/template"],
+
+    "@myorg/trivy": ["@myorg/trivy@workspace:configs/trivy"],
 
     "@myorg/ts": ["@myorg/ts@workspace:configs/ts"],
 

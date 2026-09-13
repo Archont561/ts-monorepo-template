@@ -72,6 +72,11 @@ All tool invocations use `m`-prefixed aliases that bake in config paths. Each co
 | `msetup` | `citty` | Links m-bins, regenerates `lefthook.yml`, hooks (citty) |
 | `mdocs` | `citty` | Regenerates workflows from `configs/*` (citty) |
 | `mtsc` | `tsc` | TypeScript type-checking |
+| `mgitleaks` | `gitleaks` | Secret scanning — `detect` + `protect --staged` (defensive, always) |
+| `mcodeql` | `codeql` | CodeQL SAST info — runs in Actions (opt-in default true) |
+| `mtrivy` | `trivy` | Vuln scanning — `fs` + `image` (defensive, opt-in) |
+| `mnative` | `cargo` + `napi` | Rust bindings — check/clippy/fmt/test/build + napi build (opt-in) |
+| `mcoverage` | `genhtml` + `lcov` | Coverage — html/check/summary/merge (always) |
 
 <details>
 <summary>Bin linking flow</summary>
@@ -103,6 +108,10 @@ bun run coverage       # Collect unit-test coverage (mbun coverage + merged LCOV
 bun run check          # Lint and format check (Biome)
 bun run check:fix      # Auto-fix lint and format issues
 bun run ci:lint        # Validate GitHub Actions workflows (mci lint)
+bun run security:gitleaks # Scan for secrets (gitleaks)
+bun run security:trivy # FS vuln scan (Trivy HIGH,CRITICAL)
+bun run security:audit # Rust audit (mnative audit)
+bun run security:check # gitleaks + trivy
 bun run skills:list    # List available AI agent skills
 bun run skills:sync    # Sync curated → vendored + validate + index
 bun run skills:add <pkg> # Add via skills.sh (e.g. vercel-labs/agent-skills)
@@ -182,15 +191,22 @@ Tool configs and their agent-facing docs (reference, not concatenated):
 | Commitlint | [AGENT.md](configs/commitlint/AGENT.md) | Commit messages |
 | Coverage | [AGENT.md](configs/coverage/AGENT.md) | LCOV reporting — HTML via genhtml, artifact, Pages (/coverage/ or standalone), threshold 80%, PR comment |
 | Dependabot | [AGENT.md](configs/dependabot/AGENT.md) | Automated dependency updates (npm, cargo, actions, docker) |
-| GitHub Actions | [AGENT.md](configs/gh-actions/AGENT.md) | CI workflow validation and local act (citty) + coverage/pages skeletons |
-| Lefthook | [AGENT.md](configs/lefthook/AGENT.md) | Git hooks (citty) |
+| GitHub Actions | [AGENT.md](configs/gh-actions/AGENT.md) | CI workflow validation and local act (citty) + coverage/pages/stale skeletons |
+| Lefthook | [AGENT.md](configs/lefthook/AGENT.md) | Git hooks (citty) — biome + gitleaks + actionlint |
+| EditorConfig | [AGENT.md](configs/editorconfig/AGENT.md) | Editor consistency (.editorconfig) — always |
+| GitAttributes | [AGENT.md](configs/gitattributes/AGENT.md) | Git file handling (.gitattributes) — always |
+| Community | [AGENT.md](configs/community/AGENT.md) | Community health — CODEOWNERS, PR/issue templates, SECURITY, CODE_OF_CONDUCT, SUPPORT, FUNDING — always |
+| Gitleaks | [AGENT.md](configs/gitleaks/AGENT.md) | Secret scanning — mgitleaks detect/protect (always) |
+| CodeQL | [AGENT.md](configs/codeql/AGENT.md) | SAST via CodeQL — opt-in default true |
+| Trivy | [AGENT.md](configs/trivy/AGENT.md) | Container + FS vuln scanning — opt-in |
+| Stale | [AGENT.md](configs/stale/AGENT.md) | Auto-close inactive issues/PRs — opt-in |
 | TypeScript | [AGENT.md](configs/ts/AGENT.md) | Shared tsconfigs |
 | Turbo | [AGENT.md](configs/turbo/AGENT.md) | Task orchestration |
 
-<!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer,pages) -->
+<!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
 #### Opt-in configs (present only when selected)
 
-<!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer,pages) -->
+<!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
 <!-- TEMPLATE-ONLY:START(devcontainer) -->
 - Devcontainer | [AGENT.md](configs/devcontainer/AGENT.md) | Codespaces / Dev Containers, opt-in
 <!-- TEMPLATE-ONLY:END(devcontainer) -->
@@ -212,6 +228,15 @@ Tool configs and their agent-facing docs (reference, not concatenated):
 <!-- TEMPLATE-ONLY:START(pages) -->
 - Pages | [AGENT.md](configs/pages/AGENT.md) | GitHub Pages deployment, opt-in
 <!-- TEMPLATE-ONLY:END(pages) -->
+<!-- TEMPLATE-ONLY:START(codeql) -->
+- CodeQL | [AGENT.md](configs/codeql/AGENT.md) | SAST via CodeQL, opt-in default true
+<!-- TEMPLATE-ONLY:END(codeql) -->
+<!-- TEMPLATE-ONLY:START(trivy) -->
+- Trivy | [AGENT.md](configs/trivy/AGENT.md) | Container + FS vuln scanning, opt-in
+<!-- TEMPLATE-ONLY:END(trivy) -->
+<!-- TEMPLATE-ONLY:START(stale) -->
+- Stale | [AGENT.md](configs/stale/AGENT.md) | Auto-close inactive issues/PRs, opt-in
+<!-- TEMPLATE-ONLY:END(stale) -->
 
 ## Workflows
 

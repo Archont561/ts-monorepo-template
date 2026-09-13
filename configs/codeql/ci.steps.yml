@@ -1,0 +1,16 @@
+# TEMPLATE-ONLY:START(codeql)
+# CodeQL — SAST for JS/TS (opt-in, default true)
+- name: Initialize CodeQL (JS/TS)
+  uses: github/codeql-action/init@v3
+  with:
+    languages: javascript-typescript
+    queries: security-and-quality
+
+- name: Autobuild (CodeQL)
+  uses: github/codeql-action/autobuild@v3
+
+- name: Perform CodeQL Analysis
+  uses: github/codeql-action/analyze@v3
+  with:
+    category: "/language:javascript-typescript"
+# TEMPLATE-ONLY:END(codeql)

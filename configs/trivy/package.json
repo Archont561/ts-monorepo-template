@@ -1,0 +1,32 @@
+{
+  "name": "@myorg/trivy",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": false,
+    "flag": "trivy",
+    "prompt": "Include Trivy (container + filesystem vulnerability scanning)?",
+    "type": "confirm",
+    "removals": {
+      "false": {
+        "filePatternsToRemove": [
+          "**/trivy*"
+        ]
+      }
+    }
+  },
+  "bin": {
+    "mtrivy": "./src/cli.ts"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "devDependencies": {
+    "@myorg/bunup": "workspace:*",
+    "@myorg/ts": "workspace:*"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
+  }
+}

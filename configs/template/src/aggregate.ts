@@ -92,7 +92,8 @@ export async function aggregateWorkflow(
     stepsFileName === "pages.steps.yml" ||
     stepsFileName === "coverage.steps.yml" ||
     stepsFileName === "dependabot.yml" ||
-    stepsFileName === "dependabot-auto-merge.steps.yml"
+    stepsFileName === "dependabot-auto-merge.steps.yml" ||
+    stepsFileName === "stale.steps.yml"
   ) {
     const found =
       await $`find ${targetDir}/configs -mindepth 2 -maxdepth 2 -name ${stepsFileName} -type f`.text();
@@ -168,6 +169,17 @@ export async function regenerateAll(targetDir: string): Promise<void> {
       "dependabot-auto-merge.base.yml",
       "dependabot-auto-merge.steps.yml",
     );
+  }
+  // Stale workflow — only when stale config is enabled
+  const staleConfigExists = await file(`${targetDir}/configs/stale/package.json`).exists();
+  if (staleConfigExists) {
+    await aggregateWorkflow(targetDir, "stale.base.yml", "stale.steps.yml");
+  } else {
+    const staleWorkflow = `${targetDir}/.github/workflows/stale.yml`;
+    if (await file(staleWorkflow).exists()) {
+      await $`rm -rf ${staleWorkflow}`.quiet();
+      console.log(`🗑️ Removed ${staleWorkflow} (stale disabled)`);
+    }
   }
 }
 

@@ -44,6 +44,9 @@ the correct hoisted layout.
 | `bun run coverage` | Unit coverage, merged LCOV at `coverage/lcov.info` |
 | `bun run check` / `check:fix` | Biome lint + format |
 | `bun run typecheck` | Type-check all packages |
+| `bun run security:gitleaks` | Secret scanning (gitleaks) |
+| `bun run security:trivy` | FS vuln scan (Trivy) |
+| `bun run security:check` | gitleaks + trivy |
 | `bun run docs:sync` | Regenerate workflows from `configs/*` (`mdocs`) |
 | `bun run reinstall` | Clean all `node_modules` and reinstall |
 

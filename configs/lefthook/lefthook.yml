@@ -6,6 +6,9 @@ pre-commit:
       exclude: "configs/biome"
       run: bunx mbiome check --write {staged_files}
       stage_fixed: true
+    gitleaks:
+      glob: "*"
+      run: bunx mgitleaks protect --staged
     actionlint:
       glob: "{.github/workflows/*.yml,.github/workflows/*.yaml}"
       run: bun run ci:lint

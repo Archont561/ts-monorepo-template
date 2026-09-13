@@ -1,0 +1,9 @@
+# .trivyignore — ignore CVEs for Trivy
+# Format: CVE ID per line
+# Docs: https://aquasecurity.github.io/trivy/latest/docs/configuration/filtering/
+
+# Example:
+# CVE-2023-12345
+# CVE-2024-56789
+
+# Add your ignores below:

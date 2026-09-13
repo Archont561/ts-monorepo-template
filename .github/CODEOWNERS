@@ -1,0 +1,13 @@
+# CODEOWNERS — auto-assign reviewers by file path
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# Replace @Archont561 with your org/team or leave as placeholder — scaffolder replaces @myorg scope but CODEOWNERS owner should be set manually or via template prompt.
+# Syntax: <pattern> <@owner> <@team>
+
+* @Archont561
+
+# Examples — uncomment and customize after scaffolding:
+# /packages/auth/** @myorg/security-team
+# *.rs @myorg/rust-team
+# /apps/** @myorg/frontend-team
+# /configs/** @myorg/platform-team
+# *.md @myorg/docs-team

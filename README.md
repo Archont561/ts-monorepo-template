@@ -105,11 +105,19 @@ configs/
   bun-config/       Bun runtime, test, coverage (mbun)
   bunup/            Bundling presets (mbunup)
   changeset/        Versioning and releases (mchangeset)
+  citty/            CLI builder (mcitty)
   commitlint/       Conventional Commits (commitlint)
   coverage/         LCOV coverage reporting (HTML, artifact, Pages, threshold, PR comment)
   dependabot/       Automated dependency updates (npm, cargo, actions, docker)
   gh-actions/       GitHub Actions CI + act + Pages + Coverage skeletons (mci)
-  lefthook/         Git hooks (msetup)
+  lefthook/         Git hooks (msetup) + gitleaks pre-commit
+  editorconfig/     Editor consistency (.editorconfig) — always
+  gitattributes/    Git file handling (.gitattributes) — always
+  community/        Community health (CODEOWNERS, PR/issue templates, SECURITY, CODE_OF_CONDUCT, SUPPORT, FUNDING) — always
+  gitleaks/         Secret scanning (mgitleaks) — always, Lefthook + CI
+  codeql/           SAST via CodeQL (mcodeql) — opt-in default true
+  trivy/            Container + FS vuln scanning (mtrivy) — opt-in
+  stale/            Auto-close inactive issues/PRs — opt-in
   ts/               TypeScript presets (mtsc)
   turbo/            Task orchestration (mturbo)
   pages/            GitHub Pages deployment (opt-in)
@@ -117,7 +125,7 @@ configs/
 
 </details>
 
-<!-- TEMPLATE-ONLY:START(playwright,skills,unocss,native,devcontainer,pages) -->
+<!-- TEMPLATE-ONLY:START(playwright,skills,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
 <details>
 <summary>Opt-in configs (present only when selected)</summary>
 
@@ -129,10 +137,13 @@ configs/
   native/           NAPI-RS bindings
   devcontainer/     Codespaces / Dev Containers
   pages/            GitHub Pages deployment
+  codeql/           SAST via CodeQL (default true)
+  trivy/            Container + FS vuln scanning
+  stale/            Auto-close inactive issues/PRs
 ```
 
 </details>
-<!-- TEMPLATE-ONLY:END(playwright,skills,unocss,native,devcontainer,pages) -->
+<!-- TEMPLATE-ONLY:END(playwright,skills,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
 
 <!-- TEMPLATE-ONLY:START(template) -->
 <details>
@@ -161,17 +172,24 @@ Tool configs and their docs (reference, not concatenated):
 | [Changeset](configs/changeset/README.md) | `mchangeset` | Versioning and releases |
 | [Citty](configs/citty/README.md) | `mcitty` | Elegant CLI builder (citty) |
 | [Commitlint](configs/commitlint/README.md) | — | Conventional Commits |
-| [Coverage](configs/coverage/README.md) | — | LCOV coverage reporting (HTML via genhtml, artifact, Pages, threshold, PR comment) |
+| [Coverage](configs/coverage/README.md) | `mcoverage` | LCOV coverage reporting (HTML via genhtml, artifact, Pages, threshold, PR comment) |
 | [Dependabot](configs/dependabot/README.md) | — | Automated dependency updates (npm, cargo, actions, docker) |
 | [GitHub Actions](configs/gh-actions/README.md) | `mci` | CI workflows, `mci lint` / `mci act` |
-| [Lefthook](configs/lefthook/README.md) | `msetup` | Git hooks |
+| [Lefthook](configs/lefthook/README.md) | `msetup` | Git hooks (biome + gitleaks + actionlint) |
+| [EditorConfig](configs/editorconfig/README.md) | — | Editor consistency (`.editorconfig`) — always |
+| [GitAttributes](configs/gitattributes/README.md) | — | Git file handling (`.gitattributes`) — always |
+| [Community](configs/community/README.md) | — | Community health (CODEOWNERS, PR/issue templates, SECURITY, CODE_OF_CONDUCT, SUPPORT, FUNDING) — always |
+| [Gitleaks](configs/gitleaks/README.md) | `mgitleaks` | Secret scanning — Lefthook + CI (always) |
+| [CodeQL](configs/codeql/README.md) | `mcodeql` | SAST via CodeQL — opt-in default true |
+| [Trivy](configs/trivy/README.md) | `mtrivy` | Container + FS vuln scanning — opt-in |
+| [Stale](configs/stale/README.md) | — | Auto-close inactive issues/PRs — opt-in |
 | [TypeScript](configs/ts/README.md) | `mtsc` | Shared tsconfigs |
 | [Turbo](configs/turbo/README.md) | `mturbo` | Task orchestration |
 
-<!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer,pages) -->
+<!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
 #### Opt-in tooling (present only when selected)
 
-<!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer,pages) -->
+<!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
 <!-- TEMPLATE-ONLY:START(playwright) -->
 - [Playwright](configs/playwright/README.md) (`me2e`) — E2E testing
 <!-- TEMPLATE-ONLY:END(playwright) -->
@@ -193,6 +211,15 @@ Tool configs and their docs (reference, not concatenated):
 <!-- TEMPLATE-ONLY:START(pages) -->
 - [Pages](configs/pages/README.md) — GitHub Pages deployment, opt-in
 <!-- TEMPLATE-ONLY:END(pages) -->
+<!-- TEMPLATE-ONLY:START(codeql) -->
+- [CodeQL](configs/codeql/README.md) (`mcodeql`) — SAST via CodeQL, opt-in default true
+<!-- TEMPLATE-ONLY:END(codeql) -->
+<!-- TEMPLATE-ONLY:START(trivy) -->
+- [Trivy](configs/trivy/README.md) (`mtrivy`) — Container + FS vuln scanning, opt-in
+<!-- TEMPLATE-ONLY:END(trivy) -->
+<!-- TEMPLATE-ONLY:START(stale) -->
+- [Stale](configs/stale/README.md) — Auto-close inactive issues/PRs, opt-in
+<!-- TEMPLATE-ONLY:END(stale) -->
 
 See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow.
 
@@ -212,6 +239,10 @@ See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](
 | `bun run ci:list` | List `act` jobs (`mci act -l`) |
 | `bun run ci:dry` | Dry-run CI locally (`mci act push -n`) |
 | `bun run ci:local` | Run CI locally in Docker (`mci act push`) |
+| `bun run security:gitleaks` | Scan repo for secrets (gitleaks) |
+| `bun run security:trivy` | FS vuln scan (Trivy HIGH,CRITICAL) |
+| `bun run security:audit` | Rust audit (cargo audit via mnative) |
+| `bun run security:check` | Run gitleaks + trivy |
 | `bun run skills:list` | List available AI agent skills |
 | `bun run skills:sync` | Sync curated → vendored + validate + index |
 | `bun run skills:add <pkg>` | Add skill via skills.sh (`vercel-labs/agent-skills`) |
