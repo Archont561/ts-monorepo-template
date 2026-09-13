@@ -49,6 +49,7 @@
       "!**/configs/biome",
       "!**/node_modules",
       "!**/dist",
+      "!**/.vitepress/cache",
       "!**/.turbo",
       "!**/coverage",
       "!**/test-results",
