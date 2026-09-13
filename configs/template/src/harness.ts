@@ -40,7 +40,7 @@ function matchSegment(pattern: string, seg: string | undefined): boolean {
   if (!pattern.includes("*")) return pattern === seg;
   const escaped = pattern
     .split("*")
-    .map((s) => s.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+    .map((s) => s.replace(/[.+?^${}()|[\\]\\\\]/g, "\\$&"))
     .join(".*");
   return new RegExp(`^${escaped}$`).test(seg);
 }
@@ -103,8 +103,11 @@ export class TemplateHarness {
       "test-results",
       "playwright-report",
       "apps/*/dist",
+      "packages/*/dist",
+      "configs/*/dist",
       "apps/*/coverage",
       "target",
+      "dist",
       ...(options.excludes ?? []),
     ];
     this.skipInstall = options.skipInstall ?? true;

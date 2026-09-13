@@ -1,5 +1,5 @@
 {
-  "name": "@myorg/native",
+  "name": "@myorg/native-config",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -27,17 +27,21 @@
         "filePatternsToRemove": [
           "**/*.node",
           "**/native/**",
-          "**/*.napi.*"
+          "**/*.napi.*",
+          "rust-toolchain.toml",
+          ".cargo/**"
         ],
         "fileRegexesToRemove": [
           "native",
           "\\.node$",
-          "napi"
+          "napi",
+          "rust-toolchain"
         ]
       },
       "publish": {},
       "docker": {}
-    }
+    },
+    "setup": "configs/native/src/setup.ts"
   },
   "exports": {
     ".": "./index.ts"

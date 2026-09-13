@@ -224,6 +224,15 @@ async function scanForLeaks(
     "-not",
     "-path",
     "*/.git/*",
+    "-not",
+    "-path",
+    "*/dist/*",
+    "-not",
+    "-path",
+    "*/target/*",
+    "-not",
+    "-path",
+    "*/.turbo/*",
   ];
   const result = await $`find ${findArgs}`.text();
   const files = result.trim().split("\n").filter(Boolean);

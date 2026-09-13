@@ -1,0 +1,28 @@
+[package]
+name = "native"
+version = "0.1.0"
+edition = "2021"
+description = "Native Rust bindings for @myorg/external — napi-rs with WASM fallback"
+license = "MIT"
+repository = "https://github.com/Archont561/ts-monorepo-template"
+
+[lib]
+crate-type = ["cdylib"]
+name = "native"
+
+[dependencies]
+napi = { version = "3.0.0", features = ["napi4"] }
+napi-derive = "3.0.0"
+
+[build-dependencies]
+napi-build = "2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = "symbols"
+opt-level = 3
+
+[profile.dev]
+opt-level = 0
+debug = true

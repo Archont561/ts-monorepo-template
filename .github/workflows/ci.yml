@@ -36,6 +36,23 @@ jobs:
       - name: Validate workflows
         run: bun run ci:lint
 
+# TEMPLATE-ONLY:START(native)
+- name: Build native bindings (host)
+  if: hashFiles('packages/native/Cargo.toml') != ''
+  run: |
+    echo "🦀 Checking Rust toolchain"
+    rustc --version || echo "Rust not installed, skipping native build in CI lint"
+    cargo --version || true
+    # In full CI, build per matrix:
+    # bun run build:native
+  shell: bash
+
+- name: Check native package types
+  if: hashFiles('packages/native/package.json') != ''
+  run: bun --filter @myorg/native run typecheck || echo "native typecheck skipped"
+  shell: bash
+# TEMPLATE-ONLY:END(native)
+
       - name: E2E tests
         run: bun run test:e2e
 

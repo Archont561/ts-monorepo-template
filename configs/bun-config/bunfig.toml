@@ -19,4 +19,8 @@ coveragePathIgnorePatterns = [
   "**/src/collector.ts",
   "**/src/harness.ts",
   "**/src/aggregate.ts",
+  "**/src/setup.ts",
+  "**/*.node",
+  "**/*.wasi.cjs",
+  "**/target/**",
 ]

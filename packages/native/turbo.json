@@ -1,0 +1,9 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "outputs": ["*.node", "index.js", "index.d.ts"],
+      "cache": false
+    }
+  }
+}

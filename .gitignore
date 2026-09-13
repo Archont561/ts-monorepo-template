@@ -36,3 +36,19 @@ lefthook-local.yml
 !.agents/skills/**
 !.agents/skills.index.json
 !.agents/README.md
+
+# Rust / NAPI-RS
+/target/
+**/*.node
+**/*.wasi.cjs
+**/wasi-worker.mjs
+Cargo.lock
+npm/
+index.js
+index.d.ts
+# Keep template's Cargo.lock? No — native package generates its own
+!packages/native/Cargo.lock
+# But ignore generated loader in packages/native when built
+packages/native/index.js
+packages/native/index.d.ts
+packages/native/*.node

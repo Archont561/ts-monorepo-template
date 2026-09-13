@@ -11,7 +11,8 @@ import { $, file, write } from "bun";
  *   `{{STEPS}}` placeholder filled from every `configs/<dir>/ci.steps.yml`
  *   (sorted, concatenated).
  * - `.github/workflows/release.yml` is `configs/gh-actions/release.base.yml`
- *   with `{{STEPS}}` filled from `configs/changeset/release.steps.yml`.
+ *   with `{{STEPS}}` filled from every `configs/<dir>/release.steps.yml`
+ *   (sorted, concatenated).
  *
  * Root README.md and AGENTS.md are now static reference files (not concatenated)
  * that list configs via links. They have TEMPLATE-ONLY blocks for template vs
@@ -57,9 +58,9 @@ export async function aggregateMarkdown(
 
 /**
  * Renders a workflow skeleton, splicing the matching step fragments into
- * the `{{STEPS}}` placeholder. `stepsFileName === "ci.steps.yml"` aggregates
- * every config's fragment; anything else names a single file under
- * `configs/<dir>/`.
+ * the `{{STEPS}}` placeholder. Both ci.steps.yml and release.steps.yml
+ * aggregate from every config's fragment; legacy single-file mode is
+ * kept for backward compat.
  */
 export async function aggregateWorkflow(
   targetDir: string,
@@ -69,7 +70,7 @@ export async function aggregateWorkflow(
   const base = await file(`${targetDir}/configs/gh-actions/${baseFileName}`).text();
 
   let steps: string;
-  if (stepsFileName === "ci.steps.yml") {
+  if (stepsFileName === "ci.steps.yml" || stepsFileName === "release.steps.yml") {
     const found =
       await $`find ${targetDir}/configs -mindepth 2 -maxdepth 2 -name ${stepsFileName} -type f`.text();
     const fragments = found.trim().split("\n").filter(Boolean).sort();

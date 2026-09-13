@@ -504,6 +504,46 @@ export class MonorepoScaffolder {
   }
 
   /**
+   * Runs setup scripts for enabled configs (data-driven).
+   * Setup scripts are declared in scaffold.setup and are executed when config is enabled.
+   * Used for native bindings to scaffold packages/native/ when selected.
+   */
+  async runSetup(): Promise<void> {
+    const configs = await discoverConfigs(this.targetDir);
+
+    for (const config of configs) {
+      const meta = config.meta;
+      if (!meta.setup) continue;
+
+      // Always-on configs always run setup unless selfDestruct
+      // Opt-in configs run setup only when enabled
+      if (meta.default === "always" && meta.selfDestruct) continue;
+
+      const selected = this.selectedFor(meta);
+      const disabled = meta.selfDestruct || this.isDisabled(meta, selected);
+      if (disabled) continue; // Only run for enabled
+
+      const setupPath = `${this.targetDir}/${meta.setup}`;
+      if (!(await file(setupPath).exists())) continue;
+
+      console.log(`\n🔧 Running setup for ${config.dir}: ${meta.setup}\n`);
+      try {
+        // Run setup script with scope env
+        const proc = Bun.spawn({
+          cmd: ["bun", setupPath],
+          cwd: this.targetDir,
+          env: { ...process.env, NATIVE_SCOPE: this.scope },
+          stdout: "inherit",
+          stderr: "inherit",
+        });
+        await proc.exited;
+      } catch (e) {
+        console.warn(`⚠️ Setup for ${config.dir} failed:`, e);
+      }
+    }
+  }
+
+  /**
    * Ensures the target directory is a Git repository.
    *
    * Lefthook hooks are no longer installed here — the root `prepare` script
@@ -538,6 +578,7 @@ export class MonorepoScaffolder {
     await this.stripTemplateMarkers(); // Scope-aware
     await this.removeTemplateFiles();
     await this.handleConfig(); // Data-driven removals, incl. template self-destruct
+    await this.runSetup(); // Data-driven setup for enabled configs (e.g. native)
     await this.regenerateCI(); // Workflows only — README/AGENTS are static reference files
     await this.setupGitHooks();
   }

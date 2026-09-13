@@ -1,0 +1,53 @@
+{
+  "name": "@myorg/native",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "*.node",
+    "*.wasi.cjs",
+    "wasi-worker.mjs",
+    "wasi-worker-browser.mjs"
+  ],
+  "napi": {
+    "binaryName": "native",
+    "packageName": "@myorg/native",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "wasm32-wasip1-threads"
+    ],
+    "wasm": {
+      "initialMemory": 16,
+      "maximumMemory": 65536,
+      "browser": {
+        "fs": false,
+        "asyncInit": true,
+        "errorEvent": true
+      }
+    }
+  },
+  "scripts": {
+    "build": "if command -v cargo >/dev/null 2>&1; then napi build --release --platform; else echo '⚠️ cargo not found, skipping native build (install Rust to build)'; fi",
+    "build:debug": "if command -v cargo >/dev/null 2>&1; then napi build; else echo '⚠️ cargo not found, skipping native build'; fi",
+    "build:wasm": "if command -v cargo >/dev/null 2>&1; then napi build --release --target wasm32-wasip1-threads; else echo '⚠️ cargo not found, skipping WASM build'; fi",
+    "create-npm-dirs": "napi create-npm-dirs",
+    "artifacts": "napi artifacts",
+    "prepublish": "napi pre-publish",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@myorg/bunup": "workspace:*",
+    "@myorg/ts": "workspace:*",
+    "@napi-rs/cli": "^3.9.1"
+  }
+}

@@ -15,6 +15,8 @@
     "@myorg/citty": "workspace:*",
     "@myorg/gh-actions": "workspace:*",
     "@myorg/lefthook": "workspace:*",
+    "@myorg/native-config": "workspace:*",
+    "@myorg/native": "workspace:*",
     "@myorg/playwright": "workspace:*",
     "@myorg/skills": "workspace:*",
     "@myorg/template": "workspace:*",
@@ -26,9 +28,12 @@
     "start": "bun run dev"
   },
   "scripts": {
-    "preinstall": "node -e \"if(!process.env.npm_config_user_agent?.includes('bun')){console.error('\\n❌ This project requires Bun. Run: bun install\\n');process.exit(1)}\"",
+    "preinstall": "node -e \"if(!process.env.npm_config_user_agent?.includes('bun')){console.error('\\\\n❌ This project requires Bun. Run: bun install\\\\n');process.exit(1)}\"",
     "prepare": "msetup lefthook && mchangeset init",
     "build": "mturbo build",
+    "build:native": "bun --filter @myorg/native run build",
+    "build:wasm": "bun --filter @myorg/native run build:wasm",
+    "test:native": "bun --filter @myorg/native run test",
     "dev": "mturbo dev",
     "typecheck": "mturbo typecheck",
     "docs:sync": "mdocs",

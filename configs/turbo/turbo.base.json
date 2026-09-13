@@ -23,6 +23,16 @@
       "cache": false,
       "persistent": true,
       "dependsOn": ["^build"]
+    },
+    "build:native": {
+      "dependsOn": ["^build"],
+      "outputs": ["*.node", "index.js", "index.d.ts"],
+      "cache": false
+    },
+    "build:wasm": {
+      "dependsOn": ["build:native"],
+      "outputs": ["*.wasi.cjs", "wasi-worker.mjs"],
+      "cache": false
     }
   }
 }

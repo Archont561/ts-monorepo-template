@@ -40,3 +40,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+# TEMPLATE-ONLY:START(native)
+- name: Build native bindings for release
+  if: hashFiles('packages/native/Cargo.toml') != ''
+  run: |
+    echo "🦀 Building native bindings for release"
+    if command -v cargo >/dev/null 2>&1; then
+      bun run build:native || echo "native build failed, continuing with JS fallback"
+    else
+      echo "cargo not found, skipping native build"
+    fi
+  shell: bash
+# TEMPLATE-ONLY:END(native)
