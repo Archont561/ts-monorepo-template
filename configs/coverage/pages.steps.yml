@@ -1,6 +1,6 @@
       # TEMPLATE-ONLY:START(pages)
-      # Collects coverage if needed, renders HTML and copies it into the Pages
-      # artifact so it is served at /coverage/ — all inside mcoverage pages.
+      # Runs after `mpages build`: that wipes and rebuilds .pages/ from the
+      # packages that declare one, so coverage has to be copied in afterwards.
       - name: Publish coverage to Pages (mcoverage)
         run: mcoverage pages
         shell: bash

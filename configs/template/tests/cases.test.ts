@@ -427,6 +427,12 @@ describe("template cases — common flows with every combination", () => {
           ).toBeDefined();
         }
 
+        // 5c. Pages is discovered from the package that declares it, so the
+        // declaration has to survive scaffolding even when Pages is disabled.
+        expect(appPkg.pages?.dir, `Expected apps/example to declare a pages dir in ${c.name}`).toBe(
+          "public",
+        );
+
         // 6. Badges — root README should have badges when badges config always
         const readme = await file(`${result.templateDir}/README.md`).text();
         expect(readme).toContain("# Monorepo");

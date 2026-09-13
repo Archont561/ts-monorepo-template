@@ -36,7 +36,7 @@ Demo HTTP application built with Bun.serve and file-based routing, with optional
 bun run dev              # hot-reloading server on :3000
 bun run test             # unit tests (routes + integration)
 bun run test:e2e         # Playwright E2E (requires browsers)
-bun run build:css        # generate public/uno.css (when unocss enabled)
+bun run build:css        # munocss build → public/uno.css (when unocss enabled)
 ```
 
 ## Docker

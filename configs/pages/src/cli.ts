@@ -1,27 +1,23 @@
 #!/usr/bin/env bun
 import { existsSync } from "node:fs";
-import { spawnSync } from "bun";
+import { cp, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { Glob, spawnSync } from "bun";
 import { defineCommand, runMain } from "citty";
-import { PAGES_ARTIFACT_PATH } from "../index.ts";
+import { discoverPages, PAGES_STAGING_DIR, type PagesTarget, pagesUrlPath } from "../index.ts";
 
 function run(cmd: string[]): number {
   const result = spawnSync({ cmd, stdout: "inherit", stderr: "inherit", stdin: "inherit" });
   return result.exitCode;
 }
 
-type Repo = { owner: string; repo: string };
-
 /**
- * Resolves `owner/repo` for a GitHub Pages project site. Prefers the
- * Actions-provided GITHUB_REPOSITORY, falls back to the git remote so it also
- * works on a dev machine (and inside the docs data loader).
+ * Repo name for a GitHub Pages project site, e.g. "org/my-app" -> "my-app".
+ * Prefers the Actions-provided GITHUB_REPOSITORY, falls back to git remote.
  */
-function repoSlug(): Repo | undefined {
-  const fromEnv = process.env.GITHUB_REPOSITORY;
-  if (fromEnv?.includes("/")) {
-    const [owner, repo] = fromEnv.split("/");
-    if (owner && repo) return { owner, repo };
-  }
+function repoName(): string | undefined {
+  const fromEnv = process.env.GITHUB_REPOSITORY?.split("/")[1];
+  if (fromEnv) return fromEnv;
 
   const remote = spawnSync({
     cmd: ["git", "config", "--get", "remote.origin.url"],
@@ -29,40 +25,104 @@ function repoSlug(): Repo | undefined {
   });
   const url = remote.stdout?.toString().trim();
   if (!url) return undefined;
-
-  // https://github.com/owner/repo.git | git@github.com:owner/repo.git
-  const match = url.replace(/\.git$/, "").match(/[:/]([^/:]+)\/([^/]+)$/);
-  if (!match) return undefined;
-  return { owner: match[1], repo: match[2] };
+  return url
+    .replace(/\.git$/, "")
+    .split("/")
+    .at(-1);
 }
 
-/** Canonical Pages URL for the repo, e.g. https://owner.github.io/repo. */
-function pagesUrl(slug: Repo): string {
-  return `https://${slug.owner.toLowerCase()}.github.io/${slug.repo}`;
+function ownerName(): string | undefined {
+  const fromEnv = process.env.GITHUB_REPOSITORY?.split("/")[0];
+  if (fromEnv) return fromEnv;
+  const remote = spawnSync({
+    cmd: ["git", "config", "--get", "remote.origin.url"],
+    stdout: "pipe",
+  });
+  const url = remote.stdout?.toString().trim();
+  const match = url?.replace(/\.git$/, "").match(/[:/]([^/:]+)\/[^/]+$/);
+  return match?.[1];
 }
+
+/** Copies each declared Pages directory into the staging dir. */
+async function stage(root: string, targets: PagesTarget[]): Promise<void> {
+  await rm(join(root, PAGES_STAGING_DIR), { recursive: true, force: true });
+
+  for (const target of targets) {
+    const source = join(root, target.outDir);
+    if (!existsSync(source)) {
+      console.error(`::error::${target.name} declares "${target.outDir}" but it does not exist`);
+      process.exit(1);
+    }
+    const destination = target.subpath
+      ? join(root, PAGES_STAGING_DIR, target.subpath)
+      : join(root, PAGES_STAGING_DIR);
+    await cp(source, destination, { recursive: true });
+    console.log(
+      `📦 ${target.name}: ${target.outDir} → ${PAGES_STAGING_DIR}${pagesUrlPath(target)}`,
+    );
+  }
+
+  // Coverage is rendered by `mcoverage pages` into coverage/html; folding it in
+  // here keeps the step order in the workflow irrelevant.
+  const coverageHtml = join(root, "coverage", "html");
+  if (existsSync(join(coverageHtml, "index.html"))) {
+    await cp(coverageHtml, join(root, PAGES_STAGING_DIR, "coverage"), { recursive: true });
+    console.log(`📊 coverage/html → ${PAGES_STAGING_DIR}/coverage (served at /coverage/)`);
+  }
+
+  const index = join(root, PAGES_STAGING_DIR, "index.html");
+  if (!existsSync(index)) {
+    console.warn(
+      `⚠️ No index.html at the site root (${PAGES_STAGING_DIR}/) — check the pages config`,
+    );
+  }
+}
+
+const listCommand = defineCommand({
+  meta: { name: "list", description: "Show which packages declare a Pages site" },
+  run() {
+    const targets = discoverPages();
+    if (targets.length === 0) {
+      console.log("No package declares a pages config in its package.json");
+      process.exit(0);
+    }
+    for (const target of targets) {
+      console.log(
+        `${target.name.padEnd(24)} ${target.outDir.padEnd(28)} → ${pagesUrlPath(target)}`,
+      );
+    }
+    process.exit(0);
+  },
+});
 
 const buildCommand = defineCommand({
   meta: {
     name: "build",
-    description: "Build the static site for GitHub Pages (bun run build + verify artifact dir)",
+    description: "Build the site and assemble the Pages artifact from declared packages",
   },
   run() {
     console.log("📄 Building static site for GitHub Pages");
 
     // Every package builds its own assets — apps own their CSS build
-    // (e.g. apps/example's build:css), so there is no global CSS step here.
+    // (e.g. apps/example's munocss build), so there is no global CSS step here.
     const exitCode = run(["bun", "run", "build"]);
     if (exitCode !== 0) {
       console.error(`::error::bun run build failed (exit ${exitCode})`);
       process.exit(exitCode);
     }
 
-    if (!existsSync(PAGES_ARTIFACT_PATH)) {
-      console.error(`::error::Pages artifact dir missing: ${PAGES_ARTIFACT_PATH}`);
+    const targets = discoverPages();
+    if (targets.length === 0) {
+      console.error(
+        `::error::Pages is enabled but no package declares "pages" in its package.json (e.g. "pages": { "dir": "public" })`,
+      );
       process.exit(1);
     }
 
-    console.log(`✅ Pages artifact ready: ${PAGES_ARTIFACT_PATH}`);
+    stage(process.cwd(), targets).then(() => {
+      console.log(`✅ Pages artifact ready: ${PAGES_STAGING_DIR}/`);
+      process.exit(0);
+    });
   },
 });
 
@@ -84,14 +144,14 @@ const baseCommand = defineCommand({
     },
   },
   async run({ args }) {
-    const slug = repoSlug();
-    const name = slug?.repo;
-    const url = slug ? pagesUrl(slug) : undefined;
+    const name = repoName();
+    const owner = ownerName() ?? "unknown";
+    const url = name ? `https://${owner.toLowerCase()}.github.io/${name}` : undefined;
 
     if (args.json) {
       console.log(
         JSON.stringify({
-          owner: slug?.owner ?? null,
+          owner: name ? owner : null,
           repo: name ?? null,
           base: name ? `/${name}` : null,
           url: url ?? null,
@@ -111,20 +171,24 @@ const baseCommand = defineCommand({
       process.exit(1);
     }
 
-    const indexPath = `${PAGES_ARTIFACT_PATH}/index.html`;
-    if (!existsSync(indexPath)) {
-      console.error(`::error::${indexPath} not found — build the site first (mpages build)`);
-      process.exit(1);
-    }
-
-    const html = await Bun.file(indexPath).text();
-    const rewritten = html.replaceAll(/(href|src)="\/(?!\/)/g, `$1="/${name}/`);
-    if (rewritten === html) {
-      console.log("   No absolute paths to rewrite");
+    // Root-document targets only: a target published at /<subpath>/ serves its
+    // own assets relative to itself, so rewriting them to /<repo>/ would break.
+    const targets = discoverPages();
+    const rootTargets = targets.filter((target) => target.subpath === "");
+    if (rootTargets.length === 0) {
+      console.log("   No root-level Pages target — nothing to rewrite");
       return;
     }
-    await Bun.write(indexPath, rewritten);
-    console.log(`   Rewrote absolute paths to /${name}/ in ${indexPath}`);
+
+    let rewritten = 0;
+    for (const file of new Glob(`${PAGES_STAGING_DIR}/**/*.html`).scanSync(".")) {
+      const html = await Bun.file(file).text();
+      const next = html.replaceAll(/(href|src)="\/(?!\/)/g, `$1="/${name}/`);
+      if (next === html) continue;
+      await Bun.write(file, next);
+      rewritten++;
+    }
+    console.log(`   Rewrote absolute paths to /${name}/ in ${rewritten} file(s)`);
   },
 });
 
@@ -132,9 +196,9 @@ const main = defineCommand({
   meta: {
     name: "mpages",
     version: "1.0.0",
-    description: "GitHub Pages helper — builds the static site and configures the base path",
+    description: "GitHub Pages helper — discovers declared sites, builds and stages the artifact",
   },
-  subCommands: { build: buildCommand, base: baseCommand },
+  subCommands: { build: buildCommand, base: baseCommand, list: listCommand },
 });
 
 runMain(main);

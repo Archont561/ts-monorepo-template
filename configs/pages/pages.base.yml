@@ -35,7 +35,8 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "./apps/example/public"
+          # mpages build assembles every declared package into .pages/
+          path: "./.pages"
 
   deploy:
     needs: build

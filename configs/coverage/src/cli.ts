@@ -7,7 +7,10 @@ import { defineCommand, runMain } from "citty";
 const LCOV = "coverage/lcov.info";
 const RUST_LCOV = "coverage/rust-lcov.info";
 const HTML_DIR = "coverage/html";
-const PAGES_DIR = "apps/example/public/coverage";
+// mpages build assembles the artifact at .pages/ — coverage rides along there.
+const PAGES_DIR = ".pages/coverage";
+// Rendered here; `mpages build` copies it into the artifact (see pages command).
+const COVERAGE_HTML_INDEX = `${HTML_DIR}/index.html`;
 
 function run(cmd: string[], opts: { cwd?: string } = {}): number {
   const result = spawnSync({
@@ -201,14 +204,14 @@ const pagesCommand = defineCommand({
 
     installTools();
     generateHtml();
-    if (!existsSync(HTML_DIR)) {
+    if (!existsSync(COVERAGE_HTML_INDEX)) {
       console.warn(`⚠️ No HTML report at ${HTML_DIR} — skipping Pages coverage`);
       process.exit(0);
     }
 
-    mkdirSync(PAGES_DIR, { recursive: true });
-    await cp(HTML_DIR, PAGES_DIR, { recursive: true });
-    console.log(`✅ Coverage published to ${PAGES_DIR} (served at /coverage/)`);
+    console.log(
+      `✅ Coverage HTML ready at ${HTML_DIR}/ — \`mpages build\` publishes it to ${PAGES_DIR} (served at /coverage/)`,
+    );
     process.exit(0);
   },
 });

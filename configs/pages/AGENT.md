@@ -2,12 +2,12 @@
 
 > Opt-in — confirm prompt `Set up GitHub Pages deployment?` during scaffolding. Data-driven via `package.json` `scaffold` metadata.
 
-- `configs/pages` (`@myorg/pages`) provides GitHub Pages deployment via Actions, opt-in confirm
+- `configs/pages` (`@myorg/pages`) provides GitHub Pages deployment via Actions, opt-in confirm — **what is deployed is discovered from `package.json`**, not hardcoded: packages declare `"pages": { "dir": "public" }` (`"pages": "public"` / `true` also accepted), `mpages` scans `apps/*` + `packages/*` and stages each into `.pages/` (one package → site root, several → `/<name>/`)
 - In the template repo only, `docs:sync` skips `pages.yml`: `template-docs.yml` deploys the docs site (which nests the demo app at `/example/`), and one Pages site has one deployer
 - When `false` (default), `.github/workflows/pages.yml` + `pages.base.yml`/`pages.steps.yml` removed via `extraRemovals` + `filePatternsToRemove` (`**/pages.yml`) + `fileRegexesToRemove` (`pages\.yml`, `github-pages`)
 - When `true`, keeps `configs/gh-actions/pages.base.yml` skeleton + `configs/pages/pages.steps.yml` fragment → generates `.github/workflows/pages.yml` via `bun run docs:sync` (`mdocs`)
 - `pages.base.yml` skeleton: `name: Deploy to GitHub Pages`, `on: push main + workflow_dispatch`, `permissions: contents read, pages write, id-token write`, `concurrency: group pages, cancel-in-progress false`, jobs `build` (checkout, setup-bun, install, {{STEPS}}, configure-pages, upload-pages-artifact path `./apps/example/public`) + `deploy` (needs build, environment github-pages, if main, deploy-pages)
-- `pages.steps.yml` fragment: `mpages build` (runs `bun run build`, verifies `apps/example/public`) + `mpages base` (repo name + Pages URL, `--inject` rewrites absolute `href`/`src`) — all logic lives in `configs/pages/src/cli.ts`; no UnoCSS step (CSS is built by the app that owns it)
+- `pages.steps.yml` fragment: `mpages build` (runs `bun run build`, discovers declared packages, stages `.pages/`) + `mpages base` (repo name + Pages URL, `--inject` rewrites absolute `href`/`src` in staged HTML) — all logic lives in `configs/pages/src/cli.ts`; no UnoCSS step (CSS is built by the app that owns it). `mpages list` prints the discovered targets
 - Official actions: `configure-pages@v5`, `upload-pages-artifact@v3`, `deploy-pages@v4` — deploy targets `github-pages` environment
 - Other configs can contribute `pages.steps.yml` fragments (e.g. coverage publishes its HTML report into `apps/example/public/coverage`)
 - Repo settings one-time: Settings → Pages → Source → GitHub Actions, environment `github-pages` auto-created, add protection rule only main can deploy

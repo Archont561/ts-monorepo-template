@@ -1,6 +1,6 @@
 # @myorg/pages
 
-> Opt-in GitHub Pages deployment via GitHub Actions — static site hosting from `apps/example/public`.
+> Opt-in GitHub Pages deployment via GitHub Actions. **What gets deployed is discovered**: any workspace package that declares a `pages` field in its own `package.json` is published, so nothing is hardcoded to `apps/example`.
 
 ## What it provides
 
@@ -8,7 +8,7 @@
 - `pages.steps.yml` fragment aggregated into `.github/workflows/pages.yml` via `mdocs`
 - `pages.base.yml` skeleton in `configs/gh-actions/` with required permissions (`pages: write`, `id-token: write`), concurrency (`group: pages`, `cancel-in-progress: false`), environment `github-pages`
 - Build + deploy workflow using official Pages actions: `configure-pages`, `upload-pages-artifact`, `deploy-pages`
-- `mpages` CLI (`configs/pages/src/cli.ts`) — `mpages build` builds the artifact and verifies `apps/example/public`, `mpages base` prints the repo name + Pages URL and can inject the `/repo-name` base path
+- `mpages` CLI (`configs/pages/src/cli.ts`) — `mpages build` builds and stages the artifact from every package that declares one, `mpages base` prints the repo name + Pages URL and can inject the `/repo-name` base path, `mpages list` shows what was discovered
 - CSS is **not** built here — the app that owns the UnoCSS config does it in its own `build` script (see `configs/unocss`)
 
 > [!IMPORTANT]
@@ -27,7 +27,8 @@ graph TD
     A[bun create] --> B{pages?}
     B -->|no| C["prune pages<br/>pages.yml via glob+regex"]
     B -->|yes| D["keep pages.base.yml + pages.steps.yml<br/>build static site"]
-    D --> E["configure-pages<br/>upload-pages-artifact<br/>path: ./apps/example/public"]
+    D --> D2["mpages build<br/>discover declared packages<br/>stage into .pages/"]
+    D2 --> E["configure-pages<br/>upload-pages-artifact<br/>path: ./.pages"]
     E --> F["deploy-pages<br/>environment: github-pages"]
 
     style B fill:#0969DA,color:#fff
@@ -62,6 +63,40 @@ Settings → Pages → Build and deployment → Source → GitHub Actions
 - Select **GitHub Actions** as source (not Deploy from a branch)
 - The workflow uses environment `github-pages` — created automatically if missing
 - Add deployment protection rule: only `main` branch can deploy to `github-pages` (recommended)
+
+## Declaring what gets deployed
+
+A package opts into being published by declaring where its built site lives:
+
+```jsonc
+// apps/example/package.json
+{
+  "pages": { "dir": "public" }   // explicit (recommended)
+  // "pages": "public"           // shorthand
+  // "pages": true               // convention: public/
+}
+```
+
+`mpages` scans `apps/*` and `packages/*` for that field — no registry, no config
+file to keep in sync:
+
+```bash
+mpages list     # @myorg/example   apps/example/public   → /
+```
+
+| Declared packages | Result |
+| :--- | :--- |
+| one | published at the site root (`/`) |
+| two or more | each under its unscoped name (`/example/`, `/docs/`) |
+
+`mpages build` runs the workspace build (so every package produces its own
+assets) and copies each declared directory into **`.pages/`**. That staging dir
+is what the workflow uploads, which keeps `upload-pages-artifact` on a constant
+path no matter which packages exist. `.pages/` is generated — gitignored, and
+wiped on every build.
+
+Coverage rides along the same way: `mcoverage pages` renders the report into
+`coverage/html`, and `mpages build` folds it in as `/coverage/`.
 
 ## Workflow Details
 

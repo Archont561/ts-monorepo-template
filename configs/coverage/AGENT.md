@@ -7,6 +7,7 @@
 - Fragments:
   - `ci.steps.yml`: one-liners only — `mcoverage setup` (installs lcov) → `mcoverage html` (genhtml) → `upload-artifact@v4` path `coverage/html/` → `mcoverage check --threshold 80` → `romeovs/lcov-reporter-action@v0.3.1` on PR. All logic lives in `configs/coverage/src/cli.ts`
   - `pages.steps.yml` (TEMPLATE-ONLY pages): when Pages enabled, `mcoverage pages` collects + renders HTML and copies it into `apps/example/public/coverage/` → served at `/coverage/` alongside example app (avoids Pages conflict)
+  - `mcoverage pages` renders `coverage/html`; `mpages build` copies it into `.pages/coverage`, so step order in the workflow does not matter
   - Template repo: no `pages.yml` and no `coverage.yml` — `mdocs site` renders the report into the docs artifact (`mcoverage html --out docs/public/coverage`) so `/coverage/` has exactly one publisher
   - `coverage.steps.yml` + `coverage.base.yml` skeleton → `.github/workflows/coverage.yml` standalone coverage Pages site when Pages **disabled** (if Pages enabled, coverage.yml removed, coverage included in pages.yml)
 - `configs/gh-actions/coverage.base.yml` skeleton: on push main/PR/workflow_dispatch, permissions contents:read pages:write id-token:write, concurrency group pages cancel-in-progress false, jobs build (checkout, setup-bun, install, {{STEPS}}, configure-pages, upload-pages-artifact path coverage/html) + deploy (needs build, if main, pages:write id-token:write, environment github-pages, deploy-pages)
