@@ -20,5 +20,8 @@
   },
   "devDependencies": {
     "turbo": "^2.10.12"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

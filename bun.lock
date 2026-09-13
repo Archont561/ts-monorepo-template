@@ -9,6 +9,7 @@
         "@myorg/bun-config": "workspace:*",
         "@myorg/bunup": "workspace:*",
         "@myorg/changeset": "workspace:*",
+        "@myorg/citty": "workspace:*",
         "@myorg/gh-actions": "workspace:*",
         "@myorg/lefthook": "workspace:*",
         "@myorg/playwright": "workspace:*",
@@ -35,6 +36,9 @@
       "bin": {
         "mbiome": "./src/cli.ts",
       },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
       "devDependencies": {
         "@biomejs/biome": "^2.5.13",
       },
@@ -57,6 +61,9 @@
       "version": "0.0.0",
       "bin": {
         "mbunup": "./src/cli.ts",
+      },
+      "dependencies": {
+        "citty": "^0.2.2",
       },
       "devDependencies": {
         "bunup": "^0.16.32",
@@ -132,6 +139,9 @@
       "bin": {
         "me2e": "./src/e2e.ts",
       },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
       "devDependencies": {
         "@playwright/test": "^1.63.0",
       },
@@ -169,6 +179,9 @@
       "bin": {
         "mtsc": "./src/cli.ts",
       },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
       "devDependencies": {
         "@types/bun": "^1.4.2",
         "typescript": "^7.0.2",
@@ -179,6 +192,9 @@
       "version": "0.0.0",
       "bin": {
         "mturbo": "./src/cli.ts",
+      },
+      "dependencies": {
+        "citty": "^0.2.2",
       },
       "devDependencies": {
         "turbo": "^2.10.12",

@@ -1,20 +1,32 @@
 #!/usr/bin/env bun
 import { spawnSync } from "bun";
+import { defineCommand, runMain } from "citty";
 
-/**
- * m-prefixed Turbo CLI. Bakes in the shared `turbo.base.json` config so
- * callers never need root-level turbo.json, command flags, or knowledge of
- * where the base config lives.
- */
-const turbo = Bun.fileURLToPath(import.meta.resolve("turbo/bin/turbo"));
-const rootTurboJson = `${import.meta.dir}/../turbo.base.json`;
-const args = process.argv.slice(2);
-
-const result = spawnSync({
-  cmd: ["bun", turbo, `--root-turbo-json=${rootTurboJson}`, ...args],
-  stdout: "inherit",
-  stderr: "inherit",
-  stdin: "inherit",
+const main = defineCommand({
+  meta: {
+    name: "mturbo",
+    version: "1.0.0",
+    description: "Turbo with baked root config — no root turbo.json needed, uses turbo.base.json",
+  },
+  args: {
+    task: {
+      type: "positional",
+      description: "Turbo task (build, dev, test, typecheck, etc.)",
+      required: false,
+    },
+  },
+  run() {
+    const turbo = Bun.fileURLToPath(import.meta.resolve("turbo/bin/turbo"));
+    const rootTurboJson = `${import.meta.dir}/../turbo.base.json`;
+    const args = process.argv.slice(2);
+    const result = spawnSync({
+      cmd: ["bun", turbo, `--root-turbo-json=${rootTurboJson}`, ...args],
+      stdout: "inherit",
+      stderr: "inherit",
+      stdin: "inherit",
+    });
+    process.exit(result.exitCode);
+  },
 });
 
-process.exit(result.exitCode);
+runMain(main);

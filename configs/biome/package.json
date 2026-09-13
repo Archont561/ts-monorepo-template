@@ -20,5 +20,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.13"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

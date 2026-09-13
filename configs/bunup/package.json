@@ -16,5 +16,8 @@
   },
   "devDependencies": {
     "bunup": "^0.16.32"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }
