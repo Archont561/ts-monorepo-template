@@ -14,6 +14,8 @@ on:
       - ".github/workflows/template-docs.yml"
       - "README.md"
       - "AGENTS.md"
+      - "package.json"
+      - "bun.lock"
   workflow_dispatch:
 
 permissions:
@@ -30,20 +32,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # required for VitePress lastUpdated
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build docs
+        run: bun run docs:build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      # No build step — docs/index.html is static
-      # If using VitePress, add:
-      # - uses: oven-sh/setup-bun@v2
-      # - run: bun install && bunx vitepress build docs
-      #   then path: docs/.vitepress/dist
-
       - name: Upload template docs artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "./docs"
+          path: "docs/.vitepress/dist"
 
   deploy:
     environment:

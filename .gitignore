@@ -76,3 +76,7 @@ index.d.ts
 # UnoCSS generated
 **/uno.css
 apps/example/public/uno.css
+
+# VitePress (template-only docs site)
+docs/.vitepress/dist/
+docs/.vitepress/cache/

@@ -1,42 +1,45 @@
 # Template Docs (template-only)
 
-> Static GitHub Pages site for the **template repository** itself. **Removed during scaffolding**.
+> VitePress site for the **template repository** itself. **Removed during scaffolding.**
 
-This folder is **template-only** — it exists only in `Archont561/ts-monorepo-template`, not in generated monorepos.
+This folder is **template-only** — it exists only in `Archont561/ts-monorepo-template`,
+not in generated monorepos.
 
 ## What it is
 
-- `docs/index.html` — static landing page (no build) explaining template usage, config matrix, scaffolding flow
-- Deployed via `.github/workflows/template-docs.yml` to GitHub Pages (template-only workflow)
-- Removed on `bun create` via `configs/template/package.json` `extraRemovals: ["docs", ".github/workflows/template-docs.yml"]`
+- `docs/.vitepress/config.ts` — all site config (title, `base`, nav, sidebar, local search)
+- `docs/index.md` — home page (VitePress `layout: home`)
+- `docs/guide/` — introduction + config matrix
+- Deployed by `.github/workflows/template-docs.yml` to GitHub Pages
+- Removed on `bun create` via `configs/template` `extraRemovals`
 
-## Why template-only?
-
-Generated monorepos have their own Pages setup:
-- `configs/pages` → `pages.yml` deploys `apps/example/public` + `/coverage/` when opt-in
-- This `docs/` is for **template documentation**, not example app
-
-If you scaffold a new monorepo, you won't see `docs/` — that's intentional.
-
-## How to add your own template docs
-
-1. Put static files in `docs/` (HTML, MD, assets)
-2. Ensure workflow `.github/workflows/template-docs.yml` exists and is template-only (removed via scaffold)
-3. Enable Pages in repo Settings → Pages → Source: GitHub Actions
-4. On push to `main`, workflow deploys `docs/` to Pages
-
-### Optional: VitePress / Astro
-
-If you want a full docs framework:
+## Commands
 
 ```bash
-bun add -D vitepress
-# create docs/.vitepress/config.ts
-# build: vitepress build docs -> docs/.vitepress/dist
-# update workflow to build before upload
+bun run docs:dev       # vitepress dev docs
+bun run docs:build     # vitepress build docs -> docs/.vitepress/dist
+bun run docs:preview   # vitepress preview docs
 ```
 
-But keep it simple for template-only — static HTML avoids extra deps in template.
+`vitepress` is a root devDependency alongside the docs scripts. `sanitizePackageJson()`
+in `configs/template/src/scaffolder.ts` strips both from generated monorepos, so a
+scaffolded project never inherits a docs toolchain it has no docs for.
+
+## Why VitePress and not static HTML?
+
+The previous `docs/index.html` needed no build, but every edit was hand-written markup.
+VitePress gives the template markdown pages, local search, last-updated timestamps and
+edit links, at the cost of one build step in the deploy workflow.
+
+## Rules
+
+| Rule | Detail |
+| :--- | :--- |
+| `base` | `/ts-monorepo-template/` — required for a Pages project site |
+| `fetch-depth: 0` | Set in the workflow so `lastUpdated` can read git history |
+| `cleanUrls: true` | `/guide/` instead of `/guide.html` |
+| Search | `provider: "local"` — no external service |
+| Output dir | `docs/.vitepress/dist/` — gitignored, never committed |
 
 ## Removal logic
 
@@ -47,6 +50,7 @@ In `configs/template/package.json`:
   "scaffold": {
     "default": "always",
     "selfDestruct": true,
+    "scriptsToRemove": ["docs:sync"],
     "removals": {
       "always": {
         "extraRemovals": ["docs", ".github/workflows/template-docs.yml"],
@@ -57,6 +61,5 @@ In `configs/template/package.json`:
 }
 ```
 
-Or simpler: add to `extraRemovals` in `selfDestruct` path (handled in `scaffolder.ts`).
-
-Currently implemented via `extraRemovals` in template's scaffold metadata.
+The docs scripts (`docs:dev`, `docs:build`, `docs:preview`) and the `vitepress`
+devDependency are removed by `sanitizePackageJson()` over in the scaffolder.
