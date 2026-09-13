@@ -17,6 +17,11 @@ import { $, file } from "bun";
  * - profiles: dev, release (lto, codegen-units=1, strip), ci
  * - Cargo.lock gitignored for library (cdylib)
  *
+ * Self-contained Rust:
+ * - packages/native/rust-toolchain.toml (stable + rustfmt, clippy, wasm32-wasip1-threads)
+ * - packages/native/.cargo/config.toml (optional build flags)
+ * - No root rust-toolchain.toml or root .cargo/config.toml needed — rustup searches parent dirs, but self-contained is cleaner.
+ *
  * Data-driven via scaffold.setup field in configs/native/package.json
  */
 
@@ -296,7 +301,7 @@ pub fn primes_up_to(n: u32) -> Vec<u32> {
       JSON.stringify(
         {
           extends: "@myorg/ts/library.json".replace("@myorg", scope),
-          compilerOptions: { rootDir: ".", outDir: "./dist", types: ["bun"] },
+          compilerOptions: { rootDir: ".", outDir: "./dist", types: [\"bun\"] },
           include: ["src/**/*", "tests/**/*"],
         },
         null,
@@ -488,41 +493,69 @@ export default async function handleNativeStatus(): Promise<Response> {
     }
   }
 
-  // Create rust-toolchain.toml if not exists
-  const toolchainPath = join(TARGET_DIR, "rust-toolchain.toml");
+  // Create rust-toolchain.toml self-contained in packages/native (not root) — rustup searches parent dirs, but self-contained is cleaner
+  const toolchainPath = join(NATIVE_DIR, "rust-toolchain.toml");
+  const rootToolchainPath = join(TARGET_DIR, "rust-toolchain.toml");
+  // Migrate root toolchain to native if root exists and native doesn't
+  if ((await file(rootToolchainPath).exists()) && !(await file(toolchainPath).exists())) {
+    console.log(`  📦 Migrating rust-toolchain.toml from root to packages/native/ (self-contained)`);
+    const content = await file(rootToolchainPath).text();
+    await writeFile(toolchainPath, content);
+    await $`rm -f ${rootToolchainPath}`.quiet();
+    console.log(`  ✓ Moved rust-toolchain.toml to packages/native/`);
+  }
   if (!(await file(toolchainPath).exists())) {
     await writeFile(
       toolchainPath,
-      `[toolchain]
-channel = "stable"
-components = ["rustfmt", "clippy"]
-targets = ["wasm32-wasip1-threads"]
-`,
+      `[toolchain]\nchannel = "stable"\ncomponents = ["rustfmt", "clippy"]\ntargets = ["wasm32-wasip1-threads"]\n`,
     );
-    console.log(`  ✓ rust-toolchain.toml (stable + rustfmt, clippy, wasm32-wasip1-threads)`);
+    console.log(`  ✓ packages/native/rust-toolchain.toml (stable + rustfmt, clippy, wasm32-wasip1-threads)`);
   } else {
-    console.log(`  ✓ rust-toolchain.toml exists`);
+    console.log(`  ✓ packages/native/rust-toolchain.toml exists`);
+  }
+  // Remove root rust-toolchain.toml if it still exists (not needed, self-contained in packages/native)
+  if (await file(rootToolchainPath).exists()) {
+    console.log(`  🗑️ Removing root rust-toolchain.toml (now self-contained in packages/native/)`);
+    await $`rm -f ${rootToolchainPath}`.quiet();
   }
 
-  // Create .cargo/config.toml if not exists
-  const cargoConfigDir = join(TARGET_DIR, ".cargo");
+  // Create .cargo/config.toml self-contained in packages/native/.cargo/ (not root)
+  const cargoConfigDir = join(NATIVE_DIR, ".cargo");
   const cargoConfigPath = join(cargoConfigDir, "config.toml");
+  const rootCargoConfigDir = join(TARGET_DIR, ".cargo");
+  const rootCargoConfigPath = join(rootCargoConfigDir, "config.toml");
+  // Migrate root .cargo/config.toml to native if needed
+  if ((await file(rootCargoConfigPath).exists()) && !(await file(cargoConfigPath).exists())) {
+    console.log(`  📦 Migrating .cargo/config.toml from root to packages/native/.cargo/ (self-contained)`);
+    const content = await file(rootCargoConfigPath).text();
+    await mkdir(cargoConfigDir, { recursive: true });
+    await writeFile(cargoConfigPath, content);
+    console.log(`  ✓ Moved .cargo/config.toml to packages/native/.cargo/`);
+  }
   if (!(await file(cargoConfigPath).exists())) {
     await mkdir(cargoConfigDir, { recursive: true });
     await writeFile(
       cargoConfigPath,
-      `# Cargo config — optional
-# No workspace root needed, self-contained packages/native/Cargo.toml
-
-[build]
-# Use faster linker if available
-# rustflags = ["-C", "link-arg=-fuse-ld=mold"]
-`,
+      `# Cargo config — self-contained, packages/native/Cargo.toml only\n# No root Cargo.toml needed\n\n[build]\n# Use faster linker if available\n# rustflags = ["-C", "link-arg=-fuse-ld=mold"]\n`,
     );
-    console.log(`  ✓ .cargo/config.toml (optional)`);
+    console.log(`  ✓ packages/native/.cargo/config.toml (self-contained)`);
+  }
+  // Remove root .cargo/config.toml if it still exists (optional cleanup — root .cargo not needed for self-contained native)
+  if (await file(rootCargoConfigPath).exists()) {
+    const rootContent = await file(rootCargoConfigPath).text();
+    // Only remove if it's the template's default content (not user-custom)
+    if (rootContent.includes("self-contained") || rootContent.includes("No workspace root needed")) {
+      console.log(`  🗑️ Removing root .cargo/config.toml (now self-contained in packages/native/.cargo/)`);
+      await $`rm -f ${rootCargoConfigPath}`.quiet();
+      // Remove .cargo dir if empty
+      const isEmpty = await $`ls -A ${rootCargoConfigDir}`.nothrow().quiet();
+      if (isEmpty.exitCode !== 0 || (await $`ls ${rootCargoConfigDir}`.text()).trim() === "") {
+        await $`rmdir ${rootCargoConfigDir}`.quiet().nothrow();
+      }
+    }
   }
 
-  console.log(`\n✅ Native setup complete (self-contained, no root Cargo.toml).\n`);
+  console.log(`\n✅ Native setup complete (self-contained, no root Cargo.toml).\\n`);
   console.log(`  Cargo via mnative CLI:`);
   console.log(`    mnative check              # cargo check (fast)`);
   console.log(`    mnative clippy             # cargo clippy -D warnings`);
@@ -532,7 +565,7 @@ targets = ["wasm32-wasip1-threads"]
   console.log(`  NAPI:`);
   console.log(`    bun run build:native       # mnative napi:build`);
   console.log(`    bun run build:wasm         # mnative napi:build:wasm`);
-  console.log(`\n  Next: bun install && mnative check && bun run build:native && bun run test\n`);
+  console.log(`\\n  Next: bun install && mnative check && bun run build:native && bun run test\\n`);
 }
 
 if (import.meta.main) {

@@ -40,8 +40,8 @@ Cargo is official Rust package manager, build system, test runner, doc generator
 | `Cargo.lock` | Pinned versions (commit for binaries, gitignore for libraries) — gitignored for cdylib |
 | `packages/native/src/lib.rs` | Library crate entry (cdylib for napi) |
 | `packages/native/build.rs` | Build script (napi_build::setup) |
-| `rust-toolchain.toml` | Toolchain, components (rustfmt, clippy), targets (wasm32-wasip1-threads) |
-| `.cargo/config.toml` | Optional build config |
+| `packages/native/rust-toolchain.toml` | Toolchain, components (rustfmt, clippy), targets (wasm32-wasip1-threads) — self-contained, no root file needed |
+| `packages/native/.cargo/config.toml` | Optional build config — self-contained |
 
 ### Self-contained Cargo.toml
 
@@ -154,7 +154,7 @@ graph TD
 
 | Option | Description | Result |
 | :--- | :--- | :--- |
-| `none` | No native bindings (default) | Removes `packages/native/`, `rust-toolchain.toml`, `Cargo.lock`, `*.node`, `apps/example/src/pages/api/native/**` via glob+regex+extraRemovals — no root Cargo.toml exists |
+| `none` | No native bindings (default) | Removes `packages/native/` (including `rust-toolchain.toml`, `.cargo/`, `Cargo.lock`, `*.node`) + `apps/example/src/pages/api/native/**` via glob+regex+extraRemovals — no root Cargo.toml or root rust-toolchain.toml exists |
 | `publish` | Publish with prebuilt binaries | Keeps + runs `setup.ts` → `packages/native/` self-contained + example routes + CI matrix + `mnative` CLI |
 | `docker` | Build in Docker | Keeps + Docker cross-compilation |
 
@@ -164,8 +164,8 @@ When `none` selected:
 
 | Field | Patterns | Purpose |
 | :--- | :--- | :--- |
-| `extraRemovals` | `packages/native`, `Cargo.lock`, `rust-toolchain.toml`, `.cargo`, `apps/example/src/pages/api/native` | Exact paths — no root Cargo.toml |
-| `filePatternsToRemove` | `**/*.node`, `**/*.napi.*`, `**/*.wasi.cjs`, `rust-toolchain.toml`, `Cargo.lock`, `.cargo/**`, `**/native/**`, `**/api/native/**` | Glob via `Bun.Glob` |
+| `extraRemovals` | `packages/native`, `apps/example/src/pages/api/native` | Exact paths — self-contained native dir includes `rust-toolchain.toml`, `.cargo/`, `Cargo.lock`, `*.node` — no root Cargo.toml or root rust-toolchain.toml |
+| `filePatternsToRemove` | `**/*.node`, `**/*.napi.*`, `**/*.wasi.cjs`, `**/rust-toolchain.toml`, `Cargo.lock`, `.cargo/**`, `**/native/**`, `**/api/native/**` | Glob via `Bun.Glob` — covers `packages/native/rust-toolchain.toml` |
 | `fileRegexesToRemove` | `\.node$`, `napi`, `rust-toolchain`, `api/native` | Regex |
 | `appDepsToRemove` | `@myorg/native` | Remove from example |
 
@@ -210,10 +210,10 @@ bun run dev
 <summary>After enabling — package structure (no root Cargo.toml)</summary>
 
 ```
-rust-toolchain.toml       # stable + rustfmt, clippy, wasm32-wasip1-threads
-.cargo/config.toml        # optional build config (no workspace)
 packages/native/
   Cargo.toml          # Self-contained Rust crate (edition 2021, direct deps, cdylib, profiles)
+  rust-toolchain.toml # stable + rustfmt, clippy, wasm32-wasip1-threads (self-contained, no root file)
+  .cargo/config.toml  # optional build config (self-contained)
   build.rs            # napi-build setup
   src/
     lib.rs            # Rust with #[napi] — add, fibonacci, Counter, primes_up_to

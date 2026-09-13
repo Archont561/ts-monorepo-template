@@ -33,16 +33,13 @@
       "none": {
         "extraRemovals": [
           "packages/native",
-          "rust-toolchain.toml",
-          "Cargo.lock",
-          ".cargo",
           "apps/example/src/pages/api/native"
         ],
         "filePatternsToRemove": [
           "**/*.node",
           "**/*.napi.*",
           "**/*.wasi.cjs",
-          "rust-toolchain.toml",
+          "**/rust-toolchain.toml",
           "Cargo.lock",
           ".cargo/**",
           "**/native/**",

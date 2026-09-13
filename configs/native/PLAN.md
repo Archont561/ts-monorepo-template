@@ -47,8 +47,9 @@ my-monorepo/
       src/
         cli.ts        # mnative CLI (cargo wrapper: check, clippy, fmt, test, build, napi:build)
         setup.ts      # Setup script that scaffolds packages/native self-contained when enabled
-  rust-toolchain.toml # stable + rustfmt, clippy, wasm32-wasip1-threads (root, removed when native=none)
-  .cargo/config.toml  # optional build config (root)
+  packages/native/
+    rust-toolchain.toml # stable + rustfmt, clippy, wasm32-wasip1-threads (self-contained, no root file)
+    .cargo/config.toml  # optional build config (self-contained)
   apps/
     example/          # Demo app, can import from external which may use native
 ```

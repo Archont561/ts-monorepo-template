@@ -4,7 +4,7 @@
 
 - `configs/native` (`@myorg/native-config`) provides scaffold prompt for Rust + NAPI-RS, `@napi-rs/cli` + `mnative` CLI (`src/cli.ts` wrapping cargo + napi), self-contained Cargo handling
 - `setup: configs/native/src/setup.ts` scaffolds `packages/native/` with self-contained `Cargo.toml` (edition 2021, direct deps, profiles dev/release/ci) — **no root Cargo.toml** — when enabled (publish/docker)
-- When `none` selected, `packages/native/`, `rust-toolchain.toml`, `Cargo.lock`, `.cargo`, `*.node`, `apps/example/src/pages/api/native/**` pruned via `extraRemovals` + `filePatternsToRemove` + `fileRegexesToRemove` (glob + regex) — no root Cargo.toml to remove
+- When `none` selected, `packages/native/` (self-contained: `Cargo.toml`, `rust-toolchain.toml`, `.cargo/`, `Cargo.lock`, `*.node`) + `apps/example/src/pages/api/native/**` pruned via `extraRemovals` + `filePatternsToRemove` + `fileRegexesToRemove` (glob + regex) — no root Cargo.toml or root rust-toolchain.toml to remove
 - When enabled, adds `packages/native/` with Rust crate (`Cargo.toml` standalone, `cdylib`, `src/lib.rs` #[napi], `build.rs`, `package.json` napi config + `cargo:*` scripts via `mnative`)
 - CLI `mnative` (bin → dist/cli.js via bunup): `check` (cargo check), `clippy` (clippy -D warnings), `fmt`, `fmt:check`, `test`, `build`, `build:release` (lto, strip), `build:ci`, `napi:build` (check + napi build --platform), `napi:build:wasm`, passthrough `napi` + cargo passthrough
 - Root package.json scripts: `cargo:*` → `mnative <cmd>`, `build:native` → `bun --filter @myorg/native run build`, `build:wasm`, `test:native`

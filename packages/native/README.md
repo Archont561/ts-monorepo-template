@@ -19,10 +19,10 @@
 ### Structure
 
 ```
-rust-toolchain.toml             # stable + rustfmt, clippy, wasm32-wasip1-threads (root)
-.cargo/config.toml              # optional build config (root)
 packages/native/
   Cargo.toml                    # self-contained, edition=2021, direct deps, profiles, cdylib
+  rust-toolchain.toml           # stable + rustfmt, clippy, wasm32-wasip1-threads (self-contained, no root file)
+  .cargo/config.toml            # optional build config (self-contained)
   build.rs                      # napi_build::setup()
   src/lib.rs                    # #[napi] impl
 ```
