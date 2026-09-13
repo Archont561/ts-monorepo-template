@@ -82,17 +82,19 @@ describe("aggregate", () => {
       expect(await pathExists(`${result.templateDir}/configs/template`)).toBe(false);
 
       // README and AGENTS are now static reference files, not concatenated.
-      // They should still exist and have TEMPLATE-ONLY stripped.
+      // They should still exist and have TEMPLATE-ONLY markers stripped (but may mention the term in docs).
       const agents = await file(`${result.templateDir}/AGENTS.md`).text();
       expect(agents).toContain("# AGENTS.md");
-      expect(agents).not.toContain("TEMPLATE-ONLY");
+      expect(agents).not.toContain("TEMPLATE-ONLY:START");
+      expect(agents).not.toContain("TEMPLATE-ONLY:END");
       // Should reference configs via links, not contain concatenated blocks
       expect(agents).not.toContain("<!-- AGENT:biome:START -->");
 
       const readme = await file(`${result.templateDir}/README.md`).text();
       expect(readme).toContain("# Monorepo");
       expect(readme).not.toContain("TypeScript Monorepo Template");
-      expect(readme).not.toContain("TEMPLATE-ONLY");
+      expect(readme).not.toContain("TEMPLATE-ONLY:START");
+      expect(readme).not.toContain("TEMPLATE-ONLY:END");
       expect(readme).not.toContain("<!-- PACKAGE:biome:START -->");
       // Should reference config docs
       expect(readme).toContain("configs/biome/README.md");
@@ -109,10 +111,10 @@ describe("aggregate", () => {
 
 async function scanForLeaks(
   cwd: string,
-  needles: string[] = ["@myorg", "TEMPLATE-ONLY"],
+  needles: string[] = ["@myorg", "TEMPLATE-ONLY:START", "TEMPLATE-ONLY:END"],
 ): Promise<string[]> {
   const result =
-    await $`find ${cwd} -type f -not -path "*/node_modules/*" -not -path "*/.git/*"`.text();
+    await $`find ${cwd} -type f -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/dist/*" -not -path "*/target/*" -not -path "*/.turbo/*"`.text();
   const leaks: string[] = [];
   for (const path of result.trim().split("\n").filter(Boolean)) {
     if (!/\.(json|ts|md|yml|yaml)$/.test(path)) continue;

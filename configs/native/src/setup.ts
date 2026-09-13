@@ -301,7 +301,7 @@ pub fn primes_up_to(n: u32) -> Vec<u32> {
       JSON.stringify(
         {
           extends: "@myorg/ts/library.json".replace("@myorg", scope),
-          compilerOptions: { rootDir: ".", outDir: "./dist", types: [\"bun\"] },
+          compilerOptions: { rootDir: ".", outDir: "./dist", types: ["bun"] },
           include: ["src/**/*", "tests/**/*"],
         },
         null,
@@ -498,7 +498,9 @@ export default async function handleNativeStatus(): Promise<Response> {
   const rootToolchainPath = join(TARGET_DIR, "rust-toolchain.toml");
   // Migrate root toolchain to native if root exists and native doesn't
   if ((await file(rootToolchainPath).exists()) && !(await file(toolchainPath).exists())) {
-    console.log(`  📦 Migrating rust-toolchain.toml from root to packages/native/ (self-contained)`);
+    console.log(
+      `  📦 Migrating rust-toolchain.toml from root to packages/native/ (self-contained)`,
+    );
     const content = await file(rootToolchainPath).text();
     await writeFile(toolchainPath, content);
     await $`rm -f ${rootToolchainPath}`.quiet();
@@ -507,9 +509,15 @@ export default async function handleNativeStatus(): Promise<Response> {
   if (!(await file(toolchainPath).exists())) {
     await writeFile(
       toolchainPath,
-      `[toolchain]\nchannel = "stable"\ncomponents = ["rustfmt", "clippy"]\ntargets = ["wasm32-wasip1-threads"]\n`,
+      `[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-wasip1-threads"]
+`,
     );
-    console.log(`  ✓ packages/native/rust-toolchain.toml (stable + rustfmt, clippy, wasm32-wasip1-threads)`);
+    console.log(
+      `  ✓ packages/native/rust-toolchain.toml (stable + rustfmt, clippy, wasm32-wasip1-threads)`,
+    );
   } else {
     console.log(`  ✓ packages/native/rust-toolchain.toml exists`);
   }
@@ -526,7 +534,9 @@ export default async function handleNativeStatus(): Promise<Response> {
   const rootCargoConfigPath = join(rootCargoConfigDir, "config.toml");
   // Migrate root .cargo/config.toml to native if needed
   if ((await file(rootCargoConfigPath).exists()) && !(await file(cargoConfigPath).exists())) {
-    console.log(`  📦 Migrating .cargo/config.toml from root to packages/native/.cargo/ (self-contained)`);
+    console.log(
+      `  📦 Migrating .cargo/config.toml from root to packages/native/.cargo/ (self-contained)`,
+    );
     const content = await file(rootCargoConfigPath).text();
     await mkdir(cargoConfigDir, { recursive: true });
     await writeFile(cargoConfigPath, content);
@@ -536,18 +546,27 @@ export default async function handleNativeStatus(): Promise<Response> {
     await mkdir(cargoConfigDir, { recursive: true });
     await writeFile(
       cargoConfigPath,
-      `# Cargo config — self-contained, packages/native/Cargo.toml only\n# No root Cargo.toml needed\n\n[build]\n# Use faster linker if available\n# rustflags = ["-C", "link-arg=-fuse-ld=mold"]\n`,
+      `# Cargo config — self-contained, packages/native/Cargo.toml only
+# No root Cargo.toml needed
+
+[build]
+# Use faster linker if available
+# rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+`,
     );
     console.log(`  ✓ packages/native/.cargo/config.toml (self-contained)`);
   }
   // Remove root .cargo/config.toml if it still exists (optional cleanup — root .cargo not needed for self-contained native)
   if (await file(rootCargoConfigPath).exists()) {
     const rootContent = await file(rootCargoConfigPath).text();
-    // Only remove if it's the template's default content (not user-custom)
-    if (rootContent.includes("self-contained") || rootContent.includes("No workspace root needed")) {
-      console.log(`  🗑️ Removing root .cargo/config.toml (now self-contained in packages/native/.cargo/)`);
+    if (
+      rootContent.includes("self-contained") ||
+      rootContent.includes("No workspace root needed")
+    ) {
+      console.log(
+        `  🗑️ Removing root .cargo/config.toml (now self-contained in packages/native/.cargo/)`,
+      );
       await $`rm -f ${rootCargoConfigPath}`.quiet();
-      // Remove .cargo dir if empty
       const isEmpty = await $`ls -A ${rootCargoConfigDir}`.nothrow().quiet();
       if (isEmpty.exitCode !== 0 || (await $`ls ${rootCargoConfigDir}`.text()).trim() === "") {
         await $`rmdir ${rootCargoConfigDir}`.quiet().nothrow();
@@ -555,7 +574,7 @@ export default async function handleNativeStatus(): Promise<Response> {
     }
   }
 
-  console.log(`\n✅ Native setup complete (self-contained, no root Cargo.toml).\\n`);
+  console.log(`\n✅ Native setup complete (self-contained, no root Cargo.toml).\n`);
   console.log(`  Cargo via mnative CLI:`);
   console.log(`    mnative check              # cargo check (fast)`);
   console.log(`    mnative clippy             # cargo clippy -D warnings`);
@@ -565,7 +584,7 @@ export default async function handleNativeStatus(): Promise<Response> {
   console.log(`  NAPI:`);
   console.log(`    bun run build:native       # mnative napi:build`);
   console.log(`    bun run build:wasm         # mnative napi:build:wasm`);
-  console.log(`\\n  Next: bun install && mnative check && bun run build:native && bun run test\\n`);
+  console.log(`\n  Next: bun install && mnative check && bun run build:native && bun run test\n`);
 }
 
 if (import.meta.main) {

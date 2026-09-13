@@ -128,15 +128,24 @@ export class TemplateHarness {
     // fs.cp (no external binary), keeping the harness portable across every
     // environment. The committed template bundle (configs/template/dist) is
     // explicitly included so it survives even if an exclude would drop it.
-    const includePatterns = ["configs/template/dist/", "configs/template/dist/index.js"];
+    // Also include configs/coverage which would otherwise be excluded by the
+    // generic "coverage" basename exclude.
+    const includePatterns = [
+      "configs/template/dist/",
+      "configs/template/dist/index.js",
+      "configs/coverage/",
+    ];
     const isIncluded = makeMatcher(includePatterns);
     const isExcluded = makeMatcher(this.excludes);
+    const isForcedInclude = (rel: string) =>
+      rel.startsWith("configs/coverage") || rel.startsWith("configs/template/dist");
     await rm(templateDir, { recursive: true, force: true });
     await cp(this.templateRoot, templateDir, {
       recursive: true,
       force: true,
       filter: (src) => {
         const rel = relative(this.templateRoot, src ?? this.templateRoot);
+        if (isForcedInclude(rel)) return true;
         return isIncluded(rel) || !isExcluded(rel);
       },
     });

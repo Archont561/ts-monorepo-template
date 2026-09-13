@@ -1,0 +1,29 @@
+{
+  "name": "@myorg/badges",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": "always",
+    "flag": "badges",
+    "prompt": "Include badges for CI, coverage, license in READMEs?"
+  },
+  "bin": {
+    "mbadges": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
+  },
+  "devDependencies": {
+    "@myorg/bunup": "workspace:*",
+    "@myorg/citty": "workspace:*",
+    "@myorg/ts": "workspace:*"
+  }
+}

@@ -62,9 +62,10 @@ describe("Scaffolder integration", () => {
       ).text();
       expect(changesetConfig).not.toContain("@myorg");
 
-      // 7. Template markers are stripped from surviving documents.
+      // 7. Template markers are stripped from surviving documents (markers, not doc mentions).
       const agentsMd = await file(`${result.templateDir}/AGENTS.md`).text();
-      expect(agentsMd).not.toContain("TEMPLATE-ONLY");
+      expect(agentsMd).not.toContain("TEMPLATE-ONLY:START");
+      expect(agentsMd).not.toContain("TEMPLATE-ONLY:END");
 
       // 8. Docs and workflows are regenerated from the surviving config set.
       const readmeMd = await file(`${result.templateDir}/README.md`).text();
@@ -201,9 +202,13 @@ describe("Scaffolder integration", () => {
 
       // The bundle scopes to @myorg by default, so template artifacts — not
       // the scope itself — must not leak into the generated project.
-      expect(await scanForLeaks(result.templateDir, ["TEMPLATE-ONLY", "configs/template"])).toEqual(
-        [],
-      );
+      expect(
+        await scanForLeaks(result.templateDir, [
+          "TEMPLATE-ONLY:START",
+          "TEMPLATE-ONLY:END",
+          "configs/template",
+        ]),
+      ).toEqual([]);
     },
     { timeout: 60_000 },
   );
@@ -214,10 +219,11 @@ describe("Scaffolder integration", () => {
  * text-readable files (JSON/TS/Markdown/YAML). Bun.lock and binary outputs
  * are intentionally ignored: the lockfile is regenerated on the first
  * install in the generated project.
+ * Checks for actual marker syntax, not doc mentions of TEMPLATE-ONLY.
  */
 async function scanForLeaks(
   cwd: string,
-  needles: string[] = ["@myorg", "TEMPLATE-ONLY"],
+  needles: string[] = ["@myorg", "TEMPLATE-ONLY:START", "TEMPLATE-ONLY:END"],
 ): Promise<string[]> {
   const findArgs = [
     cwd,

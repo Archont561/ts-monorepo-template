@@ -78,10 +78,19 @@ export async function aggregateWorkflow(
   baseFileName: string,
   stepsFileName: string,
 ): Promise<void> {
-  const basePath = `${targetDir}/configs/gh-actions/${baseFileName}`;
+  // Base file discovery: prefer gh-actions for backward compat, but also allow
+  // self-contained configs to own their base (e.g. configs/pages/pages.base.yml)
+  let basePath = `${targetDir}/configs/gh-actions/${baseFileName}`;
   if (!(await file(basePath).exists())) {
-    console.log(`⚠️ Skipping ${baseFileName} — base not found (config disabled)`);
-    return;
+    const foundBases =
+      await $`find ${targetDir}/configs -mindepth 2 -maxdepth 3 -name ${baseFileName} -type f`.text();
+    const first = foundBases.trim().split("\n").filter(Boolean).sort()[0];
+    if (first) {
+      basePath = first;
+    } else {
+      console.log(`⚠️ Skipping ${baseFileName} — base not found (config disabled)`);
+      return;
+    }
   }
   const base = await file(basePath).text();
 

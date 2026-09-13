@@ -158,6 +158,7 @@ export class MonorepoScaffolder {
 
       // Native package (self-contained, no root Cargo.toml)
       "packages/native/package.json",
+      "packages/native/tsconfig.json",
       "packages/native/Cargo.toml",
       "packages/native/src/lib.rs",
       "packages/native/README.md",
@@ -207,6 +208,20 @@ export class MonorepoScaffolder {
         .text()
         .catch(() => "");
     for (const absolutePath of configFiles.trim().split("\n").filter(Boolean)) {
+      const relativePath = absolutePath.replace(`${this.targetDir}/`, "");
+      if (/\.(json|ts|js|md|yml|yaml|toml)$/.test(relativePath)) {
+        files.push(relativePath);
+      }
+    }
+
+    // Skills setup copies files to .agents/skills after this method runs
+    // initially, so also include any already-present .agents files. A second
+    // pass after runSetup() catches files created by setup scripts.
+    const agentsFiles =
+      await $`find ${this.targetDir}/.agents -type f -not -path "*/node_modules/*" 2>/dev/null`
+        .text()
+        .catch(() => "");
+    for (const absolutePath of agentsFiles.trim().split("\n").filter(Boolean)) {
       const relativePath = absolutePath.replace(`${this.targetDir}/`, "");
       if (/\.(json|ts|js|md|yml|yaml|toml)$/.test(relativePath)) {
         files.push(relativePath);
@@ -617,9 +632,11 @@ export class MonorepoScaffolder {
           cwd: this.targetDir,
           env: {
             ...process.env,
+            SCOPE: this.scope,
             NATIVE_SCOPE: this.scope,
             UNOCSS_SCOPE: this.scope,
             DEVCONTAINER_SCOPE: this.scope,
+            SKILLS_SCOPE: this.scope,
           },
           stdout: "inherit",
           stderr: "inherit",
@@ -666,7 +683,9 @@ export class MonorepoScaffolder {
     await this.stripTemplateMarkers(); // Scope-aware
     await this.removeTemplateFiles();
     await this.handleConfig(); // Data-driven removals, incl. template self-destruct
-    await this.runSetup(); // Data-driven setup for enabled configs (e.g. native)
+    await this.runSetup(); // Data-driven setup for enabled configs (e.g. native, skills)
+    // Second pass after setup — catches files created by setup scripts (e.g. .agents/skills)
+    await this.replaceScopePlaceholders();
     await this.regenerateCI(); // Workflows only — README/AGENTS are static reference files
     await this.setupGitHooks();
   }

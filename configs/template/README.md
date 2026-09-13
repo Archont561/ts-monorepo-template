@@ -87,7 +87,9 @@ graph TD
 ## Development
 
 ```bash
-bun run --filter @myorg/template test     # unit + integration suites
+bun run --filter @myorg/template test     # unit + integration + cases (all combos)
+bun run test:template                     # same via root script
+bun run test:template:cases               # only combination cases (cases.test.ts)
 bun run --filter @myorg/template build    # rebuild the committed dist bundle
 bun run docs:sync                          # regenerate workflows (mdocs)
 bun run ci:lint                            # after regenerating workflows

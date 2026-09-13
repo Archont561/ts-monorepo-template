@@ -1,6 +1,15 @@
 # @myorg/external
 
+[![CI](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/Archont561/ts-monorepo-template?logo=codecov&label=Coverage)](https://codecov.io/gh/Archont561/ts-monorepo-template)
+[![npm version](https://img.shields.io/npm/v/@myorg/external?logo=npm&color=blue)](https://www.npmjs.com/package/@myorg/external)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE.md)
+[![Bun](https://img.shields.io/badge/Bun-1.4.2-black?logo=bun)](https://bun.sh)
+
 > The public API surface of this monorepo — the only package published to npm.
+
+> [!TIP]
+> Badges: update `Archont561/ts-monorepo-template` → `YOUR_ORG/YOUR_REPO` and `@myorg` → your scope after scaffolding. Coverage from root `bun run coverage` → `coverage/lcov.info` → Codecov + HTML at `../../coverage/html/` or `/coverage/` on Pages.
 
 ## What it is
 

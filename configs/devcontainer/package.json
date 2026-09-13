@@ -8,6 +8,7 @@
     "flag": "devcontainer",
     "prompt": "Include devcontainer config for Codespaces / Dev Containers?",
     "type": "confirm",
+    "setup": "configs/devcontainer/src/setup.ts",
     "removals": {
       "true": {},
       "false": {
@@ -28,5 +29,9 @@
   },
   "exports": {
     ".": "./index.ts"
+  },
+  "devDependencies": {
+    "@myorg/bunup": "workspace:*",
+    "@myorg/ts": "workspace:*"
   }
 }

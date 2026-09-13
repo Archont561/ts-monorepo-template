@@ -35,6 +35,15 @@
           "packages/native",
           "apps/example/src/pages/api/native"
         ],
+        "scriptsToRemove": [
+          "build:native",
+          "build:wasm",
+          "test:native"
+        ],
+        "turboTasksToRemove": [
+          "build:native",
+          "build:wasm"
+        ],
         "filePatternsToRemove": [
           "**/*.node",
           "**/*.napi.*",

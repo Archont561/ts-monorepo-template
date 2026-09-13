@@ -2,6 +2,10 @@ node_modules/
 dist/
 *.tsbuildinfo
 .turbo/
+.turbo/**
+apps/*/.turbo/
+packages/*/.turbo/
+configs/*/.turbo/
 *.log
 *.log.*
 .env
@@ -10,6 +14,9 @@ dist/
 coverage/
 !configs/coverage/
 !configs/coverage/**
+# Bun coverage temp files
+**/coverage/.lcov.info.*.tmp
+**/coverage/lcov.info.tmp
 
 .DS_Store
 Thumbs.db
@@ -18,6 +25,9 @@ Thumbs.db
 test-results/
 playwright-report/
 blob-report/
+test-results
+playwright-report
+blob-report
 
 # Lefthook (developer-local overrides, never committed)
 lefthook-local.yml

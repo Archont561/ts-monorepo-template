@@ -1,6 +1,14 @@
 <!-- TEMPLATE-ONLY:START(template) -->
 # TypeScript Monorepo Template
 
+[![CI](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/Archont561/ts-monorepo-template?logo=codecov&label=Coverage)](https://codecov.io/gh/Archont561/ts-monorepo-template)
+[![Coverage Graph](https://codecov.io/gh/Archont561/ts-monorepo-template/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/Archont561/ts-monorepo-template)
+[![Coverage HTML](https://img.shields.io/badge/Coverage-HTML-brightgreen?logo=github)](https://Archont561.github.io/ts-monorepo-template/coverage/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+[![Bun](https://img.shields.io/badge/Bun-1.4.2-black?logo=bun)](https://bun.sh)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7.x-blue?logo=typescript)](https://www.typescriptlang.org/)
+
 > A reusable template for TypeScript monorepos built with Bun, Turborepo, and Bunup.
 
 This repository is a **template**, not a regular monorepo. Use it to scaffold a new monorepo with `bun create`.
@@ -51,7 +59,20 @@ After scaffolding, this README will describe your monorepo (see below).
 <!-- TEMPLATE-ONLY:END(template) -->
 # Monorepo
 
+[![CI](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/Archont561/ts-monorepo-template?logo=codecov&label=Coverage)](https://codecov.io/gh/Archont561/ts-monorepo-template)
+[![Coverage Graph](https://codecov.io/gh/Archont561/ts-monorepo-template/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/Archont561/ts-monorepo-template)
+[![Coverage HTML](https://img.shields.io/badge/Coverage-HTML-brightgreen?logo=github)](./coverage/html/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+[![Bun](https://img.shields.io/badge/Bun-1.4.2-black?logo=bun)](https://bun.sh)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7.x-blue?logo=typescript)](https://www.typescriptlang.org/)
+
 A TypeScript library monorepo built with Bun, Turborepo, and Bunup.
+
+> [!TIP]
+> After scaffolding, update badges in this README and in `packages/*/README.md`, `apps/*/README.md` to point to your repo:
+> `Archont561/ts-monorepo-template` → `YOUR_ORG/YOUR_REPO`, `@myorg` → `YOUR_SCOPE`.
+> Coverage badge uses Codecov (requires `CODECOV_TOKEN` secret if private) + local HTML at `./coverage/html/` + Pages at `/coverage/` when Pages enabled.
 
 > [!IMPORTANT]
 > All tool configs live in `configs/*` and are reached via `m`-prefixed bins. No root `turbo.json`, `biome.json`, `bunfig.toml`.
@@ -92,35 +113,32 @@ graph TD
 ## Project Structure
 
 <details>
-<summary>Core structure</summary>
+<summary>Core structure (always)</summary>
 
 ```
 apps/
-  example/          Bun.serve HTTP server + Dockerfile + static public for Pages
+  example/          Bun.serve HTTP server + static public for Pages
 packages/
   external/         Public library (published to npm)
   internal/         Private implementation (inlined into external by Bunup)
 configs/
-  biome/            Lint and format (mbiome)
-  bun-config/       Bun runtime, test, coverage (mbun)
-  bunup/            Bundling presets (mbunup)
-  changeset/        Versioning and releases (mchangeset)
-  citty/            CLI builder (mcitty)
-  commitlint/       Conventional Commits (commitlint)
-  coverage/         LCOV coverage reporting (HTML, artifact, Pages, threshold, PR comment)
-  dependabot/       Automated dependency updates (npm, cargo, actions, docker)
-  gh-actions/       GitHub Actions CI + act + Pages + Coverage skeletons (mci)
-  lefthook/         Git hooks (msetup) + gitleaks pre-commit
+  badges/           CI, coverage, license badges — always
+  biome/            Lint and format (mbiome) — always
+  bun-config/       Bun runtime, test, coverage (mbun) — always
+  bunup/            Bundling presets (mbunup) — always
+  changeset/        Versioning and releases (mchangeset) — always
+  citty/            CLI builder (mcitty) — always
+  commitlint/       Conventional Commits — always
+  community/        Community health (CODEOWNERS, templates, SECURITY) — always
+  coverage/         LCOV coverage reporting (HTML, artifact, Pages) — always
+  dependabot/       Automated dependency updates — always
   editorconfig/     Editor consistency (.editorconfig) — always
+  gh-actions/       GitHub Actions skeletons (mci) — always
   gitattributes/    Git file handling (.gitattributes) — always
-  community/        Community health (CODEOWNERS, PR/issue templates, SECURITY, CODE_OF_CONDUCT, SUPPORT, FUNDING) — always
-  gitleaks/         Secret scanning (mgitleaks) — always, Lefthook + CI
-  codeql/           SAST via CodeQL (mcodeql) — opt-in default true
-  trivy/            Container + FS vuln scanning (mtrivy) — opt-in
-  stale/            Auto-close inactive issues/PRs — opt-in
-  ts/               TypeScript presets (mtsc)
-  turbo/            Task orchestration (mturbo)
-  pages/            GitHub Pages deployment (opt-in)
+  gitleaks/         Secret scanning (mgitleaks) — always
+  lefthook/         Git hooks (msetup) — always
+  ts/               TypeScript presets (mtsc) — always
+  turbo/            Task orchestration (mturbo) — always
 ```
 
 </details>
@@ -131,15 +149,15 @@ configs/
 
 ```
 configs/
-  playwright/       E2E testing (me2e)
-  skills/           AI agent skills (mskills)
-  unocss/           Atomic CSS
-  native/           NAPI-RS bindings
-  devcontainer/     Codespaces / Dev Containers
-  pages/            GitHub Pages deployment
-  codeql/           SAST via CodeQL (default true)
-  trivy/            Container + FS vuln scanning
-  stale/            Auto-close inactive issues/PRs
+  codeql/           SAST via CodeQL — opt-in default true
+  devcontainer/     Codespaces / Dev Containers — opt-in
+  native/           NAPI-RS bindings — opt-in (publish/docker/none)
+  pages/            GitHub Pages deployment — opt-in
+  playwright/       E2E testing (me2e) — opt-in default true
+  skills/           AI agent skills (mskills) — opt-in
+  stale/            Auto-close inactive issues/PRs — opt-in
+  trivy/            Container + FS vuln scanning — opt-in
+  unocss/           Atomic CSS — opt-in
 ```
 
 </details>
@@ -162,64 +180,72 @@ configs/
 
 ## Tooling
 
-Tool configs and their docs (reference, not concatenated):
+Tool configs live in `configs/*` and are reached via `m`-prefixed bins. No root config files.
+
+#### Always-on
 
 | Config | Bin | Description |
 | :--- | :--- | :--- |
-| [Biome](configs/biome/README.md) | `mbiome` | Lint and format |
-| [Bun Config](configs/bun-config/README.md) | `mbun` | Bun runtime, test, coverage (LCOV generation) |
-| [Bunup](configs/bunup/README.md) | `mbunup` | Bundling presets |
-| [Changeset](configs/changeset/README.md) | `mchangeset` | Versioning and releases |
-| [Citty](configs/citty/README.md) | `mcitty` | Elegant CLI builder (citty) |
-| [Commitlint](configs/commitlint/README.md) | — | Conventional Commits |
-| [Coverage](configs/coverage/README.md) | `mcoverage` | LCOV coverage reporting (HTML via genhtml, artifact, Pages, threshold, PR comment) |
-| [Dependabot](configs/dependabot/README.md) | — | Automated dependency updates (npm, cargo, actions, docker) |
-| [GitHub Actions](configs/gh-actions/README.md) | `mci` | CI workflows, `mci lint` / `mci act` |
-| [Lefthook](configs/lefthook/README.md) | `msetup` | Git hooks (biome + gitleaks + actionlint) |
-| [EditorConfig](configs/editorconfig/README.md) | — | Editor consistency (`.editorconfig`) — always |
-| [GitAttributes](configs/gitattributes/README.md) | — | Git file handling (`.gitattributes`) — always |
-| [Community](configs/community/README.md) | — | Community health (CODEOWNERS, PR/issue templates, SECURITY, CODE_OF_CONDUCT, SUPPORT, FUNDING) — always |
-| [Gitleaks](configs/gitleaks/README.md) | `mgitleaks` | Secret scanning — Lefthook + CI (always) |
-| [CodeQL](configs/codeql/README.md) | `mcodeql` | SAST via CodeQL — opt-in default true |
-| [Trivy](configs/trivy/README.md) | `mtrivy` | Container + FS vuln scanning — opt-in |
-| [Stale](configs/stale/README.md) | — | Auto-close inactive issues/PRs — opt-in |
-| [TypeScript](configs/ts/README.md) | `mtsc` | Shared tsconfigs |
-| [Turbo](configs/turbo/README.md) | `mturbo` | Task orchestration |
+| [Badges](configs/badges/README.md) | — | CI, coverage, license badges — always |
+| [Biome](configs/biome/README.md) | `mbiome` | Lint and format — always |
+| [Bun Config](configs/bun-config/README.md) | `mbun` | Bun runtime, test, coverage merge — always |
+| [Bunup](configs/bunup/README.md) | `mbunup` | Bundling presets — always |
+| [Changeset](configs/changeset/README.md) | `mchangeset` | Versioning and releases — always |
+| [Citty](configs/citty/README.md) | `mcitty` | CLI builder — always |
+| [Commitlint](configs/commitlint/README.md) | — | Conventional Commits — always |
+| [Community](configs/community/README.md) | — | CODEOWNERS, templates, SECURITY — always |
+| [Coverage](configs/coverage/README.md) | `mcoverage` | LCOV HTML, artifact, Pages, threshold, PR comment — always |
+| [Dependabot](configs/dependabot/README.md) | — | Dependency updates — always |
+| [EditorConfig](configs/editorconfig/README.md) | — | `.editorconfig` — always |
+| [GitAttributes](configs/gitattributes/README.md) | — | `.gitattributes` — always |
+| [GitHub Actions](configs/gh-actions/README.md) | `mci` | CI skeletons, `lint`/`act` — always |
+| [Gitleaks](configs/gitleaks/README.md) | `mgitleaks` | Secret scanning — always |
+| [Lefthook](configs/lefthook/README.md) | `msetup` | Git hooks — always |
+| [TypeScript](configs/ts/README.md) | `mtsc` | Shared tsconfigs — always |
+| [Turbo](configs/turbo/README.md) | `mturbo` | Task orchestration — always |
 
 <!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
-#### Opt-in tooling (present only when selected)
+#### Opt-in (pruned when disabled)
 
+| Config | Bin | Default | Description |
+| :--- | :--- | :--- | :--- |
 <!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
+<!-- TEMPLATE-ONLY:START(codeql) -->
+| [CodeQL](configs/codeql/README.md) | `mcodeql` | true | SAST via CodeQL |
+<!-- TEMPLATE-ONLY:END(codeql) -->
+<!-- TEMPLATE-ONLY:START(devcontainer) -->
+| [Devcontainer](configs/devcontainer/README.md) | — | false | Codespaces / Dev Containers |
+<!-- TEMPLATE-ONLY:END(devcontainer) -->
+<!-- TEMPLATE-ONLY:START(native) -->
+| [Native](configs/native/README.md) | `mnative` | none | NAPI-RS bindings (publish/docker/none) |
+<!-- TEMPLATE-ONLY:END(native) -->
+<!-- TEMPLATE-ONLY:START(pages) -->
+| [Pages](configs/pages/README.md) | — | false | GitHub Pages deployment |
+<!-- TEMPLATE-ONLY:END(pages) -->
 <!-- TEMPLATE-ONLY:START(playwright) -->
-- [Playwright](configs/playwright/README.md) (`me2e`) — E2E testing
+| [Playwright](configs/playwright/README.md) | `me2e` | true | E2E testing |
 <!-- TEMPLATE-ONLY:END(playwright) -->
 <!-- TEMPLATE-ONLY:START(skills) -->
-- [Skills](configs/skills/README.md) (`mskills`) — AI agent skills (opt-in)
+| [Skills](configs/skills/README.md) | `mskills` | false | AI agent skills |
 <!-- TEMPLATE-ONLY:END(skills) -->
-<!-- TEMPLATE-ONLY:START(template) -->
-- [Template](configs/template/README.md) (`mdocs`) — Scaffolder, template-only
-<!-- TEMPLATE-ONLY:END(template) -->
-<!-- TEMPLATE-ONLY:START(unocss) -->
-- [UnoCSS](configs/unocss/README.md) — Atomic CSS, opt-in
-<!-- TEMPLATE-ONLY:END(unocss) -->
-<!-- TEMPLATE-ONLY:START(native) -->
-- [Native](configs/native/README.md) — NAPI-RS, opt-in
-<!-- TEMPLATE-ONLY:END(native) -->
-<!-- TEMPLATE-ONLY:START(devcontainer) -->
-- [Devcontainer](configs/devcontainer/README.md) — Codespaces / Dev Containers, opt-in
-<!-- TEMPLATE-ONLY:END(devcontainer) -->
-<!-- TEMPLATE-ONLY:START(pages) -->
-- [Pages](configs/pages/README.md) — GitHub Pages deployment, opt-in
-<!-- TEMPLATE-ONLY:END(pages) -->
-<!-- TEMPLATE-ONLY:START(codeql) -->
-- [CodeQL](configs/codeql/README.md) (`mcodeql`) — SAST via CodeQL, opt-in default true
-<!-- TEMPLATE-ONLY:END(codeql) -->
-<!-- TEMPLATE-ONLY:START(trivy) -->
-- [Trivy](configs/trivy/README.md) (`mtrivy`) — Container + FS vuln scanning, opt-in
-<!-- TEMPLATE-ONLY:END(trivy) -->
 <!-- TEMPLATE-ONLY:START(stale) -->
-- [Stale](configs/stale/README.md) — Auto-close inactive issues/PRs, opt-in
+| [Stale](configs/stale/README.md) | — | false | Auto-close inactive issues/PRs |
 <!-- TEMPLATE-ONLY:END(stale) -->
+<!-- TEMPLATE-ONLY:START(trivy) -->
+| [Trivy](configs/trivy/README.md) | `mtrivy` | false | Container + FS vuln scanning |
+<!-- TEMPLATE-ONLY:END(trivy) -->
+<!-- TEMPLATE-ONLY:START(unocss) -->
+| [UnoCSS](configs/unocss/README.md) | — | false | Atomic CSS |
+<!-- TEMPLATE-ONLY:END(unocss) -->
+
+<!-- TEMPLATE-ONLY:START(template) -->
+#### Template-only (removed after scaffolding)
+
+| Config | Bin | Description |
+| :--- | :--- | :--- |
+| [Template](configs/template/README.md) | `mdocs` | Scaffolder, data-driven engine |
+
+<!-- TEMPLATE-ONLY:END(template) -->
 
 See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow.
 
@@ -230,8 +256,11 @@ See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](
 | `bun run dev` | Start all packages in watch mode (Turbo) |
 | `bun run build` | Build all packages (Turbo orchestrated) |
 | `bun run test` | Run all unit tests (Turbo orchestrates per-package `mbun test`) |
+| `bun run test:template` | Run template scaffolding tests (all opt-in combinations) |
+| `bun run test:template:cases` | Run only template combination cases (`cases.test.ts`) |
 | `bun run test:e2e` | Run Playwright E2E tests (auto-skips if browsers missing) |
 | `bun run coverage` | Collect unit-test coverage (merged LCOV at `coverage/lcov.info`) |
+| `bun run coverage:html` | Generate HTML report (`mcoverage html`) |
 | `bun run typecheck` | Type-check all packages |
 | `bun run check` | Lint and format check (Biome) |
 | `bun run check:fix` | Auto-fix lint and format issues |
@@ -242,13 +271,11 @@ See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](
 | `bun run security:gitleaks` | Scan repo for secrets (gitleaks) |
 | `bun run security:trivy` | FS vuln scan (Trivy HIGH,CRITICAL) |
 | `bun run security:audit` | Rust audit (cargo audit via mnative) |
-| `bun run security:check` | Run gitleaks + trivy |
+| `bun run security:check` | Run gitleaks + trivy (if installed) |
 | `bun run skills:list` | List available AI agent skills |
 | `bun run skills:sync` | Sync curated → vendored + validate + index |
-| `bun run skills:add <pkg>` | Add skill via skills.sh (`vercel-labs/agent-skills`) |
+| `bun run skills:add <pkg>` | Add skill via skills.sh |
 | `bun run skills:update` | Update skills via skills.sh |
-| `bun run skills:validate` | Validate `SKILL.md` frontmatter |
-| `bun run skills:index` | Build `skills.index.json` |
 | `bun run docs:sync` | Regenerate workflows from `configs/*` (`mdocs`) |
 
 ### Agent Skills (skills.sh)

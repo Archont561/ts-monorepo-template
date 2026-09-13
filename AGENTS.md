@@ -103,6 +103,8 @@ bun run dev            # Start all packages in watch mode via Turbo
 bun run build          # Build all packages (Turbo orchestrates dependency order)
 bun run typecheck      # Type-check all packages
 bun run test           # Run all unit tests (Turbo runs each package's mbun test)
+bun run test:template  # Run template scaffolding tests (all opt-in combos, cases.test.ts)
+bun run test:template:cases # Run only template combination cases
 bun run test:e2e       # Run Playwright E2E tests (auto-skips if browsers missing)
 bun run coverage       # Collect unit-test coverage (mbun coverage + merged LCOV)
 bun run check          # Lint and format check (Biome)
@@ -181,62 +183,70 @@ apps/example → @myorg/external → (inlines) @myorg/internal
 
 Tool configs and their agent-facing docs (reference, not concatenated):
 
+#### Always-on
+
 | Config | File | Purpose |
 | :--- | :--- | :--- |
-| Biome | [AGENT.md](configs/biome/AGENT.md) | Lint and format |
-| Bun Config | [AGENT.md](configs/bun-config/AGENT.md) | Bun runtime and coverage generation (citty) — LCOV via bunfig.toml |
-| Bunup | [AGENT.md](configs/bunup/AGENT.md) | Bundling presets |
-| Changeset | [AGENT.md](configs/changeset/AGENT.md) | Releases (citty) |
-| Citty | [AGENT.md](configs/citty/AGENT.md) | CLI builder (citty) |
-| Commitlint | [AGENT.md](configs/commitlint/AGENT.md) | Commit messages |
-| Coverage | [AGENT.md](configs/coverage/AGENT.md) | LCOV reporting — HTML via genhtml, artifact, Pages (/coverage/ or standalone), threshold 80%, PR comment |
-| Dependabot | [AGENT.md](configs/dependabot/AGENT.md) | Automated dependency updates (npm, cargo, actions, docker) |
-| GitHub Actions | [AGENT.md](configs/gh-actions/AGENT.md) | CI workflow validation and local act (citty) + coverage/pages/stale skeletons |
-| Lefthook | [AGENT.md](configs/lefthook/AGENT.md) | Git hooks (citty) — biome + gitleaks + actionlint |
-| EditorConfig | [AGENT.md](configs/editorconfig/AGENT.md) | Editor consistency (.editorconfig) — always |
-| GitAttributes | [AGENT.md](configs/gitattributes/AGENT.md) | Git file handling (.gitattributes) — always |
-| Community | [AGENT.md](configs/community/AGENT.md) | Community health — CODEOWNERS, PR/issue templates, SECURITY, CODE_OF_CONDUCT, SUPPORT, FUNDING — always |
-| Gitleaks | [AGENT.md](configs/gitleaks/AGENT.md) | Secret scanning — mgitleaks detect/protect (always) |
-| CodeQL | [AGENT.md](configs/codeql/AGENT.md) | SAST via CodeQL — opt-in default true |
-| Trivy | [AGENT.md](configs/trivy/AGENT.md) | Container + FS vuln scanning — opt-in |
-| Stale | [AGENT.md](configs/stale/AGENT.md) | Auto-close inactive issues/PRs — opt-in |
-| TypeScript | [AGENT.md](configs/ts/AGENT.md) | Shared tsconfigs |
-| Turbo | [AGENT.md](configs/turbo/AGENT.md) | Task orchestration |
+| Badges | [AGENT.md](configs/badges/AGENT.md) | CI, coverage, license badges — always |
+| Biome | [AGENT.md](configs/biome/AGENT.md) | Lint and format — always |
+| Bun Config | [AGENT.md](configs/bun-config/AGENT.md) | Bun runtime, coverage merge — always |
+| Bunup | [AGENT.md](configs/bunup/AGENT.md) | Bundling presets — always |
+| Changeset | [AGENT.md](configs/changeset/AGENT.md) | Releases — always |
+| Citty | [AGENT.md](configs/citty/AGENT.md) | CLI builder — always |
+| Commitlint | [AGENT.md](configs/commitlint/AGENT.md) | Commit messages — always |
+| Community | [AGENT.md](configs/community/AGENT.md) | CODEOWNERS, templates, SECURITY — always |
+| Coverage | [AGENT.md](configs/coverage/AGENT.md) | LCOV HTML, artifact, Pages, threshold, PR comment — always |
+| Dependabot | [AGENT.md](configs/dependabot/AGENT.md) | Dependency updates — always |
+| EditorConfig | [AGENT.md](configs/editorconfig/AGENT.md) | `.editorconfig` — always |
+| GitAttributes | [AGENT.md](configs/gitattributes/AGENT.md) | `.gitattributes` — always |
+| GitHub Actions | [AGENT.md](configs/gh-actions/AGENT.md) | CI skeletons, lint/act — always |
+| Gitleaks | [AGENT.md](configs/gitleaks/AGENT.md) | Secret scanning — always |
+| Lefthook | [AGENT.md](configs/lefthook/AGENT.md) | Git hooks — always |
+| TypeScript | [AGENT.md](configs/ts/AGENT.md) | Shared tsconfigs — always |
+| Turbo | [AGENT.md](configs/turbo/AGENT.md) | Task orchestration — always |
 
 <!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
-#### Opt-in configs (present only when selected)
+#### Opt-in (pruned when disabled)
 
+| Config | File | Default | Purpose |
+| :--- | :--- | :--- | :--- |
 <!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
+<!-- TEMPLATE-ONLY:START(codeql) -->
+| CodeQL | [AGENT.md](configs/codeql/AGENT.md) | true | SAST via CodeQL |
+<!-- TEMPLATE-ONLY:END(codeql) -->
 <!-- TEMPLATE-ONLY:START(devcontainer) -->
-- Devcontainer | [AGENT.md](configs/devcontainer/AGENT.md) | Codespaces / Dev Containers, opt-in
+| Devcontainer | [AGENT.md](configs/devcontainer/AGENT.md) | false | Codespaces / Dev Containers |
 <!-- TEMPLATE-ONLY:END(devcontainer) -->
 <!-- TEMPLATE-ONLY:START(native) -->
-- Native | [AGENT.md](configs/native/AGENT.md) | NAPI-RS opt-in
+| Native | [AGENT.md](configs/native/AGENT.md) | none | NAPI-RS bindings |
 <!-- TEMPLATE-ONLY:END(native) -->
+<!-- TEMPLATE-ONLY:START(pages) -->
+| Pages | [AGENT.md](configs/pages/AGENT.md) | false | GitHub Pages deployment |
+<!-- TEMPLATE-ONLY:END(pages) -->
 <!-- TEMPLATE-ONLY:START(playwright) -->
-- Playwright | [AGENT.md](configs/playwright/AGENT.md) | E2E testing
+| Playwright | [AGENT.md](configs/playwright/AGENT.md) | true | E2E testing |
 <!-- TEMPLATE-ONLY:END(playwright) -->
 <!-- TEMPLATE-ONLY:START(skills) -->
-- Skills | [AGENT.md](configs/skills/AGENT.md) | AI agent skills, opt-in
+| Skills | [AGENT.md](configs/skills/AGENT.md) | false | AI agent skills |
 <!-- TEMPLATE-ONLY:END(skills) -->
-<!-- TEMPLATE-ONLY:START(template) -->
-- Template | [AGENT.md](configs/template/AGENT.md) | Scaffolder, template-only
-<!-- TEMPLATE-ONLY:END(template) -->
-<!-- TEMPLATE-ONLY:START(unocss) -->
-- UnoCSS | [AGENT.md](configs/unocss/AGENT.md) | Atomic CSS, opt-in
-<!-- TEMPLATE-ONLY:END(unocss) -->
-<!-- TEMPLATE-ONLY:START(pages) -->
-- Pages | [AGENT.md](configs/pages/AGENT.md) | GitHub Pages deployment, opt-in
-<!-- TEMPLATE-ONLY:END(pages) -->
-<!-- TEMPLATE-ONLY:START(codeql) -->
-- CodeQL | [AGENT.md](configs/codeql/AGENT.md) | SAST via CodeQL, opt-in default true
-<!-- TEMPLATE-ONLY:END(codeql) -->
-<!-- TEMPLATE-ONLY:START(trivy) -->
-- Trivy | [AGENT.md](configs/trivy/AGENT.md) | Container + FS vuln scanning, opt-in
-<!-- TEMPLATE-ONLY:END(trivy) -->
 <!-- TEMPLATE-ONLY:START(stale) -->
-- Stale | [AGENT.md](configs/stale/AGENT.md) | Auto-close inactive issues/PRs, opt-in
+| Stale | [AGENT.md](configs/stale/AGENT.md) | false | Auto-close inactive issues/PRs |
 <!-- TEMPLATE-ONLY:END(stale) -->
+<!-- TEMPLATE-ONLY:START(trivy) -->
+| Trivy | [AGENT.md](configs/trivy/AGENT.md) | false | Container + FS vuln scanning |
+<!-- TEMPLATE-ONLY:END(trivy) -->
+<!-- TEMPLATE-ONLY:START(unocss) -->
+| UnoCSS | [AGENT.md](configs/unocss/AGENT.md) | false | Atomic CSS |
+<!-- TEMPLATE-ONLY:END(unocss) -->
+
+<!-- TEMPLATE-ONLY:START(template) -->
+#### Template-only (removed after scaffolding)
+
+| Config | File | Purpose |
+| :--- | :--- | :--- |
+| Template | [AGENT.md](configs/template/AGENT.md) | Scaffolder, data-driven engine |
+
+<!-- TEMPLATE-ONLY:END(template) -->
 
 ## Workflows
 

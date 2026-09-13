@@ -78,3 +78,5 @@ docker-compose.*.yml
 
 # Turbo cache
 .turbo
+
+# Used for both root and apps/example (context is root)

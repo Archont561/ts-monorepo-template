@@ -1,6 +1,15 @@
 # @myorg/native
 
+[![CI](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/Archont561/ts-monorepo-template?logo=codecov&label=Coverage)](https://codecov.io/gh/Archont561/ts-monorepo-template)
+[![Rust](https://img.shields.io/badge/Rust-stable-orange?logo=rust)](https://www.rust-lang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE.md)
+[![Bun](https://img.shields.io/badge/Bun-1.4.2-black?logo=bun)](https://bun.sh)
+
 > Native Rust bindings via Cargo + napi-rs — self-contained `Cargo.toml`, no root workspace, with WASM fallback and platform-specific binaries. Built via `mnative` CLI.
+
+> [!TIP]
+> Badges: update `Archont561/ts-monorepo-template` → `YOUR_ORG/YOUR_REPO` after scaffolding. Coverage includes Rust via `mnative llvm-cov` → `coverage/rust-lcov.info` merged into `coverage/lcov.info`.
 
 ## What it provides
 

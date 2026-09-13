@@ -79,8 +79,12 @@ async function findAllSkillMd(dir: string): Promise<string[]> {
 const syncCommand = defineCommand({
   meta: { name: "sync", description: "Sync curated skills to .agents/skills/ + validate + index" },
   run: async () => {
+    const scope = process.env.SKILLS_SCOPE || process.env.SCOPE || "@myorg";
+    const placeholder = "@myorg";
     await mkdir(TARGET_DIR, { recursive: true });
-    console.log(`\n📦 Syncing curated skills from ${CURATED_DIR} to ${TARGET_DIR}/\n`);
+    console.log(
+      `\n📦 Syncing curated skills from ${CURATED_DIR} to ${TARGET_DIR}/ (scope: ${scope})\n`,
+    );
 
     let count = 0;
     try {
@@ -90,17 +94,33 @@ const syncCommand = defineCommand({
         if (entry.isDirectory()) {
           const destDir = join(TARGET_DIR, entry.name);
           await mkdir(destDir, { recursive: true });
+          // Copy then replace scope in copied files
           await $`cp -r ${srcPath}/* ${destDir}/`.quiet().catch(() => {});
+          // Replace placeholder in all md files under destDir
+          if (scope !== placeholder) {
+            const files = await $`find ${destDir} -type f -name "*.md"`.text().catch(() => "");
+            for (const f of files.trim().split("\n").filter(Boolean)) {
+              try {
+                const c = await file(f).text();
+                if (c.includes(placeholder)) {
+                  await write(f, c.replaceAll(placeholder, scope));
+                }
+              } catch {}
+            }
+          }
           count++;
           console.log(`  ✓ ${entry.name}/`);
         } else if (entry.isFile() && entry.name.endsWith(".md")) {
           const name = entry.name.replace(/\.md$/, "");
           const destDir = join(TARGET_DIR, name);
           await mkdir(destDir, { recursive: true });
-          const content = await file(srcPath).text();
+          let content = await file(srcPath).text();
+          if (scope !== placeholder) {
+            content = content.replaceAll(placeholder, scope);
+          }
           const hasFrontmatter = content.startsWith("---");
           if (hasFrontmatter) {
-            await $`cp ${srcPath} ${destDir}/SKILL.md`.quiet();
+            await write(join(destDir, "SKILL.md"), content);
           } else {
             const wrapped = `---\nname: ${name}\ndescription: ${name} skill\n---\n\n${content}`;
             await write(join(destDir, "SKILL.md"), wrapped);

@@ -1,6 +1,14 @@
 # @myorg/example
 
+[![CI](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/Archont561/ts-monorepo-template?logo=codecov&label=Coverage)](https://codecov.io/gh/Archont561/ts-monorepo-template)
+[![Bun](https://img.shields.io/badge/Bun-1.4.2-black?logo=bun)](https://bun.sh)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE.md)
+
 Demo HTTP application built with Bun.serve and file-based routing, with optional UnoCSS and native Rust bindings.
+
+> [!TIP]
+> Badges: update `Archont561/ts-monorepo-template` → `YOUR_ORG/YOUR_REPO` after scaffolding. Coverage from root `bun run coverage` → `coverage/lcov.info`.
 
 > [!NOTE]
 > This app is **private** — not bundled, not published. Bun runs TypeScript directly with `--hot`.
