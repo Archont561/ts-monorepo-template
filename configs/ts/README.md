@@ -4,7 +4,8 @@
 
 ## What it provides
 
-- `typescript` + `@types/bun` as shared devDependencies (hoisted)
+- `typescript` + `@types/bun` as shared devDependencies
+- `typeRoots` in `base.json` pointing at `configs/ts/node_modules/@types` (isolated linker) and the repo root (hoisted linker), so `types: ["bun"]` resolves from every package
 - `library.json` — base for library packages (`external`, `internal`)
 - `app.json` — base for apps (`example`)
 - `mtsc` — CLI alias for `tsc` with shared config resolution
