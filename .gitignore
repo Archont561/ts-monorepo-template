@@ -14,6 +14,10 @@ configs/*/.turbo/
 coverage/
 !configs/coverage/
 !configs/coverage/**
+# Keep the tracked coverage config package visible, but not its generated output
+configs/coverage/node_modules/
+configs/coverage/dist/
+configs/coverage/.turbo/
 # Bun coverage temp files
 **/coverage/.lcov.info.*.tmp
 **/coverage/lcov.info.tmp
