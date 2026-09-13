@@ -33,33 +33,6 @@
       "dependsOn": ["build:native"],
       "outputs": ["*.wasi.cjs", "wasi-worker.mjs"],
       "cache": false
-    },
-    "cargo:check": {
-      "cache": false
-    },
-    "cargo:clippy": {
-      "cache": false
-    },
-    "cargo:fmt": {
-      "cache": false
-    },
-    "cargo:fmt:check": {
-      "cache": false
-    },
-    "cargo:test": {
-      "cache": false
-    },
-    "cargo:build": {
-      "outputs": ["target/**"],
-      "cache": false
-    },
-    "cargo:build:release": {
-      "outputs": ["target/**"],
-      "cache": false
-    },
-    "cargo:build:ci": {
-      "outputs": ["target/**"],
-      "cache": false
     }
   }
 }

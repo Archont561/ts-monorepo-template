@@ -225,7 +225,7 @@ pub fn primes_up_to(n: u32) -> Vec<u32> {
     await writeFile(join(NATIVE_DIR, "src/lib.rs"), libRs);
     console.log(`  ✓ src/lib.rs (#[napi] add, fibonacci, Counter, primes)`);
 
-    // package.json — with cargo:* scripts using mnative + napi
+    // package.json — all cargo via mnative CLI (single source of truth)
     const pkgJson = {
       name: "@myorg/native",
       version: "0.0.0",
@@ -253,35 +253,34 @@ pub fn primes_up_to(n: u32) -> Vec<u32> {
         },
       },
       scripts: {
-        build:
-          "if command -v cargo >/dev/null 2>&1; then cargo check && napi build --release --platform; else echo '⚠️ cargo not found, skipping native build (install Rust)'; fi",
-        "build:debug":
-          "if command -v cargo >/dev/null 2>&1; then cargo check && napi build; else echo '⚠️ cargo not found, skipping native build'; fi",
-        "build:wasm":
-          "if command -v cargo >/dev/null 2>&1; then napi build --release --target wasm32-wasip1-threads; else echo '⚠️ cargo not found, skipping WASM build'; fi",
-        "create-npm-dirs": "napi create-npm-dirs",
-        artifacts: "napi artifacts",
-        prepublish: "napi pre-publish",
-        test: "bun test",
-        typecheck: "tsc --noEmit",
-        "cargo:check": "cargo check",
-        "cargo:clippy": "cargo clippy -- -D warnings",
-        "cargo:fmt": "cargo fmt --all",
-        "cargo:fmt:check": "cargo fmt --all -- --check",
-        "cargo:test": "cargo test",
-        "cargo:nextest": "cargo nextest run",
-        "cargo:build": "cargo build",
-        "cargo:build:release": "cargo build --release",
-        "cargo:build:ci": "cargo build --profile ci",
-        "cargo:tree": "cargo tree",
-        "cargo:tree:duplicates": "cargo tree -d",
-        "cargo:update": "cargo update",
-        "cargo:doc": "cargo doc --no-deps",
-        "cargo:audit": "cargo audit",
-        "cargo:deny": "cargo deny check",
+        build: "mnative napi:build",
+        "build:debug": "mnative napi:build:debug",
+        "build:wasm": "mnative napi:build:wasm",
+        "create-npm-dirs": "mnative napi create-npm-dirs",
+        artifacts: "mnative napi artifacts",
+        prepublish: "mnative napi pre-publish",
+        test: "mbun test",
+        typecheck: "mtsc --noEmit",
+        "cargo:check": "mnative check",
+        "cargo:clippy": "mnative clippy",
+        "cargo:fmt": "mnative fmt",
+        "cargo:fmt:check": "mnative fmt:check",
+        "cargo:test": "mnative test",
+        "cargo:nextest": "mnative nextest",
+        "cargo:build": "mnative build",
+        "cargo:build:release": "mnative build:release",
+        "cargo:build:ci": "mnative build:ci",
+        "cargo:tree": "mnative tree",
+        "cargo:tree:duplicates": "mnative tree -d",
+        "cargo:update": "mnative update",
+        "cargo:doc": "mnative doc",
+        "cargo:audit": "mnative audit",
+        "cargo:deny": "mnative deny check",
       },
       devDependencies: {
+        "@myorg/bun-config": "workspace:*",
         "@myorg/bunup": "workspace:*",
+        "@myorg/native-config": "workspace:*",
         "@myorg/ts": "workspace:*",
         "@napi-rs/cli": "^3.9.1",
       },
@@ -331,7 +330,9 @@ pub fn primes_up_to(n: u32) -> Vec<u32> {
   if (await file(rootCargoPath).exists()) {
     const content = await file(rootCargoPath).text();
     if (content.includes('members = ["packages/native"]') || content.includes("[workspace]")) {
-      console.log(`  🗑️ Removing root Cargo.toml (migrated to packages/native/Cargo.toml self-contained)`);
+      console.log(
+        `  🗑️ Removing root Cargo.toml (migrated to packages/native/Cargo.toml self-contained)`,
+      );
       await $`rm -f ${rootCargoPath}`.quiet();
     }
   }
@@ -397,7 +398,7 @@ export default async function handleNativeStatus(): Promise<Response> {
     console.log(`  ✓ Example native routes`);
   }
 
-  // Update root package.json scripts to use mnative
+  // Update root package.json scripts — only build wrappers, no cargo:* (cargo via mnative directly)
   const rootPkgPath = join(TARGET_DIR, "package.json");
   if (await file(rootPkgPath).exists()) {
     const pkg = await file(rootPkgPath).json();
@@ -405,17 +406,29 @@ export default async function handleNativeStatus(): Promise<Response> {
     const scriptsToEnsure: Record<string, string> = {
       "build:native": "bun --filter @myorg/native run build",
       "build:wasm": "bun --filter @myorg/native run build:wasm",
-      "test:native": "bun --filter @myorg/native test",
-      "cargo:check": "mnative check || echo 'cargo not found, skipping'",
-      "cargo:clippy": "mnative clippy || echo 'cargo not found'",
-      "cargo:fmt": "mnative fmt || echo 'cargo not found'",
-      "cargo:fmt:check": "mnative fmt:check || echo 'cargo not found'",
-      "cargo:test": "mnative test || echo 'cargo not found'",
-      "cargo:build": "mnative build || echo 'cargo not found'",
-      "cargo:build:release": "mnative build:release || echo 'cargo not found'",
-      "cargo:build:ci": "mnative build:ci || echo 'cargo not found'",
+      "test:native": "bun --filter @myorg/native run test",
     };
+    // Remove old cargo:* scripts from root (now only via mnative CLI directly)
+    const cargoScripts = [
+      "cargo:check",
+      "cargo:clippy",
+      "cargo:fmt",
+      "cargo:fmt:check",
+      "cargo:test",
+      "cargo:build",
+      "cargo:build:release",
+      "cargo:build:ci",
+    ];
     let updated = false;
+    for (const k of cargoScripts) {
+      if (pkg.scripts[k]) {
+        delete pkg.scripts[k];
+        console.log(
+          `  🗑️ Removed root script ${k} (use mnative ${k.replace("cargo:", "")} directly)`,
+        );
+        updated = true;
+      }
+    }
     for (const [k, v] of Object.entries(scriptsToEnsure)) {
       if (pkg.scripts[k] !== v) {
         pkg.scripts[k] = v;
@@ -428,7 +441,7 @@ export default async function handleNativeStatus(): Promise<Response> {
     }
   }
 
-  // Update turbo config
+  // Update turbo config — only build:native and build:wasm, no cargo:* (cargo via mnative directly)
   const turboPath = join(TARGET_DIR, "configs/turbo/turbo.base.json");
   if (await file(turboPath).exists()) {
     const turbo = await file(turboPath).json();
@@ -452,13 +465,23 @@ export default async function handleNativeStatus(): Promise<Response> {
       console.log(`  ✓ Added turbo task build:wasm`);
       changed = true;
     }
-    if (!turbo.tasks["cargo:check"]) {
-      turbo.tasks["cargo:check"] = { cache: false };
-      changed = true;
-    }
-    if (!turbo.tasks["cargo:clippy"]) {
-      turbo.tasks["cargo:clippy"] = { cache: false };
-      changed = true;
+    // Remove old cargo:* turbo tasks (now via mnative CLI directly)
+    const oldCargoTasks = [
+      "cargo:check",
+      "cargo:clippy",
+      "cargo:fmt",
+      "cargo:fmt:check",
+      "cargo:test",
+      "cargo:build",
+      "cargo:build:release",
+      "cargo:build:ci",
+    ];
+    for (const t of oldCargoTasks) {
+      if (turbo.tasks[t]) {
+        delete turbo.tasks[t];
+        console.log(`  🗑️ Removed turbo task ${t} (use mnative directly)`);
+        changed = true;
+      }
     }
     if (changed) {
       await Bun.write(turboPath, `${JSON.stringify(turbo, null, 2)}\n`);

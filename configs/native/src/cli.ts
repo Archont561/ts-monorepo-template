@@ -126,6 +126,44 @@ const docCommand = defineCommand({
   },
 });
 
+const nextestCommand = defineCommand({
+  meta: { name: "nextest", description: "cargo nextest run (faster parallel tests)" },
+  run() {
+    const raw = process.argv.slice(3);
+    process.exit(runCargo(["nextest", "run", ...raw]));
+  },
+});
+
+const llvmCovCommand = defineCommand({
+  meta: {
+    name: "llvm-cov",
+    description: "cargo llvm-cov --lcov (Rust coverage, requires cargo-llvm-cov)",
+  },
+  run() {
+    const raw = process.argv.slice(3);
+    if (raw.length === 0) {
+      process.exit(runCargo(["llvm-cov", "--lcov", "--output-path", "coverage/rust-lcov.info"]));
+    } else {
+      process.exit(runCargo(["llvm-cov", ...raw]));
+    }
+  },
+});
+
+const auditCommand = defineCommand({
+  meta: { name: "audit", description: "cargo audit (security audit)" },
+  run() {
+    process.exit(runCargo(["audit"]));
+  },
+});
+
+const denyCommand = defineCommand({
+  meta: { name: "deny", description: "cargo deny check (license/ban check)" },
+  run() {
+    const raw = process.argv.slice(3);
+    process.exit(runCargo(["deny", ...raw]));
+  },
+});
+
 const napiBuildCommand = defineCommand({
   meta: { name: "napi:build", description: "napi build --release --platform (native .node)" },
   run() {
@@ -191,12 +229,16 @@ const main = defineCommand({
     tree: treeCommand,
     update: updateCommand,
     doc: docCommand,
+    nextest: nextestCommand,
+    "llvm-cov": llvmCovCommand,
+    audit: auditCommand,
+    deny: denyCommand,
     "napi:build": napiBuildCommand,
     "napi:build:debug": napiBuildDebugCommand,
     "napi:build:wasm": napiBuildWasmCommand,
     napi: napiCommand,
   },
-  run({ args }) {
+  run() {
     // If no subcommand, show help + support direct cargo passthrough
     const raw = process.argv.slice(2);
     if (raw.length === 0) {

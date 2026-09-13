@@ -28,22 +28,16 @@ jobs:
         run: bun install --frozen-lockfile
 
 # TEMPLATE-ONLY:START(pages)
-- name: Generate coverage HTML for Pages (include at /coverage/)
+- name: Generate coverage HTML for Pages (include at /coverage/ via mcoverage)
   run: |
-    echo "📊 Generating coverage HTML for inclusion in Pages site"
+    echo "📊 Generating coverage HTML for inclusion in Pages site (via mcoverage)"
     if [ ! -f "coverage/lcov.info" ]; then
       echo "⚠️ coverage/lcov.info not found, running coverage first"
       bun run coverage || echo "coverage failed"
     fi
     if [ -f "coverage/lcov.info" ]; then
       sudo apt-get update && sudo apt-get install -y lcov bc || echo "lcov install failed"
-      genhtml coverage/lcov.info \
-        --output-directory coverage/html \
-        --title "Coverage Report" \
-        --show-details \
-        --highlight \
-        --legend || echo "genhtml failed"
-      # Copy coverage HTML into Pages public dir at /coverage/
+      mcoverage html || genhtml coverage/lcov.info --output-directory coverage/html --title "Coverage Report" --show-details --highlight --legend || echo "genhtml failed"
       mkdir -p apps/example/public/coverage
       cp -r coverage/html/* apps/example/public/coverage/ || echo "copy coverage to public/coverage failed"
       echo "✅ Coverage included at /coverage/ in Pages site"

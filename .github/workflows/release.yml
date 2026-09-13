@@ -43,31 +43,29 @@ jobs:
 
 # TEMPLATE-ONLY:START(native)
 - name: Setup Rust toolchain (release)
-  if: hashFiles('Cargo.toml') != '' || hashFiles('packages/native/Cargo.toml') != ''
+  if: hashFiles('packages/native/Cargo.toml') != ''
   uses: dtolnay/rust-toolchain@stable
   with:
     components: clippy, rustfmt
     targets: wasm32-wasip1-threads
 
 - name: Rust cache (release)
-  if: hashFiles('Cargo.toml') != '' || hashFiles('packages/native/Cargo.toml') != ''
+  if: hashFiles('packages/native/Cargo.toml') != ''
   uses: Swatinem/rust-cache@v2
+  with:
+    workspaces: "packages/native"
 
-- name: Cargo build release (workspace)
-  if: hashFiles('Cargo.toml') != '' || hashFiles('packages/native/Cargo.toml') != ''
-  run: |
-    echo "🦀 Building Rust workspace release"
-    cargo build --workspace --release || echo "cargo build failed"
-  shell: bash
-
-- name: Build native bindings for release (napi)
+- name: Cargo build release (mnative)
   if: hashFiles('packages/native/Cargo.toml') != ''
   run: |
-    echo "🦀 Building native bindings for release (napi)"
-    if command -v cargo >/dev/null 2>&1; then
-      bun run build:native || echo "native build failed, continuing with JS fallback"
-    else
-      echo "cargo not found, skipping native build"
-    fi
+    echo "🦀 Building Rust release via mnative"
+    mnative build:release || echo "cargo build failed"
+  shell: bash
+
+- name: Build native bindings for release (napi via mnative)
+  if: hashFiles('packages/native/Cargo.toml') != ''
+  run: |
+    echo "🦀 Building native bindings for release (napi via mnative)"
+    bun run build:native || mnative napi:build || echo "native build failed, continuing with JS fallback"
   shell: bash
 # TEMPLATE-ONLY:END(native)
