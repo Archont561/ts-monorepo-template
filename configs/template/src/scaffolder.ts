@@ -175,6 +175,8 @@ export class MonorepoScaffolder {
       "apps/example/docker-compose.yml",
       "apps/example/.dockerignore",
       ".dockerignore",
+      ".github/dependabot.yml",
+      ".github/workflows/dependabot-auto-merge.yml",
     ];
 
     // Config package manifests and config files carry the @myorg scope in
@@ -505,11 +507,12 @@ export class MonorepoScaffolder {
   }
 
   /**
-   * Regenerates `.github/workflows/*.yml` from the gh-actions base skeletons
-   * and the surviving configs' step fragments.
+   * Regenerates `.github/workflows/*.yml` + `.github/dependabot.yml` from the
+   * gh-actions base skeletons and the surviving configs' step fragments.
    */
   async regenerateCI(): Promise<void> {
     await mkdir(`${this.targetDir}/.github/workflows`, { recursive: true });
+    await mkdir(`${this.targetDir}/.github`, { recursive: true });
     await aggregateWorkflow(this.targetDir, "ci.base.yml", "ci.steps.yml");
     await aggregateWorkflow(this.targetDir, "release.base.yml", "release.steps.yml");
     // Only generate pages.yml if pages config is enabled (exists)
@@ -522,6 +525,21 @@ export class MonorepoScaffolder {
         await $`rm -rf ${pagesWorkflow}`.quiet();
         console.log(`🗑️ Removed ${pagesWorkflow} (pages disabled)`);
       }
+    }
+    // Dependabot is always generated (always config), but check existence for safety
+    const dependabotConfigExists = await file(
+      `${this.targetDir}/configs/dependabot/package.json`,
+    ).exists();
+    const ghActionsExists = await file(
+      `${this.targetDir}/configs/gh-actions/package.json`,
+    ).exists();
+    if (dependabotConfigExists || ghActionsExists) {
+      await aggregateWorkflow(this.targetDir, "dependabot.base.yml", "dependabot.yml");
+      await aggregateWorkflow(
+        this.targetDir,
+        "dependabot-auto-merge.base.yml",
+        "dependabot-auto-merge.steps.yml",
+      );
     }
   }
 

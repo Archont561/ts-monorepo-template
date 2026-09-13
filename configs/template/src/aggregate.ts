@@ -16,6 +16,12 @@ import { $, file, write } from "bun";
  * - `.github/workflows/pages.yml` is `configs/gh-actions/pages.base.yml`
  *   with `{{STEPS}}` filled from every `configs/<dir>/pages.steps.yml`
  *   (sorted, concatenated) — GitHub Pages deployment.
+ * - `.github/dependabot.yml` is `configs/gh-actions/dependabot.base.yml`
+ *   with `{{UPDATES}}` filled from every `configs/<dir>/dependabot.yml`
+ *   (sorted, concatenated) — Dependabot version updates.
+ * - `.github/workflows/dependabot-auto-merge.yml` is
+ *   `configs/gh-actions/dependabot-auto-merge.base.yml` with `{{STEPS}}`
+ *   filled from `dependabot-auto-merge.steps.yml`.
  *
  * Root README.md and AGENTS.md are now static reference files (not concatenated)
  * that list configs via links. They have TEMPLATE-ONLY blocks for template vs
@@ -81,7 +87,9 @@ export async function aggregateWorkflow(
   if (
     stepsFileName === "ci.steps.yml" ||
     stepsFileName === "release.steps.yml" ||
-    stepsFileName === "pages.steps.yml"
+    stepsFileName === "pages.steps.yml" ||
+    stepsFileName === "dependabot.yml" ||
+    stepsFileName === "dependabot-auto-merge.steps.yml"
   ) {
     const found =
       await $`find ${targetDir}/configs -mindepth 2 -maxdepth 2 -name ${stepsFileName} -type f`.text();
@@ -93,14 +101,27 @@ export async function aggregateWorkflow(
     steps = (await file(`${targetDir}/configs/changeset/${stepsFileName}`).text()).trimEnd();
   }
 
-  const rendered = base.replace("{{STEPS}}", `${steps}\n`).replace(/\n{3,}/g, "\n\n");
-  const outputPath = `${targetDir}/.github/workflows/${baseFileName.replace(".base.yml", ".yml")}`;
+  // Support both {{STEPS}} and {{UPDATES}} placeholders
+  const rendered = base
+    .replace("{{STEPS}}", `${steps}\n`)
+    .replace("{{UPDATES}}", `${steps}\n`)
+    .replace(/\n{3,}/g, "\n\n");
+
+  // Determine output path based on base file name
+  let outputPath: string;
+  if (baseFileName === "dependabot.base.yml") {
+    outputPath = `${targetDir}/.github/dependabot.yml`;
+  } else {
+    outputPath = `${targetDir}/.github/workflows/${baseFileName.replace(".base.yml", ".yml")}`;
+  }
+
   await write(outputPath, rendered);
   console.log(`✅ generated ${outputPath}`);
 }
 
 export async function regenerateAll(targetDir: string): Promise<void> {
   await mkdir(`${targetDir}/.github/workflows`, { recursive: true });
+  await mkdir(`${targetDir}/.github`, { recursive: true });
   await aggregateWorkflow(targetDir, "ci.base.yml", "ci.steps.yml");
   await aggregateWorkflow(targetDir, "release.base.yml", "release.steps.yml");
   // Only generate pages.yml if pages config is enabled (exists)
@@ -114,6 +135,19 @@ export async function regenerateAll(targetDir: string): Promise<void> {
       await $`rm -rf ${pagesWorkflow}`.quiet();
       console.log(`🗑️ Removed ${pagesWorkflow} (pages disabled)`);
     }
+  }
+  // Dependabot is always generated (always config), but check existence for safety
+  const dependabotConfigExists = await file(
+    `${targetDir}/configs/dependabot/package.json`,
+  ).exists();
+  const ghActionsExists = await file(`${targetDir}/configs/gh-actions/package.json`).exists();
+  if (dependabotConfigExists || ghActionsExists) {
+    await aggregateWorkflow(targetDir, "dependabot.base.yml", "dependabot.yml");
+    await aggregateWorkflow(
+      targetDir,
+      "dependabot-auto-merge.base.yml",
+      "dependabot-auto-merge.steps.yml",
+    );
   }
 }
 

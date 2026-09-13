@@ -1,0 +1,23 @@
+# AUTO-GENERATED from configs/*/dependabot-auto-merge.steps.yml — do not edit directly
+# Edit fragments then run bun run docs:sync (mdocs)
+name: Dependabot auto-merge
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+{{STEPS}}

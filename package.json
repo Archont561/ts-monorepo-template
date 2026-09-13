@@ -13,6 +13,7 @@
     "@myorg/bunup": "workspace:*",
     "@myorg/changeset": "workspace:*",
     "@myorg/citty": "workspace:*",
+    "@myorg/dependabot": "workspace:*",
     "@myorg/devcontainer": "workspace:*",
     "@myorg/gh-actions": "workspace:*",
     "@myorg/lefthook": "workspace:*",

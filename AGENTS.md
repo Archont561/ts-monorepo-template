@@ -180,6 +180,7 @@ Tool configs and their agent-facing docs (reference, not concatenated):
 | Changeset | [AGENT.md](configs/changeset/AGENT.md) | Releases (citty) |
 | Citty | [AGENT.md](configs/citty/AGENT.md) | CLI builder (citty) |
 | Commitlint | [AGENT.md](configs/commitlint/AGENT.md) | Commit messages |
+| Dependabot | [AGENT.md](configs/dependabot/AGENT.md) | Automated dependency updates (npm, cargo, actions, docker) |
 | GitHub Actions | [AGENT.md](configs/gh-actions/AGENT.md) | CI workflow validation and local act (citty) |
 | Lefthook | [AGENT.md](configs/lefthook/AGENT.md) | Git hooks (citty) |
 | TypeScript | [AGENT.md](configs/ts/AGENT.md) | Shared tsconfigs |
@@ -214,7 +215,7 @@ Tool configs and their agent-facing docs (reference, not concatenated):
 ## Workflows
 
 > [!NOTE]
-> Workflows in `.github/workflows/` are generated from skeletons in `configs/gh-actions/*.base.yml` with fragments from `configs/*/ci.steps.yml`. Edit skeletons and fragments, then run `bun run docs:sync` (`mdocs`).
+> Workflows in `.github/workflows/` are generated from skeletons in `configs/gh-actions/*.base.yml` with fragments from `configs/*/*.steps.yml` + `dependabot.yml` fragments → `.github/dependabot.yml`. Edit skeletons and fragments, then run `bun run docs:sync` (`mdocs`).
 
 ```mermaid
 stateDiagram-v2

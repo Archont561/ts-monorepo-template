@@ -1,16 +1,16 @@
 # @myorg/gh-actions
 
-> GitHub Actions CI + local `act` runner.
+> GitHub Actions CI + local `act` runner + Dependabot skeletons.
 
 ## What it provides
 
 - `actionlint` + `act` as shared devDependencies
-- `ci.base.yml` + `release.base.yml` + `pages.base.yml` — workflow skeletons with `{{STEPS}}` placeholder
+- `ci.base.yml` + `release.base.yml` + `pages.base.yml` + `dependabot.base.yml` + `dependabot-auto-merge.base.yml` — workflow skeletons with `{{STEPS}}` / `{{UPDATES}}` placeholders
 - `mci` — CLI with subcommands `mci lint` and `mci act`
-- Per-config `ci.steps.yml`, `release.steps.yml`, `pages.steps.yml` fragments aggregated by `mdocs`
+- Per-config `ci.steps.yml`, `release.steps.yml`, `pages.steps.yml`, `dependabot.yml`, `dependabot-auto-merge.steps.yml` fragments aggregated by `mdocs`
 
 > [!NOTE]
-> Workflows in `.github/workflows/` are generated — don't edit them directly. Edit skeletons and fragments, then run `bun run docs:sync`.
+> Workflows in `.github/` are generated — don't edit them directly. Edit skeletons and fragments, then run `bun run docs:sync`.
 
 ### Workflow generation
 
@@ -19,11 +19,13 @@
 | `ci.base.yml` | `*/ci.steps.yml` | `.github/workflows/ci.yml` |
 | `release.base.yml` | `*/release.steps.yml` | `.github/workflows/release.yml` |
 | `pages.base.yml` | `*/pages.steps.yml` | `.github/workflows/pages.yml` |
+| `dependabot.base.yml` | `*/dependabot.yml` | `.github/dependabot.yml` |
+| `dependabot-auto-merge.base.yml` | `*/dependabot-auto-merge.steps.yml` | `.github/workflows/dependabot-auto-merge.yml` |
 
 ## Usage
 
 ```bash
-bun run docs:sync   # mdocs → regenerate workflows
+bun run docs:sync   # mdocs → regenerate workflows + dependabot
 bun run ci:lint     # mci lint → validate workflows
 bun run ci:list     # mci act -l → list jobs
 bun run ci:dry      # mci act push -n → dry-run
@@ -43,7 +45,7 @@ sequenceDiagram
     Dev->>Mdocs: bun run docs:sync
     Mdocs->>Base: Read
     Mdocs->>Frag: Collect via discoverConfigs
-    Mdocs->>GH: Generate + replace {{STEPS}}
+    Mdocs->>GH: Generate + replace {{STEPS}} / {{UPDATES}}
     Dev->>GH: Validate with ci:lint
 ```
 
@@ -56,7 +58,7 @@ sequenceDiagram
   run: bun run check
 ```
 
-Fragments are concatenated in discovery order and injected into `{{STEPS}}`.
+Fragments are concatenated in discovery order and injected into `{{STEPS}}` or `{{UPDATES}}`.
 
 </details>
 
@@ -64,7 +66,7 @@ Fragments are concatenated in discovery order and injected into `{{STEPS}}`.
 
 | Command | Description |
 | :--- | :--- |
-| `bun run docs:sync` | Regenerate workflows |
+| `bun run docs:sync` | Regenerate workflows + dependabot.yml |
 | `bun run ci:lint` | Validate with actionlint |
 | `bun run ci:list` | List act jobs |
 | `bun run ci:dry` | Dry-run locally |
