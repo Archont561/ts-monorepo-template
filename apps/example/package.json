@@ -8,6 +8,7 @@
     "start": "mbun src/index.ts",
     "typecheck": "mtsc --noEmit",
     "test": "mbun test tests/",
+    "test:watch": "mbun test tests/ --watch",
     "coverage": "mbun test tests/ --coverage",
     "test:e2e": "me2e",
     "build:css": "bunx unocss --config ../../configs/unocss/uno.config.ts || echo 'UnoCSS not enabled or build failed'",

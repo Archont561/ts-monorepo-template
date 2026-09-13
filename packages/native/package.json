@@ -43,6 +43,7 @@
     "artifacts": "mnative napi artifacts",
     "prepublish": "mnative napi pre-publish",
     "test": "mbun test",
+    "test:watch": "mbun test --watch",
     "typecheck": "mtsc --noEmit",
     "cargo:check": "mnative check",
     "cargo:clippy": "mnative clippy",

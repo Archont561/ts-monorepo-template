@@ -180,7 +180,7 @@ configs/
 ```
 configs/
   template/         Scaffolder (mdocs) — self-destruct
-docs/               Template-only static docs (GitHub Pages) — removed via extraRemovals
+docs/               Template-only VitePress docs (GitHub Pages) — removed via extraRemovals
 .github/workflows/
   template-docs.yml Template-only Pages workflow for docs/ — removed
 ```
@@ -190,6 +190,67 @@ docs/               Template-only static docs (GitHub Pages) — removed via ext
 
 > [!NOTE]
 > Every tool config lives in its own `configs/*` package and is reached through `m`-prefixed CLI bins that bake in config paths. There are no root tool-config files and the root ships zero `devDependencies`.
+
+## Adding a Package or an App
+
+### New library package
+
+```bash
+mkdir -p packages/my-lib/src packages/my-lib/tests
+```
+
+`packages/my-lib/package.json`:
+
+```json
+{
+  "name": "@myorg/my-lib",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch",
+    "typecheck": "mtsc --noEmit",
+    "test": "mbun test",
+    "test:watch": "mbun test --watch",
+    "coverage": "mbun test --coverage"
+  },
+  "devDependencies": {
+    "@myorg/ts": "workspace:*",
+    "@myorg/bunup": "workspace:*"
+  }
+}
+```
+
+Then add two files:
+
+- `tsconfig.json` — extends `@myorg/ts/library.json`, sets `rootDir`, `outDir` and the
+  `@src/*` / `@tests/*` paths. Never add `baseUrl` (removed in TS 7.0).
+- `bunup.config.ts` — `defineConfig({ ...baseConfig, entry: ["src/index.ts"] })`,
+  or `...cliConfig` if the package ships a bin.
+
+Finish with `bun install`, then `bun run build`.
+
+> [!TIP]
+> Code that should never be published lives in a `private: true` package and is
+> inlined by Bunup at build time — see `packages/internal` for the pattern.
+
+### New app
+
+Apps extend `@myorg/ts/app.json` (no emit) and run unbundled (`mbun --hot src/index.ts`).
+They depend on packages, never the reverse — Biome enforces that boundary.
+
+### Depending on another workspace package
+
+```bash
+bun add @myorg/external --filter @myorg/example
+```
+
+or add `"@myorg/external": "workspace:*"` to the consumer's `dependencies` and run
+`bun install`. Inter-package deps are always `workspace:*`.
 
 ## Tooling
 
@@ -269,6 +330,7 @@ See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](
 | `bun run dev` | Start all packages in watch mode (Turbo) |
 | `bun run build` | Build all packages (Turbo orchestrated) |
 | `bun run test` | Run all unit tests (Turbo orchestrates per-package `mbun test`) |
+| `bun --filter @myorg/external run test:watch` | Re-run one package's tests on change |
 | `bun run test:template` | Run template scaffolding tests (all opt-in combinations) |
 | `bun run test:template:cases` | Run only template combination cases (`cases.test.ts`) |
 | `bun run test:e2e` | Run Playwright E2E tests (auto-skips if browsers missing) |
