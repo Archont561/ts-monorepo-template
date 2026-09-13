@@ -1,3 +1,4 @@
+import { mkdir } from "node:fs/promises";
 import { $, file, write } from "bun";
 import { aggregateMarkdown, aggregateWorkflow } from "./aggregate";
 import type { ScaffoldMeta, ScaffoldRemovals } from "./configs";
@@ -400,7 +401,7 @@ export class MonorepoScaffolder {
    * and the surviving configs' step fragments.
    */
   async regenerateCI(): Promise<void> {
-    await $`mkdir -p ${this.targetDir}/.github/workflows`.quiet();
+    await mkdir(`${this.targetDir}/.github/workflows`, { recursive: true });
     await aggregateWorkflow(this.targetDir, "ci.base.yml", "ci.steps.yml");
     await aggregateWorkflow(this.targetDir, "release.base.yml", "release.steps.yml");
   }
@@ -409,7 +410,7 @@ export class MonorepoScaffolder {
    * Ensures the target directory is a Git repository.
    *
    * Lefthook hooks are no longer installed here — the root `prepare` script
-   * (`bun configs/lefthook/setup.ts`) handles that during `bun install`,
+   * (`msetup lefthook`) handles that during `bun install`,
    * which in the `bun create` flow runs after this preinstall scaffold.
    */
   async setupGitHooks(): Promise<void> {

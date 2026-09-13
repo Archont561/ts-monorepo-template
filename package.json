@@ -7,13 +7,23 @@
     "packages/*",
     "configs/*"
   ],
+  "devDependencies": {
+    "@myorg/biome": "workspace:*",
+    "@myorg/bun-config": "workspace:*",
+    "@myorg/changeset": "workspace:*",
+    "@myorg/gh-actions": "workspace:*",
+    "@myorg/lefthook": "workspace:*",
+    "@myorg/playwright": "workspace:*",
+    "@myorg/skills": "workspace:*",
+    "@myorg/turbo": "workspace:*"
+  },
   "bun-create": {
     "preinstall": "bun configs/template/dist/index.js",
     "start": "bun run dev"
   },
   "scripts": {
     "preinstall": "node -e \"if(!process.env.npm_config_user_agent?.includes('bun')){console.error('\\n❌ This project requires Bun. Run: bun install\\n');process.exit(1)}\"",
-    "prepare": "bun configs/lefthook/setup.ts lefthook && bun configs/changeset/init.ts changeset",
+    "prepare": "bun configs/lefthook/src/cli.ts lefthook && bun configs/changeset/src/cli.ts changeset",
     "build": "mturbo build",
     "dev": "mturbo dev",
     "typecheck": "mturbo typecheck",
@@ -29,6 +39,8 @@
     "ci:local": "mact push",
     "skills:sync": "mskills sync",
     "skills:list": "mskills list",
+    "clean:modules": "find . -name 'node_modules' -not -path '*/node_modules/*' -prune -exec rm -rf {} +",
+    "reinstall": "bun run clean:modules && bun install",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "changeset publish"

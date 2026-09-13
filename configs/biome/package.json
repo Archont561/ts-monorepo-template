@@ -9,7 +9,11 @@
     "prompt": "Configure Biome (lint + format)?"
   },
   "bin": {
-    "mbiome": "./cli.ts"
+    "mbiome": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "bunup",
+    "dev": "bunup --watch"
   },
   "exports": {
     ".": "./biome.json"

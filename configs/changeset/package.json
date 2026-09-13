@@ -10,7 +10,11 @@
     "setup": "bun configs/changeset/init.ts"
   },
   "bin": {
-    "minit": "./init.ts"
+    "minit": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "bunup",
+    "dev": "bunup --watch"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.2"

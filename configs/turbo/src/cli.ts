@@ -7,7 +7,7 @@ import { spawnSync } from "bun";
  * where the base config lives.
  */
 const turbo = Bun.fileURLToPath(import.meta.resolve("turbo/bin/turbo"));
-const rootTurboJson = `${import.meta.dir}/turbo.base.json`;
+const rootTurboJson = `${import.meta.dir}/../turbo.base.json`;
 const args = process.argv.slice(2);
 
 const result = spawnSync({

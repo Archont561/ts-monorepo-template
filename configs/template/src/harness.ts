@@ -1,4 +1,49 @@
+import { cp, rm } from "node:fs/promises";
+import { relative } from "node:path";
 import { $ } from "bun";
+
+/**
+ * Compiles rsync-style include/exclude patterns into a matcher over a
+ * forward-slash relative path (no leading slash), covering the subset of
+ * rsync semantics the harness relies on:
+ *   - patterns without "/"  → match any path segment (basename) anywhere
+ *   - patterns with "/"     → match the full relative path, with "*" wildcards
+ */
+function makeMatcher(patterns: string[]): (rel: string) => boolean {
+  const compiled = patterns.map((raw) => {
+    const dirOnly = raw.endsWith("/");
+    const pattern = dirOnly ? raw.slice(0, -1) : raw;
+    return { pattern, anchored: pattern.includes("/") };
+  });
+  return (rel: string): boolean => {
+    if (rel === "") return false;
+    const segs = rel.split("/");
+    for (const { pattern, anchored } of compiled) {
+      if (anchored) {
+        if (matchPath(pattern, segs)) return true;
+      } else if (segs.includes(pattern)) {
+        return true;
+      }
+    }
+    return false;
+  };
+}
+
+function matchPath(pattern: string, segs: string[]): boolean {
+  const pSegs = pattern.split("/");
+  if (pSegs.length !== segs.length) return false;
+  return pSegs.every((p, i) => matchSegment(p, segs[i]));
+}
+
+function matchSegment(pattern: string, seg: string | undefined): boolean {
+  if (seg === undefined) return false;
+  if (!pattern.includes("*")) return pattern === seg;
+  const escaped = pattern
+    .split("*")
+    .map((s) => s.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+    .join(".*");
+  return new RegExp(`^${escaped}$`).test(seg);
+}
 
 export interface HarnessOptions {
   /** Absolute path to the template repo root (defaults to three levels up from this file). */
@@ -75,17 +120,23 @@ export class TemplateHarness {
 
     const templateDir = `${registryDir}/${TemplateHarness.TEMPLATE_NAME}`;
 
-    // Copy template repo to registry using rsync with excludes. The
-    // committed template bundle (configs/template/dist/index.js) must be
-    // kept; other packages' build outputs are dropped.
-    const includeArgs = [
-      "--include",
-      "configs/template/dist/",
-      "--include",
-      "configs/template/dist/index.js",
-    ];
-    const excludeArgs = this.excludes.flatMap((e) => ["--exclude", e]);
-    await $`rsync -a ${includeArgs} ${excludeArgs} ${this.templateRoot}/ ${templateDir}/`.quiet();
+    // Copy the template repo into the registry, dropping build outputs and VCS
+    // metadata. This replaces the previous `rsync` dependency with Bun's native
+    // fs.cp (no external binary), keeping the harness portable across every
+    // environment. The committed template bundle (configs/template/dist) is
+    // explicitly included so it survives even if an exclude would drop it.
+    const includePatterns = ["configs/template/dist/", "configs/template/dist/index.js"];
+    const isIncluded = makeMatcher(includePatterns);
+    const isExcluded = makeMatcher(this.excludes);
+    await rm(templateDir, { recursive: true, force: true });
+    await cp(this.templateRoot, templateDir, {
+      recursive: true,
+      force: true,
+      filter: (src) => {
+        const rel = relative(this.templateRoot, src ?? this.templateRoot);
+        return isIncluded(rel) || !isExcluded(rel);
+      },
+    });
 
     // Optionally `bun install` the copy to pre-provision a fully installed
     // registry (off by default; used for bundling the registry copy).

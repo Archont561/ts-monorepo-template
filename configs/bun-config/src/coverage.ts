@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { mkdir } from "node:fs/promises";
 import { spawnSync, which } from "bun";
 
 /**
@@ -34,6 +35,9 @@ if (Array.from(reports.scanSync()).length === 0) {
 }
 
 console.log("\nMerging package coverage reports...");
+// lcov-result-merger does not create the output directory, so ensure the
+// root coverage/ dir exists before writing the merged lcov.info there.
+await mkdir("coverage", { recursive: true });
 const merger = Bun.fileURLToPath(
   import.meta.resolve("lcov-result-merger/bin/lcov-result-merger.js"),
 );

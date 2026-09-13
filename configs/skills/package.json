@@ -20,7 +20,11 @@
     }
   },
   "bin": {
-    "mskills": "./cli.ts"
+    "mskills": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "bunup",
+    "dev": "bunup --watch"
   },
   "exports": {
     "./skills/*": "./skills/*"

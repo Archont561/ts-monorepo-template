@@ -1,18 +1,19 @@
 #!/usr/bin/env bun
+import { mkdir } from "node:fs/promises";
 import { $, file } from "bun";
 
 /**
  * m-prefixed skills CLI. Manages the AI-agent skill files shipped in this
  * package: syncing them into `.agents/skills/` or listing what is available.
  */
-const SKILLS_DIR = `${import.meta.dir}/skills`;
+const SKILLS_DIR = `${import.meta.dir}/../skills`;
 const TARGET_DIR = `${process.cwd()}/.agents/skills`;
 
 const command = process.argv[2] ?? "sync";
 
 switch (command) {
   case "sync": {
-    await $`mkdir -p ${TARGET_DIR}`.quiet();
+    await mkdir(TARGET_DIR, { recursive: true });
     await $`cp -r ${SKILLS_DIR}/* ${TARGET_DIR}/`.quiet();
     const skills = await $`ls ${SKILLS_DIR}`.text();
     const count = skills.trim().split("\n").filter(Boolean).length;

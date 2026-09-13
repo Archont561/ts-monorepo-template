@@ -9,8 +9,12 @@
     "prompt": "Configure GitHub Actions (CI + release workflows)?"
   },
   "bin": {
-    "mactionlint": "./cli.ts",
-    "mact": "./act.ts"
+    "mactionlint": "./src/cli.ts",
+    "mact": "./src/act.ts"
+  },
+  "scripts": {
+    "build": "bunup",
+    "dev": "bunup --watch"
   },
   "exports": {
     "./actionlint.yaml": "./actionlint.yaml"

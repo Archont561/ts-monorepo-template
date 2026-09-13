@@ -11,7 +11,7 @@ const actionlint = Bun.fileURLToPath(
 const args = process.argv.slice(2);
 
 const result = spawnSync({
-  cmd: ["bun", actionlint, `-config-file=${import.meta.dir}/actionlint.yaml`, ...args],
+  cmd: ["bun", actionlint, `-config-file=${import.meta.dir}/../actionlint.yaml`, ...args],
   stdout: "inherit",
   stderr: "inherit",
   stdin: "inherit",

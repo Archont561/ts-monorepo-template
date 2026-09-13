@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdir } from "node:fs/promises";
 import { $, file, write } from "bun";
 import { MonorepoScaffolder } from "../src/scaffolder";
 
@@ -135,7 +136,8 @@ describe("MonorepoScaffolder (unit)", () => {
         JSON.stringify({
           name: "test",
           scripts: {
-            prepare: "bun configs/lefthook/setup.ts && bun configs/changeset/init.ts",
+            prepare:
+              "bun configs/lefthook/src/cli.ts lefthook && bun configs/changeset/src/cli.ts changeset",
           },
         }),
       );
@@ -144,8 +146,8 @@ describe("MonorepoScaffolder (unit)", () => {
       await s.sanitizePackageJson();
 
       const pkg = await file(`${workDir}/package.json`).json();
-      expect(pkg.scripts.prepare).toContain("configs/lefthook/setup.ts");
-      expect(pkg.scripts.prepare).toContain("configs/changeset/init.ts");
+      expect(pkg.scripts.prepare).toContain("configs/lefthook/src/cli.ts");
+      expect(pkg.scripts.prepare).toContain("configs/changeset/src/cli.ts");
     });
 
     test("handles missing package.json gracefully", async () => {
@@ -180,7 +182,7 @@ describe("MonorepoScaffolder (unit)", () => {
 
   describe("replaceScopePlaceholders", () => {
     test("replaces @myorg with custom scope in package.json", async () => {
-      await $`mkdir -p ${workDir}/packages/internal`.quiet();
+      await mkdir(`${workDir}/packages/internal`, { recursive: true });
       await write(
         `${workDir}/packages/internal/package.json`,
         JSON.stringify({
@@ -198,7 +200,7 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("replaces in tsconfig.json extends paths", async () => {
-      await $`mkdir -p ${workDir}/packages/internal`.quiet();
+      await mkdir(`${workDir}/packages/internal`, { recursive: true });
       await write(
         `${workDir}/packages/internal/tsconfig.json`,
         JSON.stringify({ extends: "@myorg/ts/library.json" }),
@@ -212,7 +214,7 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("replaces in source imports", async () => {
-      await $`mkdir -p ${workDir}/apps/example/src`.quiet();
+      await mkdir(`${workDir}/apps/example/src`, { recursive: true });
       await write(
         `${workDir}/apps/example/src/routes.ts`,
         `import { greet } from "@myorg/external";`,
@@ -226,7 +228,7 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("replaces scope in config package contents", async () => {
-      await $`mkdir -p ${workDir}/configs/changeset`.quiet();
+      await mkdir(`${workDir}/configs/changeset`, { recursive: true });
       await write(
         `${workDir}/configs/changeset/config.json`,
         JSON.stringify({
@@ -243,7 +245,7 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("replaces scope in lefthook setup script", async () => {
-      await $`mkdir -p ${workDir}/configs/lefthook`.quiet();
+      await mkdir(`${workDir}/configs/lefthook`, { recursive: true });
       await write(`${workDir}/configs/lefthook/setup.ts`, "// hardcoding `@myorg` no more\n");
 
       const s = new MonorepoScaffolder({ targetDir: workDir, scope: "@acme" });
@@ -324,7 +326,7 @@ describe("MonorepoScaffolder (unit)", () => {
 
     test("removes TypeScript comment blocks", async () => {
       await write(
-        `${workDir}/setup.ts`,
+        `${workDir}/bootstrap.ts`,
         [
           "const keep = 1;",
           "// TEMPLATE-ONLY:START(template)",
@@ -337,7 +339,7 @@ describe("MonorepoScaffolder (unit)", () => {
       const s = new MonorepoScaffolder({ targetDir: workDir });
       await s.stripTemplateMarkers();
 
-      const content = await file(`${workDir}/setup.ts`).text();
+      const content = await file(`${workDir}/bootstrap.ts`).text();
       expect(content).toContain("keep = 1");
       expect(content).toContain("alsoKeep = 3");
       expect(content).not.toContain("remove = 2");
@@ -413,7 +415,7 @@ describe("MonorepoScaffolder (unit)", () => {
 
   describe("removeTemplateFiles", () => {
     test("removes template-only test file", async () => {
-      await $`mkdir -p ${workDir}/tests`.quiet();
+      await mkdir(`${workDir}/tests`, { recursive: true });
       await write(`${workDir}/tests/template.test.ts`, "export {}");
 
       const s = new MonorepoScaffolder({ targetDir: workDir });
@@ -448,7 +450,7 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("strips configs/template refs from bunfig ignore patterns", async () => {
-      await $`mkdir -p ${workDir}/configs/bun-config`.quiet();
+      await mkdir(`${workDir}/configs/bun-config`, { recursive: true });
       await write(
         `${workDir}/configs/bun-config/bunfig.toml`,
         ["ignore = [", '  "**/configs/template/**",', '  "dist",', "]"].join("\n"),
@@ -467,7 +469,9 @@ describe("MonorepoScaffolder (unit)", () => {
 
   describe("regenerateDocs", () => {
     test("writes AGENTS.md and README.md with sections from present configs", async () => {
-      await $`mkdir -p ${workDir}/configs/apply ${workDir}/configs/zeta ${workDir}/configs/missing`.quiet();
+      await mkdir(`${workDir}/configs/apply`, { recursive: true });
+      await mkdir(`${workDir}/configs/zeta`, { recursive: true });
+      await mkdir(`${workDir}/configs/missing`, { recursive: true });
       await write(`${workDir}/configs/AGENT.md`, "# AGENTS.md\nIntro.");
       await write(`${workDir}/configs/README.md`, "# Repo\nIntro.");
       await write(`${workDir}/configs/apply/AGENT.md`, "## Apply Section");
@@ -493,7 +497,8 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("omits configs whose doc files are missing", async () => {
-      await $`mkdir -p ${workDir}/configs/apply ${workDir}/configs/solo`.quiet();
+      await mkdir(`${workDir}/configs/apply`, { recursive: true });
+      await mkdir(`${workDir}/configs/solo`, { recursive: true });
       await write(`${workDir}/configs/AGENT.md`, "# AGENTS.md\nIntro.");
       await write(`${workDir}/configs/README.md`, "# Repo\nIntro.");
       // `apply` ships both docs; `solo` ships only AGENT.md.
@@ -518,7 +523,9 @@ describe("MonorepoScaffolder (unit)", () => {
 
   describe("regenerateCI", () => {
     test("splices step fragments into the base skeletons", async () => {
-      await $`mkdir -p ${workDir}/configs/gh-actions ${workDir}/configs/apply ${workDir}/configs/changeset`.quiet();
+      await mkdir(`${workDir}/configs/gh-actions`, { recursive: true });
+      await mkdir(`${workDir}/configs/apply`, { recursive: true });
+      await mkdir(`${workDir}/configs/changeset`, { recursive: true });
       await write(
         `${workDir}/configs/gh-actions/ci.base.yml`,
         "name: CI\n\njobs:\n  verify:\n    steps:\n{{STEPS}}",
@@ -550,7 +557,7 @@ describe("MonorepoScaffolder (unit)", () => {
 
   describe("handleConfig", () => {
     test("removes disabled confirm config directory and extra removals", async () => {
-      await $`mkdir -p ${workDir}/configs/unocss`.quiet();
+      await mkdir(`${workDir}/configs/unocss`, { recursive: true });
       await write(
         `${workDir}/configs/unocss/package.json`,
         JSON.stringify({
@@ -579,7 +586,7 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("keeps enabled config intact", async () => {
-      await $`mkdir -p ${workDir}/configs/playwright`.quiet();
+      await mkdir(`${workDir}/configs/playwright`, { recursive: true });
       await write(
         `${workDir}/configs/playwright/package.json`,
         JSON.stringify({
@@ -596,7 +603,8 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("handles select-type with 'none' selection", async () => {
-      await $`mkdir -p ${workDir}/configs/native ${workDir}/crates/core`.quiet();
+      await mkdir(`${workDir}/configs/native`, { recursive: true });
+      await mkdir(`${workDir}/crates/core`, { recursive: true });
       await write(
         `${workDir}/configs/native/package.json`,
         JSON.stringify({
@@ -625,7 +633,8 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("removes app deps when config disabled", async () => {
-      await $`mkdir -p ${workDir}/configs/playwright ${workDir}/apps/example`.quiet();
+      await mkdir(`${workDir}/configs/playwright`, { recursive: true });
+      await mkdir(`${workDir}/apps/example`, { recursive: true });
       await write(
         `${workDir}/configs/playwright/package.json`,
         JSON.stringify({
@@ -654,7 +663,8 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("self-destructs template-only configs and their scripts", async () => {
-      await $`mkdir -p ${workDir}/configs/template/src ${workDir}/configs/biome`.quiet();
+      await mkdir(`${workDir}/configs/template/src`, { recursive: true });
+      await mkdir(`${workDir}/configs/biome`, { recursive: true });
       await write(
         `${workDir}/configs/template/package.json`,
         JSON.stringify({

@@ -44,9 +44,9 @@ describe("Scaffolder integration", () => {
       expect(rootPkg.scripts?.["docs:sync"]).toBeUndefined();
       expect(rootPkg.workspaces).not.toContain("configs/template");
 
-      // 3. Prepare script still runs setup.ts + init.ts on install.
-      expect(rootPkg.scripts?.prepare).toContain("configs/lefthook/setup.ts");
-      expect(rootPkg.scripts?.prepare).toContain("configs/changeset/init.ts");
+      // 3. Prepare script still wires up lefthook + changeset on install.
+      expect(rootPkg.scripts?.prepare).toContain("configs/lefthook/src/cli.ts");
+      expect(rootPkg.scripts?.prepare).toContain("configs/changeset/src/cli.ts");
 
       // 4. Scope replacement reached workspace packages.
       const internalPkg = await file(`${result.templateDir}/packages/internal/package.json`).json();
@@ -172,12 +172,12 @@ describe("Scaffolder integration", () => {
       // Template package is fully removed.
       expect(await pathExists(`${result.templateDir}/configs/template`)).toBe(false);
 
-      // Root package.json is sanitized; prepare still runs setup.ts + init.ts.
+      // Root package.json is sanitized; prepare still wires up lefthook + changeset.
       const rootPkg = await file(`${result.templateDir}/package.json`).json();
       expect(rootPkg["bun-create"]).toBeUndefined();
       expect(rootPkg.workspaces).not.toContain("configs/template");
-      expect(rootPkg.scripts?.prepare).toContain("configs/lefthook/setup.ts");
-      expect(rootPkg.scripts?.prepare).toContain("configs/changeset/init.ts");
+      expect(rootPkg.scripts?.prepare).toContain("configs/lefthook/src/cli.ts");
+      expect(rootPkg.scripts?.prepare).toContain("configs/changeset/src/cli.ts");
       expect(rootPkg.scripts?.["docs:sync"]).toBeUndefined();
 
       // The bundle regenerates docs and workflows from the pruned tree.

@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
-import { $, file, write } from "bun";
+import { mkdir } from "node:fs/promises";
+import { file, write } from "bun";
 
 /**
  * Ensures `.changeset/config.json` exists, copying from the shared config
@@ -7,7 +8,7 @@ import { $, file, write } from "bun";
  * so developers can customize their Changesets setup.
  *
  * Hoisted as the `minit` bin; `bun run prepare` invokes it directly via
- * `bun configs/changeset/init.ts changeset`.
+ * `minit changeset`.
  */
 export async function minit(target = "changeset"): Promise<void> {
   if (target !== "changeset") {
@@ -24,7 +25,7 @@ export async function minit(target = "changeset"): Promise<void> {
 
   if (!(await file(source).exists())) return;
 
-  await $`mkdir -p .changeset`.quiet();
+  await mkdir(".changeset", { recursive: true });
   await write(configPath, await file(source).text());
 }
 

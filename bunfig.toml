@@ -1,0 +1,10 @@
+[install]
+# Pinned to "hoisted" because this repo targets Bun 1.3.11, which has a
+# known bug (oven-sh/bun#27110) where the isolated linker populates
+# node_modules/.bun but creates no top-level symlinks on Linux, leaving every
+# tool (turbo, biome, bunup, ...) unrunnable.
+#
+# Remove this line when the repo upgrades to Bun >= 1.2.19 and the isolated
+# linker has been verified working (bun install → node_modules/* are symlinks
+# into node_modules/.bun, no phantom-dependency errors).
+linker = "hoisted"

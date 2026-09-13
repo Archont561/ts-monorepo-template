@@ -9,7 +9,11 @@
     "prompt": "Configure Turbo (task orchestration)?"
   },
   "bin": {
-    "mturbo": "./cli.ts"
+    "mturbo": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "bunup",
+    "dev": "bunup --watch"
   },
   "exports": {
     "./turbo.json": "./turbo.base.json"

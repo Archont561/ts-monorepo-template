@@ -9,7 +9,7 @@ import { spawnSync } from "bun";
  * config is always passed as an explicit flag instead. All other bun
  * commands pass through unchanged.
  */
-const bunfig = `${import.meta.dir}/bunfig.toml`;
+const bunfig = `${import.meta.dir}/../bunfig.toml`;
 const args = process.argv.slice(2);
 const command = args[0];
 

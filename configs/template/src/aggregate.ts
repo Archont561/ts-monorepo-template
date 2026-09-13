@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { mkdir } from "node:fs/promises";
 import { $, file, write } from "bun";
 
 /**
@@ -92,7 +93,7 @@ export async function aggregateWorkflow(
 export async function regenerateAll(targetDir: string): Promise<void> {
   await aggregateMarkdown(targetDir, "AGENT.md", "AGENTS.md", "AGENT");
   await aggregateMarkdown(targetDir, "README.md", "README.md", "PACKAGE");
-  await $`mkdir -p ${targetDir}/.github/workflows`.quiet();
+  await mkdir(`${targetDir}/.github/workflows`, { recursive: true });
   await aggregateWorkflow(targetDir, "ci.base.yml", "ci.steps.yml");
   await aggregateWorkflow(targetDir, "release.base.yml", "release.steps.yml");
 }

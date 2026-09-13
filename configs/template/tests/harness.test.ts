@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { mkdir } from "node:fs/promises";
 import { $ } from "bun";
 import { TemplateHarness } from "../src/harness";
 
@@ -80,7 +81,7 @@ describe("TemplateHarness (unit)", () => {
   test("cleanup removes output directory contents", async () => {
     const result = await new TemplateHarness({ skipInstall: true }).prepare();
 
-    await $`mkdir -p ${result.outputDir}`.quiet();
+    await mkdir(`${result.outputDir}`, { recursive: true });
     await Bun.write(`${result.outputDir}/marker`, "x");
 
     await result.cleanup();
