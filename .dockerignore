@@ -1,0 +1,80 @@
+# Root .dockerignore - monorepo wide
+# Prevents sending unnecessary files to Docker build context
+# Speeds up builds and avoids accidentally including secrets
+
+node_modules
+dist
+.turbo
+*.tsbuildinfo
+*.log
+*.log.*
+.env
+.env.*
+!.env.example
+coverage
+.DS_Store
+Thumbs.db
+
+# Playwright
+test-results
+playwright-report
+blob-report
+
+# Lefthook
+lefthook-local.yml
+
+# act
+.actrc.local
+.secrets
+
+# AI agent skills
+.agents/*
+!.agents/skills/
+!.agents/skills/**
+!.agents/skills.index.json
+!.agents/README.md
+
+# Rust / Cargo
+/target/
+target/
+**/target/
+# Cargo.lock is ignored for library (cdylib) per guide, but we keep it in context for cache if present
+# Comment out if you want to include it:
+# Cargo.lock
+
+# NAPI generated
+**/*.node
+**/*.wasi.cjs
+**/wasi-worker.mjs
+npm/
+packages/native/index.js
+packages/native/index.d.ts
+packages/native/*.node
+
+# Git
+.git
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# UnoCSS generated
+**/uno.css
+apps/example/public/uno.css
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+.docker
+
+# Turbo cache
+.turbo

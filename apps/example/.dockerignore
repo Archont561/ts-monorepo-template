@@ -1,0 +1,76 @@
+# .dockerignore for example app - prevents sending unnecessary files to build context
+# Works like .gitignore, speeds up builds and avoids secrets
+
+node_modules
+dist
+.turbo
+*.tsbuildinfo
+*.log
+*.log.*
+.env
+.env.*
+!.env.example
+coverage
+.DS_Store
+Thumbs.db
+
+# Playwright
+test-results
+playwright-report
+blob-report
+test-results/
+playwright-report/
+blob-report/
+
+# Rust target (always ignored, rebuilt in Docker)
+target
+**/target/
+Cargo.lock
+# Keep Cargo.toml for workspace detection, but ignore lock if library
+# Cargo.lock is gitignored for library, but we allow it in Docker context for cache
+
+# NAPI generated (rebuilt in Docker)
+*.node
+*.wasi.cjs
+wasi-worker.mjs
+npm/
+packages/native/index.js
+packages/native/index.d.ts
+
+# Git
+.git
+.gitignore
+
+# Lefthook local
+lefthook-local.yml
+
+# act
+.actrc.local
+.secrets
+
+# AI skills cache
+.agents/*
+!.agents/skills/
+!.agents/skills/**
+!.agents/skills.index.json
+!.agents/README.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# UnoCSS generated (rebuilt in Docker if enabled)
+**/uno.css
+apps/example/public/uno.css
+
+# Docker itself
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml

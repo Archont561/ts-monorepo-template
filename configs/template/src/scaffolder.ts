@@ -171,6 +171,10 @@ export class MonorepoScaffolder {
       "apps/example/src/pages/api/native/primes/[n].ts",
       "apps/example/src/pages/api/native/reverse.ts",
       "apps/example/playwright.config.ts",
+      "apps/example/Dockerfile",
+      "apps/example/docker-compose.yml",
+      "apps/example/.dockerignore",
+      ".dockerignore",
     ];
 
     // Config package manifests and config files carry the @myorg scope in
@@ -390,7 +394,7 @@ export class MonorepoScaffolder {
         return new RegExp(r);
       } catch {
         // If not a valid regex, treat as literal substring
-        return new RegExp(r.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+        return new RegExp(r.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&"));
       }
     });
 
