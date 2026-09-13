@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "mbun --hot src/index.ts",
+    "build": "test -f ../../configs/unocss/uno.config.ts && bun run build:css || echo 'UnoCSS not enabled, skipping CSS build'",
     "start": "mbun src/index.ts",
     "typecheck": "mtsc --noEmit",
     "test": "mbun test tests/",

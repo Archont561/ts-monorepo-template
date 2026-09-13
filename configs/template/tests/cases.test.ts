@@ -32,6 +32,8 @@ interface TemplateCase {
     notHasWorkflows?: string[];
     rootScripts?: string[];
     rootScriptsNot?: string[];
+    /** Scripts that must exist in apps/example (per-app ownership). */
+    appScripts?: string[];
   };
 }
 
@@ -145,7 +147,8 @@ const COMMON_CASES: TemplateCase[] = [
       ciContains: ["test:e2e", "CodeQL", "Trivy", "Gitleaks", "build:native"],
       hasWorkflows: ["ci.yml", "release.yml", "pages.yml", "stale.yml", "dependabot.yml"],
       notHasWorkflows: ["coverage.yml"],
-      rootScripts: ["build:native", "build:wasm", "test:native", "test:e2e", "build:css"],
+      rootScripts: ["build:native", "build:wasm", "test:native", "test:e2e"],
+      appScripts: ["build", "build:css"],
     },
   },
   {
@@ -236,7 +239,8 @@ const COMMON_CASES: TemplateCase[] = [
     },
     expectations: {
       hasFiles: ["configs/unocss", "apps/example/public/index.html"],
-      rootScripts: ["build:css"],
+      rootScriptsNot: ["build:css"],
+      appScripts: ["build", "build:css"],
     },
   },
   {
@@ -412,6 +416,15 @@ describe("template cases — common flows with every combination", () => {
         }
         for (const s of c.expectations.rootScriptsNot ?? []) {
           expect(pkg.scripts?.[s], `Expected root script ${s} NOT in ${c.name}`).toBeUndefined();
+        }
+
+        // 5b. App scripts (per-app ownership, e.g. UnoCSS CSS build)
+        const appPkg = await file(`${result.templateDir}/apps/example/package.json`).json();
+        for (const s of c.expectations.appScripts ?? []) {
+          expect(
+            appPkg.scripts?.[s],
+            `Expected apps/example script ${s} in ${c.name}`,
+          ).toBeDefined();
         }
 
         // 6. Badges — root README should have badges when badges config always

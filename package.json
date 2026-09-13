@@ -42,10 +42,9 @@
     "start": "bun run dev"
   },
   "scripts": {
-    "preinstall": "node -e \"if(!process.env.npm_config_user_agent?.includes('bun')){console.error('\\\\n❌ This project requires Bun. Run: bun install\\\\n');process.exit(1)}\"",
+    "preinstall": "node -e \"if(!process.env.npm_config_user_agent?.includes('bun')){console.error('\\\\n\u274c This project requires Bun. Run: bun install\\\\n');process.exit(1)}\"",
     "prepare": "msetup lefthook && mchangeset init",
     "build": "mturbo build",
-    "build:css": "test -f configs/unocss/package.json && bunx unocss --config configs/unocss/uno.config.ts || echo 'UnoCSS not enabled (enable via scaffold)'",
     "build:native": "test -f packages/native/package.json && bun --filter @myorg/native run build || echo 'Native not enabled (native=publish|docker)'",
     "build:wasm": "test -f packages/native/package.json && bun --filter @myorg/native run build:wasm || echo 'Native not enabled'",
     "test:native": "test -f packages/native/package.json && bun --filter @myorg/native run test || echo 'Native not enabled'",

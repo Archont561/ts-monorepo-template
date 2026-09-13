@@ -59,8 +59,9 @@ bun create Archont561/ts-monorepo-template my-app   # choose UnoCSS
 cd my-app
 
 # Dev with UnoCSS
-bun run dev              # serves index.html (now UnoCSS version) + /uno.css
-bun run build:css        # generate public/uno.css via `bunx unocss`
+bun run dev                                  # serves index.html (now UnoCSS version) + /uno.css
+bun --filter @myorg/example run build:css    # generate public/uno.css via `bunx unocss`
+bun --filter @myorg/example run build        # same, as part of the app's own build
 
 # HTML uses utility classes:
 # <div class="flex items-center p-4 bg-blue-500 text-white rounded">Hello UnoCSS</div>
@@ -114,8 +115,14 @@ export default defineConfig({
 
 CLI usage (avoids root level file):
 ```bash
-bunx unocss --config configs/unocss/uno.config.ts --out-file apps/example/public/uno.css
-bun run build:css   # uses --config flag internally
+# UnoCSS is built by the app that owns the CSS, never globally —
+# apps/example's build script runs build:css when the config is present.
+bun run build                                # -> apps/example: test -f ../../configs/unocss/uno.config.ts && bun run build:css
+bun --filter @myorg/example run build:css    # direct, uses --config flag internally
 ```
+
+There is no root-level `build:css` script: a global CSS build would run for
+monorepos that never opted into UnoCSS. The Pages workflow likewise calls
+`mpages build`, which delegates to each package's own build.
 
 See [AGENT.md](./AGENT.md) for agent reference.

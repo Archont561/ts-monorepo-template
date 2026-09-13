@@ -85,6 +85,15 @@ export default defineConfig({
       console.log(`  ✓ Updated build:css to use --config flag (no root file)`);
     }
 
+    // CSS is built per app as part of its own build, never globally. The guard
+    // keeps the script a no-op in monorepos scaffolded without UnoCSS.
+    const expectedBuild =
+      "test -f ../../configs/unocss/uno.config.ts && bun run build:css || echo 'UnoCSS not enabled, skipping CSS build'";
+    if (pkg.scripts["build"] !== expectedBuild) {
+      pkg.scripts["build"] = expectedBuild;
+      console.log(`  ✓ Added build script to apps/example (per-app CSS build)`);
+    }
+
     if (!pkg.scripts["build:css:watch"]) {
       pkg.scripts["build:css:watch"] =
         "bunx unocss --config ../../configs/unocss/uno.config.ts --watch || echo 'UnoCSS watch failed'";
@@ -100,17 +109,15 @@ export default defineConfig({
     await Bun.write(appPkgPath, JSON.stringify(pkg, null, 2) + "\n");
   }
 
-  // 4. Ensure root package.json build:css uses --config (no root file, uses cli.entry)
+  // 4. UnoCSS is built per app/package, never globally — drop the root script
+  // if a previous version of this setup left one behind.
   const rootPkgPath = join(TARGET_DIR, "package.json");
   if (await file(rootPkgPath).exists()) {
     const pkg = await file(rootPkgPath).json();
-    pkg.scripts = pkg.scripts ?? {};
-    const expected =
-      "bunx unocss --config configs/unocss/uno.config.ts || echo 'UnoCSS not enabled'";
-    if (pkg.scripts["build:css"] !== expected) {
-      pkg.scripts["build:css"] = expected;
+    if (pkg.scripts?.["build:css"]) {
+      delete pkg.scripts["build:css"];
       await Bun.write(rootPkgPath, JSON.stringify(pkg, null, 2) + "\n");
-      console.log(`  ✓ Updated root build:css to use --config flag (no root file)`);
+      console.log(`  ✓ Removed root build:css (CSS is built by the app that owns it)`);
     }
   }
 
@@ -123,7 +130,8 @@ export default defineConfig({
 
   console.log(`\n✅ UnoCSS setup complete — config via --config flag, no root file\n`);
   console.log(
-    `   Usage: bunx unocss --config configs/unocss/uno.config.ts --out-file apps/example/public/uno.css\n`,
+    `   Usage: bun run build (apps/example builds its own CSS via build:css)\n` +
+      `         bun --filter @myorg/example run build:css:watch\n`,
   );
 }
 

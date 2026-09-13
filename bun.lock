@@ -262,8 +262,15 @@
     "configs/pages": {
       "name": "@myorg/pages",
       "version": "0.0.0",
+      "bin": {
+        "mpages": "./src/cli.ts",
+      },
+      "dependencies": {
+        "citty": "^0.2.2",
+      },
       "devDependencies": {
         "@myorg/bunup": "workspace:*",
+        "@myorg/citty": "workspace:*",
         "@myorg/ts": "workspace:*",
       },
     },

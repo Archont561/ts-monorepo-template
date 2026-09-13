@@ -27,8 +27,19 @@
   "exports": {
     ".": "./index.ts"
   },
+  "bin": {
+    "mpages": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch"
+  },
   "devDependencies": {
     "@myorg/bunup": "workspace:*",
+    "@myorg/citty": "workspace:*",
     "@myorg/ts": "workspace:*"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }
