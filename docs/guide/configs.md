@@ -28,7 +28,7 @@ install.
 | :--- | :--- | :--- |
 | `configs/playwright` | `true` | `me2e` |
 | `configs/codeql` | `true` | `mcodeql` |
-| `configs/unocss` | `false` | — |
+| `configs/unocss` | `false` | `munocss` |
 | `configs/skills` | `false` | `mskills` |
 | `configs/devcontainer` | `false` | — |
 | `configs/pages` | `false` | `mpages` |

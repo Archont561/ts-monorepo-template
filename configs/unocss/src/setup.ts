@@ -79,28 +79,27 @@ export default defineConfig({
       console.log(`  ✓ Added ${scope}/unocss to apps/example`);
     }
 
-    const expectedBuildCss = `bunx unocss --config ../../configs/unocss/uno.config.ts || echo 'UnoCSS not enabled'`;
+    // munocss owns the shared config path, so scripts stay one-liners and
+    // degrade to a no-op in monorepos scaffolded without UnoCSS.
+    const expectedBuildCss = "munocss build";
     if (pkg.scripts["build:css"] !== expectedBuildCss) {
       pkg.scripts["build:css"] = expectedBuildCss;
-      console.log(`  ✓ Updated build:css to use --config flag (no root file)`);
+      console.log(`  ✓ Updated build:css to use munocss`);
     }
 
-    // CSS is built per app as part of its own build, never globally. The guard
-    // keeps the script a no-op in monorepos scaffolded without UnoCSS.
-    const expectedBuild =
-      "test -f ../../configs/unocss/uno.config.ts && bun run build:css || echo 'UnoCSS not enabled, skipping CSS build'";
+    // CSS is built per app as part of its own build, never globally. munocss
+    // is a no-op when the config package is absent.
+    const expectedBuild = "munocss build";
     if (pkg.scripts["build"] !== expectedBuild) {
       pkg.scripts["build"] = expectedBuild;
       console.log(`  ✓ Added build script to apps/example (per-app CSS build)`);
     }
 
     if (!pkg.scripts["build:css:watch"]) {
-      pkg.scripts["build:css:watch"] =
-        "bunx unocss --config ../../configs/unocss/uno.config.ts --watch || echo 'UnoCSS watch failed'";
+      pkg.scripts["build:css:watch"] = "munocss watch";
     } else {
       // Update existing to remove --out-file (uses cli.entry in config)
-      const expectedWatch =
-        "bunx unocss --config ../../configs/unocss/uno.config.ts --watch || echo 'UnoCSS watch failed'";
+      const expectedWatch = "munocss watch";
       if (pkg.scripts["build:css:watch"] !== expectedWatch) {
         pkg.scripts["build:css:watch"] = expectedWatch;
       }
@@ -128,9 +127,9 @@ export default defineConfig({
     console.log(`  ✓ Removed stray root uno.config.ts (avoid root level file)`);
   }
 
-  console.log(`\n✅ UnoCSS setup complete — config via --config flag, no root file\n`);
+  console.log(`\n✅ UnoCSS setup complete — config via the munocss CLI, no root file\n`);
   console.log(
-    `   Usage: bun run build (apps/example builds its own CSS via build:css)\n` +
+    `   Usage: bun run build (apps/example builds its own CSS via munocss)\n` +
       `         bun --filter @myorg/example run build:css:watch\n`,
   );
 }

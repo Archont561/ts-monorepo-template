@@ -53,7 +53,9 @@
       "!**/.turbo",
       "!**/coverage",
       "!**/test-results",
-      "!**/playwright-report"
+      "!**/playwright-report",
+      "!**/uno.css",
+      "!**/.pages"
     ]
   },
   "overrides": [

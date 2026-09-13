@@ -175,7 +175,7 @@ bun create Archont561/ts-monorepo-template my-app   # choose "Set up GitHub Page
 cd my-app
 
 # Local static preview
-bun run build:css   # if unocss enabled
+munocss build        # if unocss enabled (via the app's own build script)
 ls apps/example/public/
 
 # Deploy happens automatically on push to main via GitHub Actions
@@ -205,7 +205,7 @@ Other configs can contribute `pages.steps.yml` fragments:
 ```yaml
 # configs/unocss/pages.steps.yml
 - name: Build UnoCSS for Pages
-  run: bunx unocss --config configs/unocss/uno.config.ts
+  run: munocss build
 ```
 
 Fragments are sorted and injected into `{{STEPS}}` in `pages.base.yml` via `bun run docs:sync`.

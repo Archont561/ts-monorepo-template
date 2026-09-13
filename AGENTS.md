@@ -78,6 +78,7 @@ All tool invocations use `m`-prefixed aliases that bake in config paths. Each co
 | `mnative` | `cargo` + `napi` | Rust bindings — check/clippy/fmt/test/build + napi build + typecheck (opt-in) |
 | `mcoverage` | `genhtml` + `lcov` | Coverage — setup/collect/html/check/pages/merge/summary (always) |
 | `mpages` | GitHub Pages | Pages deploy — `build` the artifact, `base` computes/injects the base path (opt-in) |
+| `munocss` | `unocss` | Atomic CSS — `build`/`watch` with the shared config, no-op when disabled (opt-in) |
 
 <details>
 <summary>Bin linking flow</summary>

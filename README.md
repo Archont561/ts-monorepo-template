@@ -333,7 +333,7 @@ Tool configs live in `configs/*` and are reached via `m`-prefixed bins. No root 
 | [Trivy](configs/trivy/README.md) | `mtrivy` | false | Container + FS vuln scanning |
 <!-- TEMPLATE-ONLY:END(trivy) -->
 <!-- TEMPLATE-ONLY:START(unocss) -->
-| [UnoCSS](configs/unocss/README.md) | — | false | Atomic CSS |
+| [UnoCSS](configs/unocss/README.md) | `munocss` | false | Atomic CSS — `munocss build`/`watch` |
 <!-- TEMPLATE-ONLY:END(unocss) -->
 
 <!-- TEMPLATE-ONLY:START(template) -->

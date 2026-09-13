@@ -4,11 +4,12 @@
 
 ## What it provides
 
-- `unocss` as shared devDependency
-- `uno.config.ts` inside `configs/unocss/` (not root) — avoids root level file, used via `bunx unocss --config configs/unocss/uno.config.ts`
+- `unocss` + `@unocss/cli` as shared devDependencies
+- `uno.config.ts` inside `configs/unocss/` (not root) — avoids a root level file
+- `munocss` CLI — owns the config path, so scripts are `munocss build` / `munocss watch` instead of `bunx unocss --config ../../configs/unocss/uno.config.ts`
 - `apps/example/public/index-unocss.html` — UnoCSS version of index.html with utility classes
-- Setup script `src/setup.ts` that replaces `index.html` with UnoCSS version when enabled + ensures CLI uses `--config` flag
-- Example bundle handling: `/uno.css` route in `apps/example/src/index.ts` + `build:css` script using `--config`
+- Setup script `src/setup.ts` that replaces `index.html` with the UnoCSS version when enabled + points the app scripts at `munocss`
+- Example bundle handling: `/uno.css` route in `apps/example/src/index.ts` + a `build:css` script that is just `munocss build`
 
 > [!NOTE]
 > Opt-in — selected during scaffolding via `Include UnoCSS?` prompt. Disabled by default.
@@ -22,7 +23,7 @@ graph TD
     B -->|yes| D[setup.ts<br/>mv index-unocss.html → index.html]
     D --> E[example/src/index.ts<br/>/uno.css route]
     D --> F[example/public<br/>UnoCSS utilities]
-    E --> G[Bundle: bunx unocss<br/>→ public/uno.css]
+    E --> G[Bundle: munocss build<br/>→ public/uno.css]
 
     style B fill:#0969DA,color:#fff
     style D fill:#f6f8fa,stroke:#0969DA
@@ -60,8 +61,9 @@ cd my-app
 
 # Dev with UnoCSS
 bun run dev                                  # serves index.html (now UnoCSS version) + /uno.css
-bun --filter @myorg/example run build:css    # generate public/uno.css via `bunx unocss`
+bun --filter @myorg/example run build:css    # generate public/uno.css via munocss
 bun --filter @myorg/example run build        # same, as part of the app's own build
+bun --filter @myorg/example run build:css:watch
 
 # HTML uses utility classes:
 # <div class="flex items-center p-4 bg-blue-500 text-white rounded">Hello UnoCSS</div>
@@ -113,12 +115,24 @@ export default defineConfig({
 });
 ```
 
-CLI usage (avoids root level file):
+CLI usage (avoids a root level file and a verbose `--config` flag):
 ```bash
-# UnoCSS is built by the app that owns the CSS, never globally —
-# apps/example's build script runs build:css when the config is present.
-bun run build                                # -> apps/example: test -f ../../configs/unocss/uno.config.ts && bun run build:css
-bun --filter @myorg/example run build:css    # direct, uses --config flag internally
+munocss build     # generate CSS — no-op when the config package is absent
+munocss watch     # watch mode
+munocss info      # is it enabled, which config, which output file
+```
+
+UnoCSS is built by the app that owns the CSS, never globally — `apps/example`'s
+scripts are one-liners that call the CLI:
+
+```json
+{
+  "scripts": {
+    "build": "munocss build",
+    "build:css": "munocss build",
+    "build:css:watch": "munocss watch"
+  }
+}
 ```
 
 There is no root-level `build:css` script: a global CSS build would run for

@@ -37,6 +37,19 @@
     ".": "./index.ts"
   },
   "devDependencies": {
-    "unocss": "^66.10.2"
+    "@myorg/bunup": "workspace:*",
+    "@myorg/citty": "workspace:*",
+    "@myorg/ts": "workspace:*",
+    "@unocss/cli": "^66.10.2"
+  },
+  "bin": {
+    "munocss": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }
