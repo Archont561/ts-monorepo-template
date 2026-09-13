@@ -171,7 +171,6 @@ export class MonorepoScaffolder {
       "apps/example/src/pages/api/native/primes/[n].ts",
       "apps/example/src/pages/api/native/reverse.ts",
       "apps/example/playwright.config.ts",
-      "uno.config.ts",
     ];
 
     // Config package manifests and config files carry the @myorg scope in

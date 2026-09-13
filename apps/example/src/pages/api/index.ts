@@ -20,7 +20,7 @@ export default async function handleApiIndex(): Promise<Response> {
 
   // UnoCSS endpoint — file existence check, file deleted via scaffold when unocss disabled
   try {
-    const unoConfig = file(new URL("../../../../uno.config.ts", import.meta.url));
+    const unoConfig = file(new URL("../../../../configs/unocss/uno.config.ts", import.meta.url));
     if (await unoConfig.exists()) {
       endpoints.push("/uno.css");
     }
@@ -31,6 +31,15 @@ export default async function handleApiIndex(): Promise<Response> {
     const unocssHtml = file(new URL("../../../public/index-unocss.html", import.meta.url));
     if (await unocssHtml.exists()) {
       if (!endpoints.includes("/uno.css")) endpoints.push("/uno.css");
+    }
+  } catch {}
+
+  // Fallback: check if index.html contains UnoCSS (when setup already moved file)
+  try {
+    const indexHtml = file(new URL("../../../public/index.html", import.meta.url));
+    const html = await indexHtml.text();
+    if (html.includes("UnoCSS") && !endpoints.includes("/uno.css")) {
+      endpoints.push("/uno.css");
     }
   } catch {}
 

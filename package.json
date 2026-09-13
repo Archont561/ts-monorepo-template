@@ -33,6 +33,7 @@
     "preinstall": "node -e \"if(!process.env.npm_config_user_agent?.includes('bun')){console.error('\\\\n❌ This project requires Bun. Run: bun install\\\\n');process.exit(1)}\"",
     "prepare": "msetup lefthook && mchangeset init",
     "build": "mturbo build",
+    "build:css": "bunx unocss --config configs/unocss/uno.config.ts || echo 'UnoCSS not enabled'",
     "build:native": "bun --filter @myorg/native run build",
     "build:wasm": "bun --filter @myorg/native run build:wasm",
     "test:native": "bun --filter @myorg/native run test",

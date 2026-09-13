@@ -5,10 +5,10 @@
 ## What it provides
 
 - `unocss` as shared devDependency
-- `uno.config.ts` at root (extends baseConfig with presets Wind3, transformers)
+- `uno.config.ts` inside `configs/unocss/` (not root) — avoids root level file, used via `bunx unocss --config configs/unocss/uno.config.ts`
 - `apps/example/public/index-unocss.html` — UnoCSS version of index.html with utility classes
-- Setup script `src/setup.ts` that replaces `index.html` with UnoCSS version when enabled
-- Example bundle handling: `/uno.css` route in `apps/example/src/index.ts` + `build:css` script
+- Setup script `src/setup.ts` that replaces `index.html` with UnoCSS version when enabled + ensures CLI uses `--config` flag
+- Example bundle handling: `/uno.css` route in `apps/example/src/index.ts` + `build:css` script using `--config`
 
 > [!NOTE]
 > Opt-in — selected during scaffolding via `Include UnoCSS?` prompt. Disabled by default.
@@ -75,7 +75,11 @@ apps/example/public/
   index-unocss.html       # UnoCSS version — when enabled, replaces index.html via setup.ts (mv)
   uno.css                 # generated CSS — deleted when disabled, served via /uno.css route when enabled
 
-uno.config.ts             # root config — extends @myorg/unocss baseConfig, deleted when disabled via scaffold config
+configs/unocss/
+  uno.config.ts           # config — not root, used via --config flag, deleted when disabled via scaffold (whole dir removed)
+  index.ts                # baseConfig with presets
+
+# No root uno.config.ts — avoided via --config flag (per CLI -c option)
 ```
 
 Bundle handling (no TEMPLATE-ONLY for unocss — via file deletion + runtime checks):
@@ -95,14 +99,23 @@ Bundle handling (no TEMPLATE-ONLY for unocss — via file deletion + runtime che
 | `transformerVariantGroup` | `hover:(bg-blue text-white)` |
 
 ```ts
-// uno.config.ts
-import { baseConfig, defineConfig } from "@myorg/unocss";
+// configs/unocss/uno.config.ts — no root file, use --config flag
+import { baseConfig, defineConfig } from "./index.ts";
 export default defineConfig({
   ...baseConfig,
   content: {
     filesystem: ["./apps/example/src/**/*.{html,js,ts,tsx}", "./apps/example/public/**/*.html"],
   },
+  cli: {
+    entry: [{ patterns: ["apps/example/src/**/*.{html,ts,tsx}", "apps/example/public/**/*.html"], outFile: "apps/example/public/uno.css" }],
+  },
 });
+```
+
+CLI usage (avoids root level file):
+```bash
+bunx unocss --config configs/unocss/uno.config.ts --out-file apps/example/public/uno.css
+bun run build:css   # uses --config flag internally
 ```
 
 See [AGENT.md](./AGENT.md) for agent reference.

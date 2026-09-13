@@ -52,3 +52,7 @@ index.d.ts
 packages/native/index.js
 packages/native/index.d.ts
 packages/native/*.node
+
+# UnoCSS generated
+**/uno.css
+apps/example/public/uno.css
