@@ -37,21 +37,25 @@ lefthook-local.yml
 !.agents/skills.index.json
 !.agents/README.md
 
-# Rust / NAPI-RS
+# Rust / Cargo
+# Workspace target dir (shared across members) — always ignored
 /target/
+target/
+**/target/
+# Cargo.lock — commit for binaries, ignore for libraries (native is cdylib lib)
+Cargo.lock
+# NAPI-RS generated
 **/*.node
 **/*.wasi.cjs
 **/wasi-worker.mjs
-Cargo.lock
 npm/
-index.js
-index.d.ts
-# Keep template's Cargo.lock? No — native package generates its own
-!packages/native/Cargo.lock
-# But ignore generated loader in packages/native when built
+# Keep root Cargo.toml workspace, ignore generated JS loader in packages/native when built
 packages/native/index.js
 packages/native/index.d.ts
 packages/native/*.node
+# Generic JS loader (if generated at root)
+index.js
+index.d.ts
 
 # UnoCSS generated
 **/uno.css

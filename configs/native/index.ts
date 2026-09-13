@@ -9,3 +9,26 @@ export const NATIVE_TARGETS = [
 ] as const;
 
 export type NativeTarget = (typeof NATIVE_TARGETS)[number];
+
+export const CARGO_WORKSPACE_CONFIG = {
+  resolver: "2",
+  members: ["packages/native"],
+  edition: "2021",
+} as const;
+
+export const CARGO_PROFILES = {
+  dev: { optLevel: 0, debug: true },
+  release: { optLevel: 3, lto: true, codegenUnits: 1, strip: "symbols" },
+  ci: { inherits: "dev", optLevel: 1 },
+} as const;
+
+export const CARGO_COMMANDS = {
+  check: "cargo check --workspace",
+  clippy: "cargo clippy --workspace -- -D warnings",
+  fmtCheck: "cargo fmt --all -- --check",
+  fmt: "cargo fmt --all",
+  test: "cargo test --workspace",
+  build: "cargo build --workspace",
+  buildRelease: "cargo build --workspace --release",
+  buildCi: "cargo build --workspace --profile ci",
+} as const;

@@ -27,6 +27,8 @@
         "extraRemovals": [
           "packages/native",
           "rust-toolchain.toml",
+          "Cargo.toml",
+          "Cargo.lock",
           ".cargo",
           "apps/example/src/pages/api/native"
         ],
@@ -35,6 +37,8 @@
           "**/*.napi.*",
           "**/*.wasi.cjs",
           "rust-toolchain.toml",
+          "Cargo.toml",
+          "Cargo.lock",
           ".cargo/**",
           "**/native/**",
           "**/api/native/**"
@@ -43,6 +47,7 @@
           "\\\\.node$",
           "napi",
           "rust-toolchain",
+          "Cargo\\.toml",
           "api/native"
         ],
         "appDepsToRemove": [

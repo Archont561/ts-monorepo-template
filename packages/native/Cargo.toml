@@ -11,18 +11,16 @@ crate-type = ["cdylib"]
 name = "native"
 
 [dependencies]
-napi = { version = "3.0.0", features = ["napi4"] }
-napi-derive = "3.0.0"
+napi = { workspace = true }
+napi-derive = { workspace = true }
 
 [build-dependencies]
-napi-build = "2"
+napi-build = { workspace = true }
 
-[profile.release]
-lto = true
-codegen-units = 1
-strip = "symbols"
-opt-level = 3
+[features]
+default = []
 
-[profile.dev]
-opt-level = 0
-debug = true
+# Profiles inherit from workspace root (Cargo.toml)
+# [profile.release] defined in workspace root with lto, codegen-units, strip
+# [profile.dev] defined in workspace root
+# [profile.ci] for faster CI builds

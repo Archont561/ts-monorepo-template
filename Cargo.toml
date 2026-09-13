@@ -1,0 +1,22 @@
+[workspace]
+members = ["packages/native"]
+resolver = "2"
+
+[workspace.dependencies]
+napi = { version = "3.0.0", features = ["napi4"] }
+napi-derive = "3.0.0"
+napi-build = "2"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = "symbols"
+
+[profile.ci]
+inherits = "dev"
+opt-level = 1

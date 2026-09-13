@@ -4,6 +4,20 @@
     "build": {
       "outputs": ["*.node", "index.js", "index.d.ts"],
       "cache": false
+    },
+    "cargo:check": {
+      "cache": false
+    },
+    "cargo:clippy": {
+      "cache": false
+    },
+    "cargo:build": {
+      "outputs": ["../../target/**"],
+      "cache": false
+    },
+    "cargo:build:release": {
+      "outputs": ["../../target/**"],
+      "cache": false
     }
   }
 }
