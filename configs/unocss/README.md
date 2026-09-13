@@ -72,16 +72,17 @@ bun run build:css        # generate public/uno.css via `bunx unocss`
 ```
 apps/example/public/
   index.html              # plain (default) — when unocss disabled, this remains
-  index-unocss.html       # UnoCSS version — when enabled, replaces index.html via setup.ts
+  index-unocss.html       # UnoCSS version — when enabled, replaces index.html via setup.ts (mv)
   uno.css                 # generated CSS — deleted when disabled, served via /uno.css route when enabled
 
-uno.config.ts             # root config — extends @myorg/unocss baseConfig
+uno.config.ts             # root config — extends @myorg/unocss baseConfig, deleted when disabled via scaffold config
 ```
 
-Bundle handling:
-- `src/index.ts` has `/uno.css` route with `// TEMPLATE-ONLY:START(unocss)` markers — stripped when disabled
-- `src/pages/index.ts` tries `index-unocss.html` first, then `index.html` — handles both cases
-- `src/pages/api/index.ts` lists `/uno.css` endpoint when unocss enabled
+Bundle handling (no TEMPLATE-ONLY for unocss — via file deletion + runtime checks):
+- `src/index.ts` has `/uno.css` route that returns generated CSS or fallback note — works even when unocss disabled
+- `src/pages/index.ts` tries `index-unocss.html` first, then `index.html` — runtime file existence check
+- `src/pages/api/index.ts` lists `/uno.css` when `uno.config.ts` exists — runtime check
+- `public/uno.css` served via `/uno.css`, deleted when disabled via `filePatternsToRemove`
 
 </details>
 

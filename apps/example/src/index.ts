@@ -1,6 +1,7 @@
 import { FileSystemRouter, file, serve } from "bun";
 
 // Detect opt-in features via file existence / env
+// Unocss detection now via file existence only (handled via scaffold file deletion)
 const hasUnocss =
   (await file(new URL("../../public/index-unocss.html", import.meta.url))
     .exists()
@@ -26,8 +27,8 @@ const server = serve({
   routes: {
     "/health": () => new Response("OK", { status: 200 }),
 
-    // UnoCSS generated CSS — served when unocss enabled
-    // TEMPLATE-ONLY:START(unocss)
+    // UnoCSS generated CSS — served always, but returns fallback when unocss not built/disabled
+    // Removed via scaffold file deletion (public/uno.css + index-unocss.html)
     "/uno.css": async () => {
       try {
         // Try to serve generated uno.css if exists (built via `bunx unocss`)
@@ -41,14 +42,13 @@ const server = serve({
           });
         }
       } catch {}
-      // Fallback: minimal reset + note
+      // Fallback: minimal reset + note — works even when unocss disabled
       return new Response(
         `/* UnoCSS not built — run: bunx unocss --out-file public/uno.css */
-/* Using CDN fallback via runtime in index-unocss.html */`,
+/* Using CDN fallback via runtime in index-unocss.html when enabled */`,
         { headers: { "Content-Type": "text/css" } },
       );
     },
-    // TEMPLATE-ONLY:END(unocss)
 
     // Native status shortcut — also available via /api/native/status
     // TEMPLATE-ONLY:START(native)
@@ -71,12 +71,10 @@ const server = serve({
     const url = new URL(req.url);
 
     // Serve static files from public/ for non-API routes (e.g. /favicon.ico)
-    // Bun's FileSystemRouter handles / pages, but we also check public
     if (!url.pathname.startsWith("/api/") && url.pathname !== "/") {
       try {
         const publicFile = file(new URL(`../../public${url.pathname}`, import.meta.url));
         if (await publicFile.exists()) {
-          // Simple mime handling
           const ext = url.pathname.split(".").pop() ?? "";
           const mime: Record<string, string> = {
             css: "text/css",

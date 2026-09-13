@@ -3,8 +3,8 @@ import { file } from "bun";
 export default async function handleApiIndex(): Promise<Response> {
   const endpoints = ["/health", "/api/greet/:name", "/api/shout/:name"];
 
+  // Native endpoints — file existence check, file deleted via scaffold when native disabled
   // TEMPLATE-ONLY:START(native)
-  // Add native endpoints when native config enabled
   try {
     const nativeIndex = file(new URL("./native/index.ts", import.meta.url));
     if (await nativeIndex.exists()) {
@@ -18,24 +18,29 @@ export default async function handleApiIndex(): Promise<Response> {
   } catch {}
   // TEMPLATE-ONLY:END(native)
 
-  // TEMPLATE-ONLY:START(unocss)
+  // UnoCSS endpoint — file existence check, file deleted via scaffold when unocss disabled
   try {
     const unoConfig = file(new URL("../../../../uno.config.ts", import.meta.url));
     if (await unoConfig.exists()) {
       endpoints.push("/uno.css");
     }
   } catch {}
-  // TEMPLATE-ONLY:END(unocss)
+
+  // Also check if uno.css route exists in public (alternative detection)
+  try {
+    const unocssHtml = file(new URL("../../../public/index-unocss.html", import.meta.url));
+    if (await unocssHtml.exists()) {
+      if (!endpoints.includes("/uno.css")) endpoints.push("/uno.css");
+    }
+  } catch {}
 
   return Response.json({
     message: "Bun Monorepo Example",
     endpoints,
     features: {
-      // TEMPLATE-ONLY:START(unocss)
-      unocss: true,
-      // TEMPLATE-ONLY:END(unocss)
+      unocss: endpoints.includes("/uno.css"),
       // TEMPLATE-ONLY:START(native)
-      native: true,
+      native: endpoints.some((e) => e.includes("/api/native")),
       // TEMPLATE-ONLY:END(native)
     },
   });

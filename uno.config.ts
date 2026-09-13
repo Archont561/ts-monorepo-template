@@ -1,4 +1,3 @@
-// TEMPLATE-ONLY:START(unocss)
 import { baseConfig, defineConfig } from "@myorg/unocss";
 
 export default defineConfig({
@@ -11,4 +10,3 @@ export default defineConfig({
     ],
   },
 });
-// TEMPLATE-ONLY:END(unocss)
