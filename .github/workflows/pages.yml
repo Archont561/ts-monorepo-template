@@ -1,0 +1,90 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+# TEMPLATE-ONLY:START(pages)
+- name: Build static site for Pages
+  run: |
+    echo "📄 Building static site for GitHub Pages"
+    # Build UnoCSS if enabled
+    if [ -f "configs/unocss/uno.config.ts" ]; then
+      echo "→ Building UnoCSS"
+      bunx unocss --config configs/unocss/uno.config.ts || echo "UnoCSS build skipped"
+    fi
+    # Build JS packages (if any dist needed)
+    bun run build || echo "JS build skipped"
+    # Ensure public dir exists for Pages
+    ls -la apps/example/public/ || echo "public dir missing"
+    # If example has a static export, run it here
+    # bun --filter @myorg/example run build:static || true
+  shell: bash
+
+- name: Configure base path for Pages (repo name)
+  run: |
+    echo "🔧 Configuring base path for GitHub Pages"
+    # For non-root repo deploys (username.github.io/repo-name), set base path
+    # Example: if your static generator needs base: "/repo-name/"
+    # Adjust apps/example/public/index.html base if needed
+    REPO_NAME=$(basename ${{ github.repository }})
+    echo "Repo name: $REPO_NAME"
+    echo "Default Pages URL will be https://${{ github.repository_owner }}.github.io/$REPO_NAME"
+    # Uncomment to inject base path into index.html if needed:
+    # sed -i \"s|href=\\\"/|href=\\\"/$REPO_NAME/|g\" apps/example/public/index.html || true
+  shell: bash
+# TEMPLATE-ONLY:END(pages)
+
+# TEMPLATE-ONLY:START(unocss,pages)
+- name: Build UnoCSS for Pages
+  run: |
+    echo "🎨 Building UnoCSS for GitHub Pages"
+    if [ -f "configs/unocss/uno.config.ts" ]; then
+      bunx unocss --config configs/unocss/uno.config.ts || echo "UnoCSS build skipped"
+      ls -la apps/example/public/uno.css || echo "uno.css not found"
+    fi
+  shell: bash
+# TEMPLATE-ONLY:END(unocss,pages)
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./apps/example/public"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+        id: deployment

@@ -24,6 +24,7 @@ Shared tooling configurations. Each sub-directory owns one tool's config and exp
 | TypeScript | `mtsc` | [AGENT.md](ts/AGENT.md) |
 | Turbo | `mturbo` | [AGENT.md](turbo/AGENT.md) |
 | UnoCSS | — | [AGENT.md](unocss/AGENT.md) |
+| Pages | — | [AGENT.md](pages/AGENT.md) |
 
 Root `AGENTS.md` and `README.md` reference these files instead of concatenating them. Workflows are generated via `bun run docs:sync` (`mdocs`).
 

@@ -13,6 +13,9 @@ import { $, file, write } from "bun";
  * - `.github/workflows/release.yml` is `configs/gh-actions/release.base.yml`
  *   with `{{STEPS}}` filled from every `configs/<dir>/release.steps.yml`
  *   (sorted, concatenated).
+ * - `.github/workflows/pages.yml` is `configs/gh-actions/pages.base.yml`
+ *   with `{{STEPS}}` filled from every `configs/<dir>/pages.steps.yml`
+ *   (sorted, concatenated) — GitHub Pages deployment.
  *
  * Root README.md and AGENTS.md are now static reference files (not concatenated)
  * that list configs via links. They have TEMPLATE-ONLY blocks for template vs
@@ -67,10 +70,19 @@ export async function aggregateWorkflow(
   baseFileName: string,
   stepsFileName: string,
 ): Promise<void> {
-  const base = await file(`${targetDir}/configs/gh-actions/${baseFileName}`).text();
+  const basePath = `${targetDir}/configs/gh-actions/${baseFileName}`;
+  if (!(await file(basePath).exists())) {
+    console.log(`⚠️ Skipping ${baseFileName} — base not found (config disabled)`);
+    return;
+  }
+  const base = await file(basePath).text();
 
   let steps: string;
-  if (stepsFileName === "ci.steps.yml" || stepsFileName === "release.steps.yml") {
+  if (
+    stepsFileName === "ci.steps.yml" ||
+    stepsFileName === "release.steps.yml" ||
+    stepsFileName === "pages.steps.yml"
+  ) {
     const found =
       await $`find ${targetDir}/configs -mindepth 2 -maxdepth 2 -name ${stepsFileName} -type f`.text();
     const fragments = found.trim().split("\n").filter(Boolean).sort();
@@ -91,6 +103,18 @@ export async function regenerateAll(targetDir: string): Promise<void> {
   await mkdir(`${targetDir}/.github/workflows`, { recursive: true });
   await aggregateWorkflow(targetDir, "ci.base.yml", "ci.steps.yml");
   await aggregateWorkflow(targetDir, "release.base.yml", "release.steps.yml");
+  // Only generate pages.yml if pages config is enabled (exists)
+  const pagesConfigExists = await file(`${targetDir}/configs/pages/package.json`).exists();
+  if (pagesConfigExists) {
+    await aggregateWorkflow(targetDir, "pages.base.yml", "pages.steps.yml");
+  } else {
+    // Ensure no stale pages.yml remains when pages disabled
+    const pagesWorkflow = `${targetDir}/.github/workflows/pages.yml`;
+    if (await file(pagesWorkflow).exists()) {
+      await $`rm -rf ${pagesWorkflow}`.quiet();
+      console.log(`🗑️ Removed ${pagesWorkflow} (pages disabled)`);
+    }
+  }
 }
 
 const targetDir = process.argv[2] ?? ".";

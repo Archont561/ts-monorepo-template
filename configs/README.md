@@ -20,6 +20,7 @@ Shared tooling configurations for the monorepo. Each sub-directory is a private 
 | [TypeScript](ts/README.md) | `mtsc` | ✅ Always | Shared tsconfigs |
 | [Turbo](turbo/README.md) | `mturbo` | ✅ Always | Task orchestration |
 | [Native](native/README.md) | — | 🔲 Opt-in | NAPI-RS bindings |
+| [Pages](pages/README.md) | — | 🔲 Opt-in | GitHub Pages deployment |
 | [Playwright](playwright/README.md) | `me2e` | 🔲 Opt-in | E2E testing |
 | [Skills](skills/README.md) | `mskills` | 🔲 Opt-in | AI agent skills |
 | [Template](template/README.md) | `mdocs` | 🗑️ Template-only | Scaffolder |

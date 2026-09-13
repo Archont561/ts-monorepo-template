@@ -15,6 +15,7 @@
         "@myorg/lefthook": "workspace:*",
         "@myorg/native": "workspace:*",
         "@myorg/native-config": "workspace:*",
+        "@myorg/pages": "workspace:*",
         "@myorg/playwright": "workspace:*",
         "@myorg/skills": "workspace:*",
         "@myorg/template": "workspace:*",
@@ -141,6 +142,14 @@
       "version": "0.0.0",
       "devDependencies": {
         "@napi-rs/cli": "^3.9.1",
+      },
+    },
+    "configs/pages": {
+      "name": "@myorg/pages",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@myorg/bunup": "workspace:*",
+        "@myorg/ts": "workspace:*",
       },
     },
     "configs/playwright": {
@@ -452,6 +461,8 @@
     "@myorg/native": ["@myorg/native@workspace:packages/native"],
 
     "@myorg/native-config": ["@myorg/native-config@workspace:configs/native"],
+
+    "@myorg/pages": ["@myorg/pages@workspace:configs/pages"],
 
     "@myorg/playwright": ["@myorg/playwright@workspace:configs/playwright"],
 

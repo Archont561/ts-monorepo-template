@@ -5,9 +5,9 @@
 ## What it provides
 
 - `actionlint` + `act` as shared devDependencies
-- `ci.base.yml` + `release.base.yml` — workflow skeletons with `{{STEPS}}` placeholder
+- `ci.base.yml` + `release.base.yml` + `pages.base.yml` — workflow skeletons with `{{STEPS}}` placeholder
 - `mci` — CLI with subcommands `mci lint` and `mci act`
-- Per-config `ci.steps.yml` fragments aggregated by `mdocs`
+- Per-config `ci.steps.yml`, `release.steps.yml`, `pages.steps.yml` fragments aggregated by `mdocs`
 
 > [!NOTE]
 > Workflows in `.github/workflows/` are generated — don't edit them directly. Edit skeletons and fragments, then run `bun run docs:sync`.
@@ -17,7 +17,8 @@
 | Skeleton | Fragments | Output |
 | :--- | :--- | :--- |
 | `ci.base.yml` | `*/ci.steps.yml` | `.github/workflows/ci.yml` |
-| `release.base.yml` | `*/ci.steps.yml` (release) | `.github/workflows/release.yml` |
+| `release.base.yml` | `*/release.steps.yml` | `.github/workflows/release.yml` |
+| `pages.base.yml` | `*/pages.steps.yml` | `.github/workflows/pages.yml` |
 
 ## Usage
 
@@ -33,9 +34,9 @@ bun run ci:local    # mci act push → run in Docker
 sequenceDiagram
     participant Dev
     participant Mdocs as mdocs
-    participant Base as *.base.yml
-    participant Frag as */ci.steps.yml
-    participant GH as .github/workflows
+    participant Base as "*.base.yml"
+    participant Frag as "*/ci.steps.yml"
+    participant GH as ".github/workflows"
 
     Dev->>Base: Edit skeleton
     Dev->>Frag: Edit fragment

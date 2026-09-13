@@ -185,10 +185,10 @@ Tool configs and their agent-facing docs (reference, not concatenated):
 | TypeScript | [AGENT.md](configs/ts/AGENT.md) | Shared tsconfigs |
 | Turbo | [AGENT.md](configs/turbo/AGENT.md) | Task orchestration |
 
-<!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer) -->
+<!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer,pages) -->
 #### Opt-in configs (present only when selected)
 
-<!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer) -->
+<!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer,pages) -->
 <!-- TEMPLATE-ONLY:START(devcontainer) -->
 - Devcontainer | [AGENT.md](configs/devcontainer/AGENT.md) | Codespaces / Dev Containers, opt-in
 <!-- TEMPLATE-ONLY:END(devcontainer) -->
@@ -207,6 +207,9 @@ Tool configs and their agent-facing docs (reference, not concatenated):
 <!-- TEMPLATE-ONLY:START(unocss) -->
 - UnoCSS | [AGENT.md](configs/unocss/AGENT.md) | Atomic CSS, opt-in
 <!-- TEMPLATE-ONLY:END(unocss) -->
+<!-- TEMPLATE-ONLY:START(pages) -->
+- Pages | [AGENT.md](configs/pages/AGENT.md) | GitHub Pages deployment, opt-in
+<!-- TEMPLATE-ONLY:END(pages) -->
 
 ## Workflows
 

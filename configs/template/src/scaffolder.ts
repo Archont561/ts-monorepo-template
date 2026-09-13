@@ -512,6 +512,17 @@ export class MonorepoScaffolder {
     await mkdir(`${this.targetDir}/.github/workflows`, { recursive: true });
     await aggregateWorkflow(this.targetDir, "ci.base.yml", "ci.steps.yml");
     await aggregateWorkflow(this.targetDir, "release.base.yml", "release.steps.yml");
+    // Only generate pages.yml if pages config is enabled (exists)
+    const pagesConfigExists = await file(`${this.targetDir}/configs/pages/package.json`).exists();
+    if (pagesConfigExists) {
+      await aggregateWorkflow(this.targetDir, "pages.base.yml", "pages.steps.yml");
+    } else {
+      const pagesWorkflow = `${this.targetDir}/.github/workflows/pages.yml`;
+      if (await file(pagesWorkflow).exists()) {
+        await $`rm -rf ${pagesWorkflow}`.quiet();
+        console.log(`🗑️ Removed ${pagesWorkflow} (pages disabled)`);
+      }
+    }
   }
 
   /**

@@ -18,6 +18,7 @@
     "@myorg/lefthook": "workspace:*",
     "@myorg/native-config": "workspace:*",
     "@myorg/native": "workspace:*",
+    "@myorg/pages": "workspace:*",
     "@myorg/playwright": "workspace:*",
     "@myorg/skills": "workspace:*",
     "@myorg/template": "workspace:*",

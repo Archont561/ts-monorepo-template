@@ -1,0 +1,10 @@
+# TEMPLATE-ONLY:START(unocss,pages)
+- name: Build UnoCSS for Pages
+  run: |
+    echo "🎨 Building UnoCSS for GitHub Pages"
+    if [ -f "configs/unocss/uno.config.ts" ]; then
+      bunx unocss --config configs/unocss/uno.config.ts || echo "UnoCSS build skipped"
+      ls -la apps/example/public/uno.css || echo "uno.css not found"
+    fi
+  shell: bash
+# TEMPLATE-ONLY:END(unocss,pages)

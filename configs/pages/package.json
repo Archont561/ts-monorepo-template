@@ -1,0 +1,34 @@
+{
+  "name": "@myorg/pages",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": false,
+    "flag": "pages",
+    "prompt": "Set up GitHub Pages deployment (static site via Actions)?",
+    "type": "confirm",
+    "removals": {
+      "true": {},
+      "false": {
+        "extraRemovals": [
+          ".github/workflows/pages.yml",
+          "configs/pages"
+        ],
+        "filePatternsToRemove": [
+          "**/pages.yml"
+        ],
+        "fileRegexesToRemove": [
+          "pages\\.yml"
+        ]
+      }
+    }
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "devDependencies": {
+    "@myorg/bunup": "workspace:*",
+    "@myorg/ts": "workspace:*"
+  }
+}

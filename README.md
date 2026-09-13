@@ -28,6 +28,7 @@ During scaffolding you will be prompted for:
   - [ ] NAPI-RS — native bindings
   - [ ] AI skills (`mskills`)
   - [ ] Devcontainer — Codespaces / Dev Containers
+  - [ ] GitHub Pages — static site deployment
 
 > [!TIP]
 > Use `bun create Archont561/ts-monorepo-template my-app -- --scope @acme --no-interactive` for CI.
@@ -38,8 +39,8 @@ During scaffolding you will be prompted for:
 - Replaces `@myorg` with your scope in `package.json`, `tsconfig.json`, `config.json`
 - Strips `TEMPLATE-ONLY` blocks (`<!-- TEMPLATE-ONLY:START(...) -->`)
 - Removes template-only files (`configs/template/`, `docs:sync` script)
-- Prunes disabled opt-in configs (`playwright`, `unocss`, `native`, `skills`, `devcontainer`)
-- Regenerates CI workflows from survivors (`configs/gh-actions/*.base.yml` + `*/ci.steps.yml`)
+- Prunes disabled opt-in configs (`playwright`, `unocss`, `native`, `skills`, `devcontainer`, `pages`)
+- Regenerates CI workflows from survivors (`configs/gh-actions/*.base.yml` + `*/*.steps.yml`)
 
 </details>
 
@@ -95,7 +96,7 @@ graph TD
 
 ```
 apps/
-  example/          Bun.serve HTTP server
+  example/          Bun.serve HTTP server + Dockerfile + static public for Pages
 packages/
   external/         Public library (published to npm)
   internal/         Private implementation (inlined into external by Bunup)
@@ -105,15 +106,16 @@ configs/
   bunup/            Bundling presets (mbunup)
   changeset/        Versioning and releases (mchangeset)
   commitlint/       Conventional Commits (commitlint)
-  gh-actions/       GitHub Actions CI + act (mci)
+  gh-actions/       GitHub Actions CI + act + Pages skeletons (mci)
   lefthook/         Git hooks (msetup)
   ts/               TypeScript presets (mtsc)
   turbo/            Task orchestration (mturbo)
+  pages/            GitHub Pages deployment (opt-in)
 ```
 
 </details>
 
-<!-- TEMPLATE-ONLY:START(playwright,skills,unocss,native,devcontainer) -->
+<!-- TEMPLATE-ONLY:START(playwright,skills,unocss,native,devcontainer,pages) -->
 <details>
 <summary>Opt-in configs (present only when selected)</summary>
 
@@ -124,10 +126,11 @@ configs/
   unocss/           Atomic CSS
   native/           NAPI-RS bindings
   devcontainer/     Codespaces / Dev Containers
+  pages/            GitHub Pages deployment
 ```
 
 </details>
-<!-- TEMPLATE-ONLY:END(playwright,skills,unocss,native,devcontainer) -->
+<!-- TEMPLATE-ONLY:END(playwright,skills,unocss,native,devcontainer,pages) -->
 
 <!-- TEMPLATE-ONLY:START(template) -->
 <details>
@@ -161,10 +164,10 @@ Tool configs and their docs (reference, not concatenated):
 | [TypeScript](configs/ts/README.md) | `mtsc` | Shared tsconfigs |
 | [Turbo](configs/turbo/README.md) | `mturbo` | Task orchestration |
 
-<!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer) -->
+<!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer,pages) -->
 #### Opt-in tooling (present only when selected)
 
-<!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer) -->
+<!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer,pages) -->
 <!-- TEMPLATE-ONLY:START(playwright) -->
 - [Playwright](configs/playwright/README.md) (`me2e`) — E2E testing
 <!-- TEMPLATE-ONLY:END(playwright) -->
@@ -183,6 +186,9 @@ Tool configs and their docs (reference, not concatenated):
 <!-- TEMPLATE-ONLY:START(devcontainer) -->
 - [Devcontainer](configs/devcontainer/README.md) — Codespaces / Dev Containers, opt-in
 <!-- TEMPLATE-ONLY:END(devcontainer) -->
+<!-- TEMPLATE-ONLY:START(pages) -->
+- [Pages](configs/pages/README.md) — GitHub Pages deployment, opt-in
+<!-- TEMPLATE-ONLY:END(pages) -->
 
 See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow.
 
@@ -226,12 +232,12 @@ Skills live in: `.agents/skills/` — each is a folder containing `SKILL.md` wit
 ## Workflows
 
 > [!TIP]
-> Workflows in `.github/workflows/` are generated from skeletons in `configs/gh-actions/*.base.yml` with fragments from `configs/*/ci.steps.yml`. Edit the skeletons and fragments, then run `bun run docs:sync`.
+> Workflows in `.github/workflows/` are generated from skeletons in `configs/gh-actions/*.base.yml` with fragments from `configs/*/*.steps.yml`. Edit the skeletons and fragments, then run `bun run docs:sync`.
 
 ```mermaid
 sequenceDiagram
     participant Dev as Developer
-    participant Config as "configs/*/ci.steps.yml"
+    participant Config as "configs/*/*.steps.yml"
     participant Base as "gh-actions/*.base.yml"
     participant Mdocs as "mdocs (aggregate.ts)"
     participant GH as ".github/workflows/*.yml"
@@ -241,7 +247,7 @@ sequenceDiagram
     Dev->>Mdocs: bun run docs:sync
     Mdocs->>Base: Read skeletons
     Mdocs->>Config: Collect fragments
-    Mdocs->>GH: Generate ci.yml + release.yml
+    Mdocs->>GH: Generate ci.yml + release.yml + pages.yml
     GH-->>Dev: Ready for CI
 ```
 
@@ -249,7 +255,8 @@ sequenceDiagram
 <summary>Workflow files</summary>
 
 - `ci.yml` — generated from `ci.base.yml` + all `ci.steps.yml`
-- `release.yml` — generated from `release.base.yml` + release fragments
+- `release.yml` — generated from `release.base.yml` + all `release.steps.yml`
+- `pages.yml` — generated from `pages.base.yml` + all `pages.steps.yml` (GitHub Pages, opt-in)
 - Fragments are discovered via `discoverConfigs()` scanning `configs/*/package.json` `scaffold` metadata
 
 </details>
