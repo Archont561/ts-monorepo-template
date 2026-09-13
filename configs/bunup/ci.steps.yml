@@ -1,0 +1,21 @@
+      # Package health — catch a broken exports map or unresolvable types
+      # before they reach npm. Builds first (Turbo makes the repeat call a
+      # cache hit) so dist/ exists for both tools. Only non-private packages
+      # are checked; private ones are never published.
+      # attw runs with --profile esm-only: the template ships ESM-only
+      # packages, so the strict profile's CJS resolutions are intentional.
+      - name: Package health (publint + arethetypeswrong)
+        run: |
+          set -eo pipefail
+          bun run build
+          publishable=$(bun -e 'const { readdirSync, readFileSync, existsSync } = require("node:fs"); const dirs = []; for (const d of readdirSync("packages")) { const p = `packages/${d}/package.json`; if (existsSync(p) && !JSON.parse(readFileSync(p, "utf8")).private) dirs.push(`packages/${d}`); } console.log(dirs.join("\n"));')
+          if [ -z "$publishable" ]; then
+            echo "No publishable packages — skipping"
+            exit 0
+          fi
+          echo "$publishable" | while read -r dir; do
+            echo "→ $dir"
+            bunx --yes publint "$dir"
+            (cd "$dir" && bunx --yes @arethetypeswrong/cli --pack . --profile esm-only)
+          done
+        shell: bash
