@@ -1,0 +1,16 @@
+[test]
+coverage = true
+coverageReporter = ["text", "lcov"]
+coverageDir = "./coverage"
+coverageSkipTestFiles = true
+coverageThreshold = { lines = 0.80, functions = 0.80 }
+coveragePathIgnorePatterns = [
+  "**/*.test.ts",
+  "**/*.spec.ts",
+  "**/e2e/**",
+  "**/dist/**",
+  "**/node_modules/**",
+  "**/bunup.config.ts",
+  "**/playwright.config.ts",
+  "**/configs/**",
+]

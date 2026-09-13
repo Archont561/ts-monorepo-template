@@ -1,0 +1,20 @@
+{
+  "name": "@myorg/biome",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": "always",
+    "flag": "biome",
+    "prompt": "Configure Biome (lint + format)?"
+  },
+  "bin": {
+    "mbiome": "./cli.ts"
+  },
+  "exports": {
+    ".": "./biome.json"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.13"
+  }
+}

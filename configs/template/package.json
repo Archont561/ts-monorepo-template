@@ -1,0 +1,23 @@
+{
+  "name": "@myorg/template",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": "always",
+    "selfDestruct": true,
+    "scriptsToRemove": [
+      "docs:sync"
+    ]
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun --packages bundle --minify",
+    "test": "bun test tests/",
+    "coverage": "bun test tests/ --coverage --coverage-reporter lcov",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@clack/prompts": "^1.8.0",
+    "@myorg/ts": "workspace:*"
+  }
+}

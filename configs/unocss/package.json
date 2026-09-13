@@ -1,0 +1,30 @@
+{
+  "name": "@myorg/unocss",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": false,
+    "flag": "unocss",
+    "prompt": "Include UnoCSS (atomic CSS engine)?",
+    "type": "confirm",
+    "removals": {
+      "true": {},
+      "false": {
+        "extraRemovals": [
+          "uno.config.ts"
+        ],
+        "appDepsToRemove": [
+          "@unocss/reset",
+          "unocss"
+        ]
+      }
+    }
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "devDependencies": {
+    "unocss": "^66.10.2"
+  }
+}

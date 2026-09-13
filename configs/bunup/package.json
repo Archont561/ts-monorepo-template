@@ -1,0 +1,17 @@
+{
+  "name": "@myorg/bunup",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": "always",
+    "flag": "bunup",
+    "prompt": "Configure Bunup (Bun-based package bundler)?"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "devDependencies": {
+    "bunup": "^0.16.32"
+  }
+}

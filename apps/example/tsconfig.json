@@ -1,0 +1,13 @@
+{
+  "extends": "@myorg/ts/app.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "types": ["bun"],
+    "paths": {
+      "@src/*": ["./src/*"],
+      "@tests/*": ["./tests/*"]
+    }
+  },
+  "include": ["src", "tests", "e2e"],
+  "exclude": ["node_modules"]
+}

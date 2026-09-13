@@ -1,0 +1,21 @@
+{
+  "name": "@myorg/gh-actions",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": "always",
+    "flag": "gh-actions",
+    "prompt": "Configure GitHub Actions (CI + release workflows)?"
+  },
+  "bin": {
+    "mactionlint": "./cli.ts",
+    "mact": "./act.ts"
+  },
+  "exports": {
+    "./actionlint.yaml": "./actionlint.yaml"
+  },
+  "devDependencies": {
+    "github-actionlint": "^1.7.12"
+  }
+}

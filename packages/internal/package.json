@@ -1,0 +1,26 @@
+{
+  "name": "@myorg/internal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bunup",
+    "dev": "bunup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "mbun test",
+    "coverage": "mbun test --coverage"
+  },
+  "devDependencies": {
+    "@myorg/ts": "workspace:*",
+    "@myorg/bunup": "workspace:*"
+  }
+}

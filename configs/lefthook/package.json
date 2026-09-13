@@ -1,0 +1,21 @@
+{
+  "name": "@myorg/lefthook",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": "always",
+    "flag": "lefthook",
+    "prompt": "Configure Lefthook (Git hooks)?",
+    "setup": "bun configs/lefthook/setup.ts"
+  },
+  "bin": {
+    "msetup": "./setup.ts"
+  },
+  "exports": {
+    "./lefthook.yml": "./lefthook.yml"
+  },
+  "devDependencies": {
+    "lefthook": "^2.1.12"
+  }
+}

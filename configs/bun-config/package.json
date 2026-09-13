@@ -1,0 +1,21 @@
+{
+  "name": "@myorg/bun-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": "always",
+    "flag": "bun-config",
+    "prompt": "Configure Bun (coverage, test settings)?"
+  },
+  "bin": {
+    "mbun": "./cli.ts",
+    "mcoverage": "./coverage.ts"
+  },
+  "exports": {
+    "./bunfig.toml": "./bunfig.toml"
+  },
+  "devDependencies": {
+    "lcov-result-merger": "^6.0.0"
+  }
+}

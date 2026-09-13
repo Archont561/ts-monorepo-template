@@ -1,0 +1,20 @@
+{
+  "name": "@myorg/turbo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": "always",
+    "flag": "turbo",
+    "prompt": "Configure Turbo (task orchestration)?"
+  },
+  "bin": {
+    "mturbo": "./cli.ts"
+  },
+  "exports": {
+    "./turbo.json": "./turbo.base.json"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.12"
+  }
+}

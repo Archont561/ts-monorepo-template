@@ -1,0 +1,30 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.turbo/
+*.log
+*.log.*
+.env
+.env.*
+!.env.example
+coverage/
+
+.DS_Store
+Thumbs.db
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# Lefthook (developer-local overrides, never committed)
+lefthook-local.yml
+
+# act (local CI simulation)
+.actrc.local
+
+# act secrets (never commit)
+.secrets
+
+# AI agent skills (synced via `bun run skills:sync`)
+.agents/

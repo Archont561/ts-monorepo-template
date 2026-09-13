@@ -1,0 +1,27 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": [
+    "@myorg/bun-config",
+    "@myorg/bunup",
+    "@myorg/changeset",
+    "@myorg/commitlint",
+    "@myorg/example",
+    "@myorg/gh-actions",
+    "@myorg/internal",
+    "@myorg/lefthook",
+    "@myorg/native",
+    "@myorg/playwright",
+    "@myorg/skills",
+    "@myorg/template",
+    "@myorg/ts",
+    "@myorg/turbo",
+    "@myorg/unocss"
+  ]
+}

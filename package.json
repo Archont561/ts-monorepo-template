@@ -1,0 +1,36 @@
+{
+  "name": "my-library",
+  "packageManager": "bun@1.3.11",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "configs/*"
+  ],
+  "bun-create": {
+    "preinstall": "bun configs/template/dist/index.js",
+    "start": "bun run dev"
+  },
+  "scripts": {
+    "preinstall": "node -e \"if(!process.env.npm_config_user_agent?.includes('bun')){console.error('\\n❌ This project requires Bun. Run: bun install\\n');process.exit(1)}\"",
+    "prepare": "bun configs/lefthook/setup.ts lefthook && bun configs/changeset/init.ts changeset",
+    "build": "mturbo build",
+    "dev": "mturbo dev",
+    "typecheck": "mturbo typecheck",
+    "docs:sync": "bun configs/template/src/aggregate.ts",
+    "test": "mturbo test",
+    "test:e2e": "mturbo test:e2e",
+    "coverage": "mcoverage",
+    "check": "mbiome check",
+    "check:fix": "mbiome check --write",
+    "ci:lint": "mactionlint",
+    "ci:list": "mact -l",
+    "ci:dry": "mact push -n",
+    "ci:local": "mact push",
+    "skills:sync": "mskills sync",
+    "skills:list": "mskills list",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "changeset publish"
+  }
+}

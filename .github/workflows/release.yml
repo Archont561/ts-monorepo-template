@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        if: ${{ !env.ACT }}
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        if: ${{ !env.ACT }}
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+        if: ${{ !env.ACT }}
+
+      - run: bun run build
+        if: ${{ !env.ACT }}
+
+      - uses: changesets/action@v1
+        if: ${{ !env.ACT }}
+        with:
+          publish: bun run release
+          version: bun run version
+          title: "chore(release): version packages"
+          commit: "chore(release): version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

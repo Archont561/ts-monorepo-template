@@ -1,0 +1,37 @@
+{
+  "name": "@myorg/native",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": "none",
+    "flag": "native",
+    "prompt": "Set up native Node-API (NAPI-RS) bindings?",
+    "type": "select",
+    "options": [
+      {
+        "value": "none",
+        "label": "None - skip native bindings"
+      },
+      {
+        "value": "publish",
+        "label": "Publish a native npm package"
+      },
+      {
+        "value": "docker",
+        "label": "Build native bindings in Docker"
+      }
+    ],
+    "removals": {
+      "none": {},
+      "publish": {},
+      "docker": {}
+    }
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.9.1"
+  }
+}

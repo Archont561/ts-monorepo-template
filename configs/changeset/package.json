@@ -1,0 +1,18 @@
+{
+  "name": "@myorg/changeset",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": "always",
+    "flag": "changeset",
+    "prompt": "Configure Changesets (versioning + releases)?",
+    "setup": "bun configs/changeset/init.ts"
+  },
+  "bin": {
+    "minit": "./init.ts"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^3.0.2"
+  }
+}
