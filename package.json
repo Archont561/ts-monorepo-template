@@ -13,6 +13,7 @@
     "@myorg/bunup": "workspace:*",
     "@myorg/changeset": "workspace:*",
     "@myorg/citty": "workspace:*",
+    "@myorg/devcontainer": "workspace:*",
     "@myorg/gh-actions": "workspace:*",
     "@myorg/lefthook": "workspace:*",
     "@myorg/native-config": "workspace:*",
@@ -21,7 +22,8 @@
     "@myorg/skills": "workspace:*",
     "@myorg/template": "workspace:*",
     "@myorg/ts": "workspace:*",
-    "@myorg/turbo": "workspace:*"
+    "@myorg/turbo": "workspace:*",
+    "@myorg/unocss": "workspace:*"
   },
   "bun-create": {
     "preinstall": "bun configs/template/dist/index.js",

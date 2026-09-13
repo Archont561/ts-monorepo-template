@@ -3,7 +3,7 @@
 
 > System prompt for AI coding agents working in this **template** repository.
 
-This repository is a **template** for TypeScript monorepos. It contains opt-in configs (Playwright, UnoCSS, NAPI-RS, AI skills) and a data-driven scaffolder in `configs/template/` that turns the template into a reusable monorepo via `bun create`.
+This repository is a **template** for TypeScript monorepos. It contains opt-in configs (Playwright, UnoCSS, NAPI-RS, AI skills, Devcontainer) and a data-driven scaffolder in `configs/template/` that turns the template into a reusable monorepo via `bun create`.
 
 > [!NOTE]
 > Template mode: this intro is stripped after scaffolding.
@@ -182,6 +182,9 @@ Tool configs and their agent-facing docs (reference, not concatenated):
 | Commitlint | [AGENT.md](configs/commitlint/AGENT.md) | Commit messages |
 | GitHub Actions | [AGENT.md](configs/gh-actions/AGENT.md) | CI workflow validation and local act (citty) |
 | Lefthook | [AGENT.md](configs/lefthook/AGENT.md) | Git hooks (citty) |
+<!-- TEMPLATE-ONLY:START(devcontainer) -->
+| Devcontainer | [AGENT.md](configs/devcontainer/AGENT.md) | Codespaces / Dev Containers, opt-in |
+<!-- TEMPLATE-ONLY:END(devcontainer) -->
 <!-- TEMPLATE-ONLY:START(native) -->
 | Native | [AGENT.md](configs/native/AGENT.md) | NAPI-RS opt-in |
 <!-- TEMPLATE-ONLY:END(native) -->

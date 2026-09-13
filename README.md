@@ -27,6 +27,7 @@ During scaffolding you will be prompted for:
   - [ ] UnoCSS — atomic CSS
   - [ ] NAPI-RS — native bindings
   - [ ] AI skills (`mskills`)
+  - [ ] Devcontainer — Codespaces / Dev Containers
 
 > [!TIP]
 > Use `bun create Archont561/ts-monorepo-template my-app -- --scope @acme --no-interactive` for CI.
@@ -37,7 +38,7 @@ During scaffolding you will be prompted for:
 - Replaces `@myorg` with your scope in `package.json`, `tsconfig.json`, `config.json`
 - Strips `TEMPLATE-ONLY` blocks (`<!-- TEMPLATE-ONLY:START(...) -->`)
 - Removes template-only files (`configs/template/`, `docs:sync` script)
-- Prunes disabled opt-in configs (`playwright`, `unocss`, `native`, `skills`)
+- Prunes disabled opt-in configs (`playwright`, `unocss`, `native`, `skills`, `devcontainer`)
 - Regenerates CI workflows from survivors (`configs/gh-actions/*.base.yml` + `*/ci.steps.yml`)
 
 </details>
@@ -112,7 +113,7 @@ configs/
 
 </details>
 
-<!-- TEMPLATE-ONLY:START(playwright,skills,unocss,native) -->
+<!-- TEMPLATE-ONLY:START(playwright,skills,unocss,native,devcontainer) -->
 <details>
 <summary>Opt-in configs (present only when selected)</summary>
 
@@ -122,10 +123,11 @@ configs/
   skills/           AI agent skills (mskills)
   unocss/           Atomic CSS
   native/           NAPI-RS bindings
+  devcontainer/     Codespaces / Dev Containers
 ```
 
 </details>
-<!-- TEMPLATE-ONLY:END(playwright,skills,unocss,native) -->
+<!-- TEMPLATE-ONLY:END(playwright,skills,unocss,native,devcontainer) -->
 
 <!-- TEMPLATE-ONLY:START(template) -->
 <details>
@@ -173,6 +175,9 @@ Tool configs and their docs (reference, not concatenated):
 <!-- TEMPLATE-ONLY:START(native) -->
 | [Native](configs/native/README.md) | — | NAPI-RS, opt-in |
 <!-- TEMPLATE-ONLY:END(native) -->
+<!-- TEMPLATE-ONLY:START(devcontainer) -->
+| [Devcontainer](configs/devcontainer/README.md) | — | Codespaces / Dev Containers, opt-in |
+<!-- TEMPLATE-ONLY:END(devcontainer) -->
 
 See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow.
 

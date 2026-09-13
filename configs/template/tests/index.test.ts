@@ -129,6 +129,8 @@ describe("Scaffolder integration", () => {
       expect(await pathExists(`${result.templateDir}/configs/unocss`)).toBe(false);
       expect(await pathExists(`${result.templateDir}/configs/native`)).toBe(false);
       expect(await pathExists(`${result.templateDir}/configs/skills`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/configs/devcontainer`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/.devcontainer`)).toBe(false);
 
       // Always-on configs remain.
       expect(await pathExists(`${result.templateDir}/configs/ts`)).toBe(true);
@@ -143,6 +145,7 @@ describe("Scaffolder integration", () => {
       expect(agentsMd).not.toContain("configs/skills/AGENT.md");
       expect(agentsMd).not.toContain("configs/unocss/AGENT.md");
       expect(agentsMd).not.toContain("configs/native/AGENT.md");
+      expect(agentsMd).not.toContain("configs/devcontainer/AGENT.md");
       expect(agentsMd).toContain("configs/biome/AGENT.md");
 
       const ciYml = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
@@ -193,6 +196,8 @@ describe("Scaffolder integration", () => {
       expect(await pathExists(`${result.templateDir}/configs/unocss`)).toBe(false);
       expect(await pathExists(`${result.templateDir}/configs/native`)).toBe(false);
       expect(await pathExists(`${result.templateDir}/configs/skills`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/configs/devcontainer`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/.devcontainer`)).toBe(false);
 
       // The bundle scopes to @myorg by default, so template artifacts — not
       // the scope itself — must not leak into the generated project.

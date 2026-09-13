@@ -23,4 +23,5 @@ coveragePathIgnorePatterns = [
   "**/*.node",
   "**/*.wasi.cjs",
   "**/target/**",
+  "**/.devcontainer/**",
 ]
