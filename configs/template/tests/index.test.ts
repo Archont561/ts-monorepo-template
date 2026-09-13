@@ -42,6 +42,16 @@ describe("Scaffolder integration", () => {
       expect(rootPkg.devDependencies?.["@myorg/template"]).toBeUndefined();
       expect(rootPkg.scripts?.["build:template"]).toBeUndefined();
       expect(rootPkg.scripts?.["docs:sync"]).toBeUndefined();
+
+      // docs/ is template-only, so the VitePress toolchain must not leak.
+      expect(rootPkg.devDependencies?.vitepress).toBeUndefined();
+      expect(rootPkg.scripts?.["docs:dev"]).toBeUndefined();
+      expect(rootPkg.scripts?.["docs:build"]).toBeUndefined();
+      expect(rootPkg.scripts?.["docs:preview"]).toBeUndefined();
+      expect(await pathExists(`${result.templateDir}/docs`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/.github/workflows/template-docs.yml`)).toBe(
+        false,
+      );
       expect(rootPkg.workspaces).not.toContain("configs/template");
 
       // 3. Prepare script still wires up lefthook + changeset on install.

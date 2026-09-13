@@ -16,7 +16,14 @@ const FILES_TO_REMOVE: string[] = ["tests/template.test.ts"];
 
 const PACKAGE_JSON_KEYS_TO_REMOVE = ["bun-create"];
 
-const PACKAGE_JSON_SCRIPTS_TO_REMOVE = ["build:template", "search:tools"];
+const PACKAGE_JSON_SCRIPTS_TO_REMOVE = [
+  "build:template",
+  "search:tools",
+  // Template-only VitePress site in docs/ — pruned by configs/template.
+  "docs:dev",
+  "docs:build",
+  "docs:preview",
+];
 
 export class MonorepoScaffolder {
   readonly targetDir: string;
@@ -61,6 +68,9 @@ export class MonorepoScaffolder {
     // The runtime prompts are bundled into the committed dist bundle, so the
     // generated project has no use for the source-level devDependency.
     delete pkg.devDependencies?.["@clack/prompts"];
+
+    // docs/ is template-only, so the generated project has nothing to build.
+    delete pkg.devDependencies?.vitepress;
 
     // Remove template from workspaces
     if (pkg.workspaces) {
