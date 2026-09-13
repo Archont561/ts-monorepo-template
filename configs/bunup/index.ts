@@ -80,6 +80,7 @@ export const inlinedConfig = bunupDefineConfig({
  */
 export const cliConfig = bunupDefineConfig({
   ...baseConfig,
+  dts: false,
   minify: true,
   target: "bun",
 });

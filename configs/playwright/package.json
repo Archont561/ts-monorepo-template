@@ -25,14 +25,14 @@
         ]
       }
     },
-    "setup": "bunx playwright install --with-deps"
+    "setup": "mbun x playwright install --with-deps"
   },
   "bin": {
     "me2e": "./src/e2e.ts"
   },
   "scripts": {
-    "build": "bunup",
-    "dev": "bunup --watch"
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "exports": {
     ".": "./index.ts"

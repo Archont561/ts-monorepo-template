@@ -12,8 +12,8 @@
     "mturbo": "./src/cli.ts"
   },
   "scripts": {
-    "build": "bunup",
-    "dev": "bunup --watch"
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "exports": {
     "./turbo.json": "./turbo.base.json"

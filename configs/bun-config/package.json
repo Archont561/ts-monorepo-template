@@ -13,8 +13,8 @@
     "mcoverage": "./src/coverage.ts"
   },
   "scripts": {
-    "build": "bunup",
-    "dev": "bunup --watch"
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "exports": {
     "./bunfig.toml": "./bunfig.toml"

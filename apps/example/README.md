@@ -1,30 +1,28 @@
 # @myorg/example
 
-> Example [Bun.serve](https://bun.sh/docs/api/http) HTTP server demo.
+Demo HTTP application built with Bun.serve and file-based routing.
 
-## What it is
+## Endpoints
 
-- A Bun.serve app (`src/index.ts`) with routes in `src/routes.ts`.
-- Imports only from `@myorg/external` — never from `@myorg/internal`.
-- **Not bundled**: Bun runs TypeScript directly (`bun --hot src/index.ts`).
+| Route | Tier | Handler | Description |
+| ----- | ---- | ------- | ----------- |
+| `GET /health` | 1 (static) | `src/index.ts` | Health probe |
+| `GET /` | 2 (file-based) | `src/pages/index.ts` | HTML welcome page |
+| `GET /api` | 2 (file-based) | `src/pages/api/index.ts` | API endpoint list |
+| `GET /api/greet/:name` | 2 (file-based) | `src/pages/api/greet/[name].ts` | Greeting |
+| `GET /api/shout/:name` | 2 (file-based) | `src/pages/api/shout/[name].ts` | Uppercased greeting |
 
 ## Development
 
 ```bash
-bun run dev       # bun --hot src/index.ts
-bun run start     # bun src/index.ts
-bun run typecheck # tsc --noEmit
+bun run dev              # hot-reloading server on :3000
+bun run test             # unit tests (routes + integration)
+bun run test:e2e         # Playwright E2E (requires browsers)
 ```
 
-Server loads at [http://localhost:3000](http://localhost:3000).
+## Architecture
 
-## E2E Testing
+- **Tier 1** (`routes:` in `Bun.serve`) — static endpoints, sub-millisecond dispatch.
+- **Tier 2** (`fetch` + `FileSystemRouter`) — Next.js-style file-based routing.
 
-Playwright specs live in `e2e/` and run against this app:
-
-```bash
-bun run test:e2e   # me2e  (auto-skips when browsers are missing)
-```
-
-Config is in `playwright.config.ts`; shared primitives come from
-`@myorg/playwright`.
+New endpoints: add a file to `src/pages/` matching the desired URL structure.

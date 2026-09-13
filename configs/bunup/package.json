@@ -8,6 +8,9 @@
     "flag": "bunup",
     "prompt": "Configure Bunup (Bun-based package bundler)?"
   },
+  "bin": {
+    "mbunup": "./src/cli.ts"
+  },
   "exports": {
     ".": "./index.ts"
   },

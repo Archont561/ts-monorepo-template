@@ -10,11 +10,14 @@
   "devDependencies": {
     "@myorg/biome": "workspace:*",
     "@myorg/bun-config": "workspace:*",
+    "@myorg/bunup": "workspace:*",
     "@myorg/changeset": "workspace:*",
     "@myorg/gh-actions": "workspace:*",
     "@myorg/lefthook": "workspace:*",
     "@myorg/playwright": "workspace:*",
     "@myorg/skills": "workspace:*",
+    "@myorg/template": "workspace:*",
+    "@myorg/ts": "workspace:*",
     "@myorg/turbo": "workspace:*"
   },
   "bun-create": {
@@ -23,11 +26,11 @@
   },
   "scripts": {
     "preinstall": "node -e \"if(!process.env.npm_config_user_agent?.includes('bun')){console.error('\\n❌ This project requires Bun. Run: bun install\\n');process.exit(1)}\"",
-    "prepare": "bun configs/lefthook/src/cli.ts lefthook && bun configs/changeset/src/cli.ts changeset",
+    "prepare": "msetup lefthook && minit changeset",
     "build": "mturbo build",
     "dev": "mturbo dev",
     "typecheck": "mturbo typecheck",
-    "docs:sync": "bun configs/template/src/aggregate.ts",
+    "docs:sync": "mdocs",
     "test": "mturbo test",
     "test:e2e": "mturbo test:e2e",
     "coverage": "mcoverage",
@@ -40,9 +43,9 @@
     "skills:sync": "mskills sync",
     "skills:list": "mskills list",
     "clean:modules": "find . -name 'node_modules' -not -path '*/node_modules/*' -prune -exec rm -rf {} +",
-    "reinstall": "bun run clean:modules && bun install",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "release": "changeset publish"
+    "reinstall": "mbun run clean:modules && mbun install",
+    "changeset": "mchangeset",
+    "version": "mchangeset version",
+    "release": "mchangeset publish"
   }
 }

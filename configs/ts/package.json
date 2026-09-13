@@ -8,6 +8,9 @@
     "flag": "ts",
     "prompt": "Configure TypeScript (shared tsconfigs)?"
   },
+  "bin": {
+    "mtsc": "./src/cli.ts"
+  },
   "exports": {
     "./base.json": "./base.json",
     "./library.json": "./library.json",

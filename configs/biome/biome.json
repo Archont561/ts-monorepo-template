@@ -13,7 +13,15 @@
     "rules": {
       "preset": "recommended",
       "style": {
-        "noNonNullAssertion": "warn"
+        "noNonNullAssertion": "warn",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "bunup": "Use @myorg/bunup instead of bunup directly. Import defineConfig from @myorg/bunup."
+            }
+          }
+        }
       },
       "correctness": {
         "noUnusedVariables": "warn",
@@ -46,5 +54,17 @@
       "!**/test-results",
       "!**/playwright-report"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["configs/bunup/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    }
+  ]
 }

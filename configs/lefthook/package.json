@@ -12,8 +12,8 @@
     "msetup": "./src/cli.ts"
   },
   "scripts": {
-    "build": "bunup",
-    "dev": "bunup --watch"
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "exports": {
     "./lefthook.yml": "./lefthook.yml"

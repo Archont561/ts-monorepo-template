@@ -13,8 +13,8 @@
     "mact": "./src/act.ts"
   },
   "scripts": {
-    "build": "bunup",
-    "dev": "bunup --watch"
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "exports": {
     "./actionlint.yaml": "./actionlint.yaml"

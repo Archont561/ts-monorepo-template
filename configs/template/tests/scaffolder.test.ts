@@ -214,16 +214,18 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("replaces in source imports", async () => {
-      await mkdir(`${workDir}/apps/example/src`, { recursive: true });
+      await mkdir(`${workDir}/apps/example/src/pages/api/greet`, {
+        recursive: true,
+      });
       await write(
-        `${workDir}/apps/example/src/routes.ts`,
+        `${workDir}/apps/example/src/pages/api/greet/[name].ts`,
         `import { greet } from "@myorg/external";`,
       );
 
       const s = new MonorepoScaffolder({ targetDir: workDir, scope: "@acme" });
       await s.replaceScopePlaceholders();
 
-      const src = await file(`${workDir}/apps/example/src/routes.ts`).text();
+      const src = await file(`${workDir}/apps/example/src/pages/api/greet/[name].ts`).text();
       expect(src).toContain('from "@acme/external"');
     });
 

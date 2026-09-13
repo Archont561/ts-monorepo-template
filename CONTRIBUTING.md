@@ -20,7 +20,7 @@ bun run dev        # watch all packages (Turbo)
 
 `bun install` alone is **not** enough after a linker-strategy change or a
 failed/interrupted install. Stale nested `node_modules/` directories can survive
-inside the workspace source trees (e.g. `configs/template/node_modules`) and
+inside the workspace source trees (e.g. `configs/bun-config/node_modules`) and
 shadow the good hoisted copies during module resolution.
 
 Use the canonical recovery script, which removes **all** `node_modules`

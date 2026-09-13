@@ -1,9 +1,6 @@
-import { defineConfig } from "bunup";
+import { cliConfig, defineConfig } from "@myorg/bunup";
 
 export default defineConfig({
-  entry: ["src/cli.ts"],
-  format: ["esm"],
-  target: "bun",
-  clean: true,
-  dts: false, // runnable binary, not an importable library
+  ...cliConfig,
+  entry: ["src/cli.ts", "src/changeset.ts"],
 });

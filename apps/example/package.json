@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --hot src/index.ts",
-    "start": "bun src/index.ts",
-    "typecheck": "tsc --noEmit",
+    "dev": "mbun --hot src/index.ts",
+    "start": "mbun src/index.ts",
+    "typecheck": "mtsc --noEmit",
     "test": "mbun test tests/",
     "coverage": "mbun test tests/ --coverage",
     "test:e2e": "me2e"

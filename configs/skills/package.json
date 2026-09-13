@@ -23,8 +23,8 @@
     "mskills": "./src/cli.ts"
   },
   "scripts": {
-    "build": "bunup",
-    "dev": "bunup --watch"
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "exports": {
     "./skills/*": "./skills/*"

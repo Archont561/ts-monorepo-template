@@ -104,6 +104,21 @@ export class MonorepoScaffolder {
         );
       await write(bunfigPath, `${lines.join("\n")}\n`);
     }
+
+    // CONTRIBUTING.md is a static root doc that should not leak template-only
+    // paths. Filter any lingering references to the template workspace that
+    // might have been introduced in the source repo.
+    const contributingPath = `${this.targetDir}/CONTRIBUTING.md`;
+    const contributing = file(contributingPath);
+    if (await contributing.exists()) {
+      const content = await contributing.text();
+      if (/configs\/template/.test(content)) {
+        // Replace with a generic example that does not reference the template
+        // workspace, preserving the surrounding context.
+        const sanitized = content.replaceAll(/configs\/template\/[^\s`)]*/g, "configs/bun-config");
+        await write(contributingPath, sanitized);
+      }
+    }
   }
 
   /**
@@ -120,6 +135,7 @@ export class MonorepoScaffolder {
       "README.md",
       "AGENTS.md",
       "LICENSE.md",
+      "CONTRIBUTING.md",
       "packages/external/README.md",
       "packages/internal/README.md",
       "apps/example/README.md",
@@ -142,7 +158,11 @@ export class MonorepoScaffolder {
       // Example app
       "apps/example/package.json",
       "apps/example/tsconfig.json",
-      "apps/example/src/routes.ts",
+      "apps/example/src/index.ts",
+      "apps/example/src/pages/index.ts",
+      "apps/example/src/pages/api/index.ts",
+      "apps/example/src/pages/api/greet/[name].ts",
+      "apps/example/src/pages/api/shout/[name].ts",
       "apps/example/playwright.config.ts",
     ];
 

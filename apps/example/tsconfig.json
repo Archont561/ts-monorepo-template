@@ -2,6 +2,7 @@
   "extends": "@myorg/ts/app.json",
   "compilerOptions": {
     "rootDir": ".",
+    "outDir": "./dist",
     "types": ["bun"],
     "paths": {
       "@src/*": ["./src/*"],
@@ -9,5 +10,5 @@
     }
   },
   "include": ["src", "tests", "e2e"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }
