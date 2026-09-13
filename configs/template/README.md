@@ -10,9 +10,10 @@
 - A **data-driven** engine: `discoverConfigs()` reads every
   `configs/*/package.json`'s `scaffold` metadata — no config package is
   hardcoded in the scaffolder.
-- `docs:sync` — runs `src/aggregate.ts` to regenerate the root `AGENTS.md`,
-  `README.md`, and `.github/workflows/*.yml` from the `configs/*` packages
-  (`AGENT.md`, `README.md`, `ci.steps.yml`, and the gh-actions base skeletons).
+- `docs:sync` — runs `src/aggregate.ts` to regenerate `.github/workflows/*.yml`
+  from the `configs/*` packages (`ci.steps.yml` and the gh-actions base skeletons).
+  Root `README.md` and `AGENTS.md` are now static reference files with
+  `TEMPLATE-ONLY` blocks for template vs monorepo descriptions.
 
 ## Source map
 
@@ -22,15 +23,16 @@
 | `src/collector.ts` | `OptionsCollector` — Clack prompts + repo-root discovery |
 | `src/scaffolder.ts` | `MonorepoScaffolder` — the pipeline engine |
 | `src/configs.ts` | `discoverConfigs` / `ScaffoldMeta` types |
-| `src/harness.ts` | `TemplateHarness` — full-pipeline test helper (`BUN_CREATE_DIR`) |
-| `src/aggregate.ts` | `docs:sync` — aggregates AGENTS.md, README.md, and CI workflows |
+| `src/harness.ts` | `TemplateHarness` — full-pipeline integration helper (`BUN_CREATE_DIR`) |
+| `src/aggregate.ts` | `docs:sync` — aggregates CI workflows from `configs/*` |
+| `src/docs.ts` | `mdocs` bin — single bin for this package |
 
 ## Development
 
 ```bash
 bun run --filter @myorg/template test     # unit + integration suites
 bun run --filter @myorg/template build    # rebuild the committed dist bundle
-bun run docs:sync                          # regenerate root docs + workflows
+bun run docs:sync                          # regenerate workflows (mdocs)
 bun run ci:lint                            # after regenerating workflows
 ```
 
@@ -39,7 +41,7 @@ bun run ci:lint                            # after regenerating workflows
 This package is **removed** from generated projects (its scaffold metadata
 declares `selfDestruct: true`). Everything it references is stripped by the
 scaffolder (`TEMPLATE-ONLY` blocks, the `docs:sync` script, the
-`configs/template` workspace). Root `prepare` in generated projects uses the
-surviving `configs/lefthook/setup.ts` + `configs/changeset/init.ts` directly.
+`configs/template` workspace). Root `prepare` in generated projects uses
+`msetup` + `mchangeset init` directly.
 
 See [AGENT.md](./AGENT.md) for the agent-facing reference.

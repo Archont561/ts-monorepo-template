@@ -44,7 +44,7 @@ the correct hoisted layout.
 | `bun run coverage` | Unit coverage, merged LCOV at `coverage/lcov.info` |
 | `bun run check` / `check:fix` | Biome lint + format |
 | `bun run typecheck` | Type-check all packages |
-| `bun run docs:sync` | Regenerate `AGENTS.md`, `README.md`, workflows from `configs/*` |
+| `bun run docs:sync` | Regenerate workflows from `configs/*` (`mdocs`) |
 | `bun run reinstall` | Clean all `node_modules` and reinstall |
 
 ## `configs/*` convention

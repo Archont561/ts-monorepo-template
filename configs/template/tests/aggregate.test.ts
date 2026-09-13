@@ -4,9 +4,9 @@ import { TemplateHarness } from "../src/harness";
 import { MonorepoScaffolder } from "../src/scaffolder";
 
 /**
- * Tests for `src/aggregate.ts` (`bun run docs:sync`), which regenerates the
- * root AGENTS.md, README.md, and `.github/workflows/*.yml` from the config
- * packages by discovery — no hardcoded registry.
+ * Tests for `src/aggregate.ts` (`bun run docs:sync`), which regenerates
+ * `.github/workflows/*.yml` from the config packages by discovery — no hardcoded registry.
+ * Root README.md and AGENTS.md are now static reference files (not concatenated).
  */
 describe("aggregate", () => {
   let cleanup: (() => Promise<void>) | null = null;
@@ -19,7 +19,7 @@ describe("aggregate", () => {
   });
 
   test(
-    "generates AGENTS.md, README.md, and both workflows from configs",
+    "generates both workflows from configs",
     async () => {
       const result = await new TemplateHarness({ skipInstall: true }).prepare();
       cleanup = result.cleanup;
@@ -31,34 +31,6 @@ describe("aggregate", () => {
       });
       const stderr = await new Response(proc.stderr).text();
       expect(await proc.exited, stderr).toBe(0);
-
-      const agents = await file(`${result.templateDir}/AGENTS.md`).text();
-      expect(agents.startsWith("<!-- AUTO-GENERATED from configs/*/AGENT.md -->")).toBe(true);
-      expect(agents).toContain("# AGENTS.md");
-      for (const dir of [
-        "ts",
-        "bunup",
-        "turbo",
-        "biome",
-        "bun-config",
-        "playwright",
-        "lefthook",
-        "commitlint",
-        "changeset",
-        "gh-actions",
-        "skills",
-        "template",
-      ]) {
-        expect(agents).toContain(`<!-- AGENT:${dir}:START -->`);
-        expect(agents).toContain(`<!-- AGENT:${dir}:END -->`);
-      }
-      // The unified aggregator no longer emits TEMPLATE-ONLY markers.
-      expect(agents).not.toContain("TEMPLATE-ONLY:START");
-
-      const readme = await file(`${result.templateDir}/README.md`).text();
-      expect(readme.startsWith("<!-- AUTO-GENERATED from configs/*/README.md -->")).toBe(true);
-      expect(readme).toContain("<!-- PACKAGE:ts:START -->");
-      expect(readme).toContain("<!-- PACKAGE:template:START -->");
 
       const ci = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
       expect(ci).not.toContain("{{STEPS}}");
@@ -83,9 +55,9 @@ describe("aggregate", () => {
 
       const script = `${result.templateDir}/configs/template/src/aggregate.ts`;
       await $`bun ${script} ${result.templateDir}`.quiet();
-      const first = await file(`${result.templateDir}/AGENTS.md`).text();
+      const first = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
       await $`bun ${script} ${result.templateDir}`.quiet();
-      const second = await file(`${result.templateDir}/AGENTS.md`).text();
+      const second = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
 
       expect(second).toBe(first);
     },
@@ -93,12 +65,12 @@ describe("aggregate", () => {
   );
 
   test(
-    "scaffold regenerates docs and workflows from the surviving configs",
+    "scaffold regenerates workflows from the surviving configs, README/AGENTS are static",
     async () => {
       const result = await new TemplateHarness({ skipInstall: true }).prepare();
       cleanup = result.cleanup;
 
-      // Teamplate-only configs self-destruct; default pruning drops skills.
+      // Template-only configs self-destruct; default pruning drops skills.
       const scaffolder = new MonorepoScaffolder({
         targetDir: result.templateDir,
         scope: "@agent-test",
@@ -109,15 +81,20 @@ describe("aggregate", () => {
 
       expect(await pathExists(`${result.templateDir}/configs/template`)).toBe(false);
 
+      // README and AGENTS are now static reference files, not concatenated.
+      // They should still exist and have TEMPLATE-ONLY stripped.
       const agents = await file(`${result.templateDir}/AGENTS.md`).text();
-      expect(agents).not.toContain("configs/template");
-      expect(agents).not.toContain("## Scaffolding (Template Development Only)");
-      expect(agents).not.toContain("## AI Agent Skills");
-      expect(agents).toContain("## E2E Testing");
+      expect(agents).toContain("# AGENTS.md");
       expect(agents).not.toContain("TEMPLATE-ONLY");
+      // Should reference configs via links, not contain concatenated blocks
+      expect(agents).not.toContain("<!-- AGENT:biome:START -->");
 
       const readme = await file(`${result.templateDir}/README.md`).text();
-      expect(readme).not.toContain("configs/template");
+      expect(readme).toContain("# @agent-test/external");
+      expect(readme).not.toContain("TEMPLATE-ONLY");
+      expect(readme).not.toContain("<!-- PACKAGE:biome:START -->");
+      // Should reference config docs
+      expect(readme).toContain("configs/biome/README.md");
 
       const ci = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
       expect(ci).not.toContain("{{STEPS}}");

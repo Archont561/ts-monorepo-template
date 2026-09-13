@@ -136,8 +136,7 @@ describe("MonorepoScaffolder (unit)", () => {
         JSON.stringify({
           name: "test",
           scripts: {
-            prepare:
-              "bun configs/lefthook/src/cli.ts lefthook && bun configs/changeset/src/cli.ts changeset",
+            prepare: "msetup lefthook && mchangeset init",
           },
         }),
       );
@@ -146,8 +145,8 @@ describe("MonorepoScaffolder (unit)", () => {
       await s.sanitizePackageJson();
 
       const pkg = await file(`${workDir}/package.json`).json();
-      expect(pkg.scripts.prepare).toContain("configs/lefthook/src/cli.ts");
-      expect(pkg.scripts.prepare).toContain("configs/changeset/src/cli.ts");
+      expect(pkg.scripts.prepare).toContain("msetup");
+      expect(pkg.scripts.prepare).toContain("mchangeset");
     });
 
     test("handles missing package.json gracefully", async () => {
@@ -464,60 +463,6 @@ describe("MonorepoScaffolder (unit)", () => {
       const content = await file(`${workDir}/configs/bun-config/bunfig.toml`).text();
       expect(content).not.toContain("configs/template");
       expect(content).toContain("dist");
-    });
-  });
-
-  // ── regenerateDocs ──────────────────────────────
-
-  describe("regenerateDocs", () => {
-    test("writes AGENTS.md and README.md with sections from present configs", async () => {
-      await mkdir(`${workDir}/configs/apply`, { recursive: true });
-      await mkdir(`${workDir}/configs/zeta`, { recursive: true });
-      await mkdir(`${workDir}/configs/missing`, { recursive: true });
-      await write(`${workDir}/configs/AGENT.md`, "# AGENTS.md\nIntro.");
-      await write(`${workDir}/configs/README.md`, "# Repo\nIntro.");
-      await write(`${workDir}/configs/apply/AGENT.md`, "## Apply Section");
-      await write(`${workDir}/configs/apply/README.md`, "# apply package");
-      await write(`${workDir}/configs/zeta/AGENT.md`, "## Zeta Section");
-
-      const s = new MonorepoScaffolder({ targetDir: workDir });
-      await s.regenerateDocs();
-
-      const agents = await file(`${workDir}/AGENTS.md`).text();
-      expect(agents.startsWith("<!-- AUTO-GENERATED from configs/*/AGENT.md -->")).toBe(true);
-      expect(agents).toContain("# AGENTS.md");
-      expect(agents.indexOf("<!-- AGENT:apply:START -->")).toBeLessThan(
-        agents.indexOf("<!-- AGENT:zeta:START -->"),
-      );
-      expect(agents).toContain("## Zeta Section");
-
-      const readme = await file(`${workDir}/README.md`).text();
-      expect(readme).toContain("<!-- PACKAGE:apply:START -->");
-      expect(readme).toContain("# apply package");
-      // Configs without a README.md contribute no PACKAGE section.
-      expect(readme).not.toContain("PACKAGE:zeta");
-    });
-
-    test("omits configs whose doc files are missing", async () => {
-      await mkdir(`${workDir}/configs/apply`, { recursive: true });
-      await mkdir(`${workDir}/configs/solo`, { recursive: true });
-      await write(`${workDir}/configs/AGENT.md`, "# AGENTS.md\nIntro.");
-      await write(`${workDir}/configs/README.md`, "# Repo\nIntro.");
-      // `apply` ships both docs; `solo` ships only AGENT.md.
-      await write(`${workDir}/configs/apply/AGENT.md`, "## Apply Section");
-      await write(`${workDir}/configs/apply/README.md`, "# apply package");
-      await write(`${workDir}/configs/solo/AGENT.md`, "## Solo Section");
-
-      const s = new MonorepoScaffolder({ targetDir: workDir });
-      await s.regenerateDocs();
-
-      const agents = await file(`${workDir}/AGENTS.md`).text();
-      expect(agents).toContain("<!-- AGENT:apply:START -->");
-      expect(agents).toContain("<!-- AGENT:solo:START -->");
-
-      const readme = await file(`${workDir}/README.md`).text();
-      expect(readme).toContain("<!-- PACKAGE:apply:START -->");
-      expect(readme).not.toContain("PACKAGE:solo");
     });
   });
 

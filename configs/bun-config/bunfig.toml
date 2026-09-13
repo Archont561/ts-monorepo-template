@@ -14,11 +14,9 @@ coveragePathIgnorePatterns = [
   "**/playwright.config.ts",
   "**/configs/**",
   "**/src/cli.ts",
-  "**/src/coverage.ts",
   "**/src/e2e.ts",
-  "**/src/act.ts",
   "**/src/docs.ts",
-  "**/src/changeset.ts",
   "**/src/collector.ts",
   "**/src/harness.ts",
+  "**/src/aggregate.ts",
 ]

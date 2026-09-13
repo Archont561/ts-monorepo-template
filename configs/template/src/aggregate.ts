@@ -3,23 +3,19 @@ import { mkdir } from "node:fs/promises";
 import { $, file, write } from "bun";
 
 /**
- * Regenerates the root docs and CI workflows from the config packages.
+ * Regenerates CI workflows from the config packages.
  *
  * Everything is discovery-driven — there is no central registry:
  *
- * - `AGENTS.md` is built from `configs/AGENT.md` (intro) plus one
- *   `<marker>:<dir>` block per `configs/<dir>/AGENT.md`, in sorted directory
- *   order, using the `AGENT` marker.
- * - `README.md` is built the same way from `configs/README.md` plus
- *   `configs/<dir>/README.md`, using the `PACKAGE` marker.
  * - `.github/workflows/ci.yml` is `configs/gh-actions/ci.base.yml` with the
  *   `{{STEPS}}` placeholder filled from every `configs/<dir>/ci.steps.yml`
  *   (sorted, concatenated).
  * - `.github/workflows/release.yml` is `configs/gh-actions/release.base.yml`
  *   with `{{STEPS}}` filled from `configs/changeset/release.steps.yml`.
  *
- * Once generated, the root files are derived artifacts — edit the config docs
- * and skeletons, then run `bun run docs:sync`.
+ * Root README.md and AGENTS.md are now static reference files (not concatenated)
+ * that list configs via links. They have TEMPLATE-ONLY blocks for template vs
+ * monorepo descriptions and are NOT regenerated here.
  *
  * Run from the repository root: `bun run docs:sync`.
  * A target directory may be passed as an argument for testing:
@@ -91,8 +87,6 @@ export async function aggregateWorkflow(
 }
 
 export async function regenerateAll(targetDir: string): Promise<void> {
-  await aggregateMarkdown(targetDir, "AGENT.md", "AGENTS.md", "AGENT");
-  await aggregateMarkdown(targetDir, "README.md", "README.md", "PACKAGE");
   await mkdir(`${targetDir}/.github/workflows`, { recursive: true });
   await aggregateWorkflow(targetDir, "ci.base.yml", "ci.steps.yml");
   await aggregateWorkflow(targetDir, "release.base.yml", "release.steps.yml");

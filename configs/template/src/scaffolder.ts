@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { $, file, write } from "bun";
-import { aggregateMarkdown, aggregateWorkflow } from "./aggregate";
+import { aggregateWorkflow } from "./aggregate";
 import type { ScaffoldMeta, ScaffoldRemovals } from "./configs";
 import { discoverConfigs } from "./configs";
 
@@ -407,16 +407,6 @@ export class MonorepoScaffolder {
   }
 
   /**
-   * Regenerates the root AGENTS.md and README.md from the config docs that
-   * survive pruning. Runs after handleConfig so pruned configs contribute
-   * no sections.
-   */
-  async regenerateDocs(): Promise<void> {
-    await aggregateMarkdown(this.targetDir, "AGENT.md", "AGENTS.md", "AGENT");
-    await aggregateMarkdown(this.targetDir, "README.md", "README.md", "PACKAGE");
-  }
-
-  /**
    * Regenerates `.github/workflows/*.yml` from the gh-actions base skeletons
    * and the surviving configs' step fragments.
    */
@@ -461,8 +451,7 @@ export class MonorepoScaffolder {
     await this.stripTemplateMarkers(); // Scope-aware
     await this.removeTemplateFiles();
     await this.handleConfig(); // Data-driven removals, incl. template self-destruct
-    await this.regenerateDocs(); // From the pruned config set
-    await this.regenerateCI();
+    await this.regenerateCI(); // Workflows only — README/AGENTS are static reference files
     await this.setupGitHooks();
   }
 }

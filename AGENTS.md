@@ -1,4 +1,25 @@
-<!-- AUTO-GENERATED from configs/*/AGENT.md -->
+<!-- TEMPLATE-ONLY:START(template) -->
+# AGENTS.md - Template
+
+> System prompt for AI coding agents working in this **template** repository.
+
+This repository is a **template** for TypeScript monorepos. It contains opt-in configs (Playwright, UnoCSS, NAPI-RS, AI skills) and a data-driven scaffolder in `configs/template/` that turns the template into a reusable monorepo via `bun create`.
+
+## Using this template
+
+```bash
+bun create <your-github-user>/ts-monorepo-template my-app
+cd my-app
+bun install
+```
+
+During scaffolding, `@myorg` is replaced with your scope, `TEMPLATE-ONLY` blocks are stripped, template-only files and disabled configs are pruned, and CI workflows are regenerated from survivors.
+
+After scaffolding, this file will describe your monorepo (see below).
+
+---
+
+<!-- TEMPLATE-ONLY:END(template) -->
 # AGENTS.md
 
 > System prompt for AI coding agents working in this repository.
@@ -18,32 +39,25 @@
 bun install
 ```
 
-This installs dependencies and runs the `prepare` script, which links the
-config packages' `m`-prefixed CLI bins into `node_modules/.bin`, regenerates
-the root `lefthook.yml` wrapper (from `configs/lefthook/lefthook.yml`) plus
-the installed Lefthook Git hooks, and ensures `.changeset/config.json` exists
-(from `configs/changeset/config.json`).
+This installs dependencies and runs the `prepare` script, which links the config packages' `m`-prefixed CLI bins into `node_modules/.bin`, regenerates the root `lefthook.yml` wrapper (from `configs/lefthook/lefthook.yml`) plus the installed Lefthook Git hooks, and ensures `.changeset/config.json` exists (from `configs/changeset/config.json`).
 
 ## CLI Aliases (m-commands)
 
-All tool invocations use `m`-prefixed aliases that bake in config paths. Each
-config package exposes exactly one `m`-command (with subcommands where needed).
-They are linked into `node_modules/.bin` on install (the root ships zero
-`devDependencies`), so just `bun run <script>` — do not invoke tools directly:
+All tool invocations use `m`-prefixed aliases that bake in config paths. Each config package exposes exactly one `m`-command (with subcommands where needed). They are linked into `node_modules/.bin` on install (the root ships zero `devDependencies`), so just `bun run <script>` — do not invoke tools directly:
 
-| Alias        | Wraps                     | Description                                         |
-| ------------ | ------------------------- | --------------------------------------------------- |
-| `mturbo`     | `turbo`                   | Build orchestration with `turbo.base.json`           |
-| `mbiome`     | `biome`                   | Lint + format with shared config                     |
-| `mbun`       | `bun` + `mturbo coverage` | Bun runtime with `bunfig.toml`; `mbun coverage` merges LCOV |
-| `mbunup`     | `bunup`                   | Package bundler                                      |
-| `mchangeset` | `changeset`               | Versioning + releases; `mchangeset init` ensures config |
-| `mci`        | `actionlint` + `act`      | CI: `mci lint` validates workflows, `mci act` runs locally |
-| `me2e`       | `playwright test`         | E2E with browser detection and auto-skip             |
-| `mskills`    | —                         | AI agent skill management                            |
-| `msetup`     | —                         | Links m-bins, regenerates `lefthook.yml`, hooks     |
-| `mdocs`      | —                         | Regenerates AGENTS.md, README.md, workflows          |
-| `mtsc`       | `tsc`                     | TypeScript type-checking                             |
+| Alias | Wraps | Description |
+| ----- | ----- | ----------- |
+| `mturbo` | `turbo` | Build orchestration with `turbo.base.json` |
+| `mbiome` | `biome` | Lint + format with shared config |
+| `mbun` | `bun` + `mturbo coverage` | Bun runtime with `bunfig.toml`; `mbun coverage` merges LCOV |
+| `mbunup` | `bunup` | Package bundler |
+| `mchangeset` | `changeset` | Versioning + releases; `mchangeset init` ensures config |
+| `mci` | `actionlint` + `act` | CI: `mci lint` validates workflows, `mci act` runs locally |
+| `me2e` | `playwright test` | E2E with browser detection and auto-skip |
+| `mskills` | — | AI agent skill management |
+| `msetup` | — | Links m-bins, regenerates `lefthook.yml`, hooks |
+| `mdocs` | — | Regenerates workflows from `configs/*` |
+| `mtsc` | `tsc` | TypeScript type-checking |
 
 ## Development Commands
 
@@ -53,17 +67,16 @@ bun run build          # Build all packages (Turbo orchestrates dependency order
 bun run typecheck      # Type-check all packages
 bun run test           # Run all unit tests (Turbo runs each package's mbun test)
 bun run test:e2e       # Run Playwright E2E tests (auto-skips if browsers missing)
-bun run coverage       # Collect unit-test coverage (mturbo coverage + merged LCOV at coverage/lcov.info)
+bun run coverage       # Collect unit-test coverage (mbun coverage + merged LCOV)
 bun run check          # Lint and format check (Biome)
 bun run check:fix      # Auto-fix lint and format issues
-bun run ci:lint        # Validate GitHub Actions workflows (actionlint)
+bun run ci:lint        # Validate GitHub Actions workflows (mci lint)
 bun run skills:list    # List available AI agent skills
 bun run skills:sync    # Sync AI agent skills into .agents/skills/
-bun run docs:sync      # Regenerate AGENTS.md, README.md, .github/workflows/ from configs/*
+bun run docs:sync      # Regenerate workflows from configs/* (mdocs)
 ```
 
-The root scripts are clean one-liners backed by the m-commands above. The
-shared tool configs live in `configs/*` and are never re-declared at root.
+The root scripts are clean one-liners backed by the m-commands above. The shared tool configs live in `configs/*` and are never re-declared at root.
 
 ## Package Architecture
 
@@ -73,7 +86,7 @@ apps/example → @myorg/external → (inlines) @myorg/internal
 
 - `@myorg/external`: The **only published package**. Contains the public API.
 - `@myorg/internal`: **Private**. Implementation details inlined into external by Bunup.
-- `configs/*`: **Private**. Shared tooling configurations (see `## Config Sections`).
+- `configs/*`: **Private**. Shared tooling configurations (see Configs section).
 - `apps/example`: **Private**. Bun.serve HTTP demo app. Not bundled.
 
 ### Dependency Rules
@@ -83,36 +96,48 @@ apps/example → @myorg/external → (inlines) @myorg/internal
 3. Apps should only import from `@myorg/external`, not from `@myorg/internal` directly.
 4. All inter-package dependencies use `workspace:*` protocol.
 
-## Config Sections
+## Configs
 
-Each config package owns its docs as `README.md` (developer-facing) plus
-`AGENT.md` (the agent-facing section aggregated into this file). The root
-`AGENTS.md` (and `README.md`) is generated — never hand-edited — by
-`bun run docs:sync`. It writes:
-`configs/AGENT.md` / `configs/README.md` first (intro), then one
-`<!-- AGENT:<dir>:START/END -->` / `<!-- PACKAGE:<dir>:START/END -->` block per
-config in sorted directory order. The workflows in `.github/workflows/` are
-generated the same way: `configs/gh-actions/*.base.yml` skeletons with per-config
-`ci.steps.yml` / `configs/changeset/release.steps.yml` fragments spliced into
-`{{STEPS}}`.
+Tool configs and their agent-facing docs (reference, not concatenated):
 
-Adding a config therefore requires only a new `configs/<dir>/` workspace with
-`package.json`, `AGENT.md`, `README.md`, and, when it should contribute CI
-steps, a `ci.steps.yml`. No central registry exists.
+- [Biome](configs/biome/AGENT.md) — lint and format
+- [Bun Config](configs/bun-config/AGENT.md) — Bun runtime and coverage
+- [Bunup](configs/bunup/AGENT.md) — bundling presets
+- [Changeset](configs/changeset/AGENT.md) — releases
+- [Commitlint](configs/commitlint/AGENT.md) — commit messages
+- [GitHub Actions](configs/gh-actions/AGENT.md) — CI workflow validation and local act
+- [Lefthook](configs/lefthook/AGENT.md) — Git hooks
+<!-- TEMPLATE-ONLY:START(native) -->
+- [Native](configs/native/AGENT.md) — NAPI-RS opt-in
+<!-- TEMPLATE-ONLY:END(native) -->
+<!-- TEMPLATE-ONLY:START(playwright) -->
+- [Playwright](configs/playwright/AGENT.md) — E2E testing
+<!-- TEMPLATE-ONLY:END(playwright) -->
+<!-- TEMPLATE-ONLY:START(skills) -->
+- [Skills](configs/skills/AGENT.md) — AI agent skills, opt-in
+<!-- TEMPLATE-ONLY:END(skills) -->
+<!-- TEMPLATE-ONLY:START(template) -->
+- [Template](configs/template/AGENT.md) — scaffolder, template-only
+<!-- TEMPLATE-ONLY:END(template) -->
+- [TypeScript](configs/ts/AGENT.md) — shared tsconfigs
+- [Turbo](configs/turbo/AGENT.md) — task orchestration
+<!-- TEMPLATE-ONLY:START(unocss) -->
+- [UnoCSS](configs/unocss/AGENT.md) — atomic CSS, opt-in
+<!-- TEMPLATE-ONLY:END(unocss) -->
+
+## Workflows
+
+Workflows in `.github/workflows/` are generated from skeletons in `configs/gh-actions/*.base.yml` with fragments from `configs/*/ci.steps.yml`. Edit skeletons and fragments, then run `bun run docs:sync` (`mdocs`).
 
 ## Code Style
 
-- Biome handles all formatting, linting, and import sorting (see the `biome`
-  config section). There is no root `biome.json`.
+- Biome handles all formatting, linting, and import sorting. There is no root `biome.json`.
 - Run `bun run check:fix` before committing.
 
 ## Testing
 
-- Unit tests use `bun:test` and live in `tests/` directories. They are
-  orchestrated by Turbo (`bun run test` → `mturbo test`); each package runs its
-  own `mbun test`. Playwright e2e specs are excluded because they live in `e2e/`.
-- Do not import `bun:test` in Playwright specs, and do not import
-  `@playwright/test` in unit tests.
+- Unit tests use `bun:test` and live in `tests/` directories. They are orchestrated by Turbo (`bun run test` → `mturbo test`); each package runs its own `mbun test`. Playwright e2e specs are excluded because they live in `e2e/`.
+- Do not import `bun:test` in Playwright specs, and do not import `@playwright/test` in unit tests.
 
 ## Important Rules
 
@@ -120,173 +145,3 @@ steps, a `ci.steps.yml`. No central registry exists.
 - Do not use `export *` in `@myorg/external`. Use explicit named re-exports.
 - Do not commit `node_modules/`, `dist/`, `.turbo/`, or `test-results/`.
 - Do not commit `.env` files. Use `.env.example` as a template.
-
-<!-- AGENT:biome:START -->
-## Lint & Format
-
-- Biome is the only lint/format tool. `mbiome` (from `@myorg/biome`, `configs/biome`) bakes in `--config-path=<configs/biome>`; there is no root `biome.json`.
-- Config (`configs/biome/biome.json`): `recommended` rule preset, unused imports as errors, space indentation (2), 100 column width, double quotes, semicolons, trailing commas, import organizing on.
-- Run `bun run check` to lint+format without writing; `bun run check:fix` to auto-fix. Run `check:fix` before committing.
-- The pre-commit hook reformats staged files automatically (`mbiome check --write {staged_files}`).
-<!-- AGENT:biome:END -->
-
-<!-- AGENT:bun-config:START -->
-## Bun Runtime & Test Coverage
-
-- `@myorg/bun-config` (`configs/bun-config`) owns `bunfig.toml`: coverage on for `bun test`, LCOV + text reporters, `coverage/lcov.info` output, 80% line/function threshold, and ignore patterns for test/bundle/config files.
-- `mbun` is the single bin for this package: wraps `bun` and passes `--config` for `bun test` (other commands pass through); `mbun coverage` runs `mturbo coverage` (Turbo runs every workspace's `coverage` script in dependency order) and merges the per-package LCOV reports into a single root report.
-- `bun run test` → `mturbo test` (Turbo runs each package's `mbun test`; `e2e/` Playwright specs are excluded by the config ignore patterns).
-- `bun run coverage` → `mbun coverage` → `mturbo coverage` + a merged `coverage/lcov.info`.
-- No per-package `bunfig.toml` symlinks; the shared config is always passed explicitly.
-- **Coverage rules**: Bun uses JavaScriptCore, not V8 — never use `NODE_V8_COVERAGE`, `v8.takeCoverage()`, or `Profiler.takePreciseCoverage`. `bun test --coverage` only tracks code executed within the test process; use in-process integration tests for server-side coverage.
-<!-- AGENT:bun-config:END -->
-
-<!-- AGENT:bunup:START -->
-## Bundling
-
-- Library and CLI bundles are built with Bunup through the shared `@myorg/bunup` package (`configs/bunup`).
-- `@myorg/bunup` re-exports Bunup's complete public API (`defineConfig`, `defineWorkspace`, `build`, plus the full set of types). Library packages must import from `@myorg/bunup`, never from `bunup` directly.
-- Presets (spread into `defineConfig()`):
-  - `baseConfig` — ESM output, DTS on, clean builds, Node target, no minification.
-  - `libraryConfig` — `baseConfig` + source maps (for published packages).
-  - `inlinedConfig` — `baseConfig` with DTS off (internal packages inlined into externals).
-  - `cliConfig` — `baseConfig` + minified, Bun target, everything bundled inline.
-- Docs are generated alongside each entry (`dts: true` unless using `inlinedConfig`).
-- Do not modify anything inside `dist/` — output directories are generated by Bunup and are never committed.
-<!-- AGENT:bunup:END -->
-
-<!-- AGENT:changeset:START -->
-## Releases
-
-- This monorepo versions and publishes with Changesets. Config is in `configs/changeset/config.json` (copied to `.changeset/config.json` by `mchangeset init` if missing; never overwritten after that).
-- Only `@myorg/external` is published. Everything else — `@myorg/internal`, all `configs/*`, and `apps/*` — is listed under `ignore`.
-- Create a changeset when you modify `@myorg/external`: new features, bug fixes, breaking changes, or new subpath exports. No changeset needed for private packages, docs, or CI.
-- Workflow:
-  ```
-  bun run changeset   # mchangeset — select external, pick patch/minor/major, write summary
-  ```
-  PRs with `.changeset/*.md` merge to `main`; the Changesets action opens a "Version Packages" PR; merging it runs `bun run release` (`mchangeset publish`) to publish to npm.
-- Manual release: `bun run version` → `bun run build` → `bun run release`.
-<!-- AGENT:changeset:END -->
-
-<!-- AGENT:commitlint:START -->
-## Commit Messages
-
-- Commits must follow Conventional Commits: `feat(external): add user profile`.
-- Config lives in `configs/commitlint/index.js` (validated by the Commit-msg hook via `bunx commitlint --config configs/commitlint/index.js`).
-- Valid scopes: `config`, `internal`, `external`, `example`, `deps`, `release`, `ci`.
-- Valid types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `perf`.
-<!-- AGENT:commitlint:END -->
-
-<!-- AGENT:gh-actions:START -->
-## CI Workflow Validation
-
-- The workflows in `.github/workflows/` are **generated** by `bun run docs:sync`
-  — never hand edited. The skeletons
-  `configs/gh-actions/ci.base.yml` and `release.base.yml` hold the workflow
-  structure plus the shared bootstrap steps (for CI: checkout, setup-bun,
-  `bun install --frozen-lockfile`); their `{{STEPS}}` placeholder is filled from
-  the surviving configs' `ci.steps.yml` fragments (in sorted config-directory
-  order) and, for releases, `configs/changeset/release.steps.yml`.
-- To add CI steps for a tool, create a `ci.steps.yml` fragment in that config
-  package's directory — it is picked up automatically. Then run
-  `bun run docs:sync` and `bun run ci:lint`.
-- `mci` is the single bin for `@myorg/gh-actions`:
-  - `mci lint` (from `configs/gh-actions`) bakes in `-config-file=<configs/gh-actions/actionlint.yaml>`; there is no root config file.
-  - `mci act` wraps `act` (flags baked in, no `.actrc`): `bun run ci:list`, `bun run ci:dry` (`-n`, shows the plan), `bun run ci:local` (runs in Docker; requires `act` + Docker).
-- To simulate other events: `mci act pull_request -n`, `mci act -W .github/workflows/release.yml -n`, `mci act -j actionlint -n`.
-- Secrets are absent locally: pass them per-run (`mci act push -s NPM_TOKEN`) or via an untracked `.secrets` file.
-- The release workflow guards every step with `if: ${{ !env.ACT }}` (step-level `if` only — job-level cannot access the `env` context, and actionlint enforces this) so local `act` runs never publish to npm.
-- Local simulation ≠ GitHub: no OIDC, no environments, limited `GITHUB_TOKEN`. The real CI run is authoritative.
-- Run `bun run ci:lint` after regenerating a workflow.
-<!-- AGENT:gh-actions:END -->
-
-<!-- AGENT:lefthook:START -->
-## Git Hooks
-
-- Lefthook is configured in `configs/lefthook/lefthook.yml`; the root `lefthook.yml` is a two-line wrapper that `extends:` it (regenerated on every install so a renamed scope still resolves).
-- `msetup` (from `@myorg/lefthook`) regenerates the wrapper, links the config packages' `m`-prefixed bins into `node_modules/.bin`, and installs the hooks. The root `prepare` script invokes it directly (`bun configs/lefthook/setup.ts lefthook`) — the root ships zero `devDependencies`, so no bin is linked until `prepare` runs.
-- Pre-commit: Biome formats staged files (`mbiome check --write {staged_files}`), and `actionlint` validates workflow files when they are staged.
-- Commit-msg: `commitlint` validates Conventional Commits against `configs/commitlint/index.js`.
-<!-- AGENT:lefthook:END -->
-
-<!-- AGENT:native:START -->
-## Native Bindings (NAPI-RS)
-
-- `@myorg/native` (`configs/native`) is the opt-in NAPI-RS config: a `select`
-  prompt (`none` / `publish` / `docker`) decides whether a project keeps
-  native bindings at all.
-- Selection is metadata-driven and defaults to `none`; the scaffolder keeps or
-  prunes the config and its artifacts according to the choice.
-- `@napi-rs/cli` is the only devDependency here so the toolchain is available
-  to generated projects that opt in.
-<!-- AGENT:native:END -->
-
-<!-- AGENT:playwright:START -->
-## E2E Testing
-
-- E2E tests use Playwright and live in `e2e/` directories. The spec lives in `apps/example/e2e/` and is configured in `apps/example/playwright.config.ts`.
-- `me2e` (from `@myorg/playwright`, `configs/playwright`) runs `playwright test` against the app config from the repository root — no flags needed.
-- `me2e` auto-skips (exit 0) when no browser is installed; install browsers once with `bunx playwright install`.
-- Run with `bun run test:e2e` (Turbo runs every workspace's `test:e2e`).
-- Playwright's `page.coverage` captures Chromium V8 coverage only — it never reaches into Bun's JSC runtime; merge coverage at the LCOV layer only.
-- Do not `import "bun:test"` in Playwright specs, and do not `import "@playwright/test"` in unit tests.
-<!-- AGENT:playwright:END -->
-
-<!-- AGENT:skills:START -->
-## AI Agent Skills
-
-- Modular skill files ship in `configs/skills/skills/` and are installed into `.agents/skills/` (gitignored) by `mskills` (from `@myorg/skills`).
-- `bun run skills:sync` copies skills into `.agents/skills/`; `bun run skills:list` prints what is available.
-- Treat `configs/skills/skills/` as the source of truth — never edit files inside `.agents/` directly.
-- Skills supplement this AGENTS.md with tool-specific knowledge.
-- This config is opt-in: it is pruned (and the `skills:sync`/`skills:list` scripts removed) unless selected during scaffolding.
-<!-- AGENT:skills:END -->
-
-<!-- AGENT:template:START -->
-## Scaffolding (Template Development Only)
-
-- The `configs/template/` workspace turns this repo into a reusable monorepo template. `bun create <user>/<repo> my-app` runs `bun-create.preinstall` (`bun configs/template/dist/index.js` — the committed bundle), which scaffolds a project (replaces `@myorg` scope, strips `TEMPLATE-ONLY` blocks, removes template-only files, prunes opt-in configs, regenerates docs and workflows from the survivors, initializes Git) *before* `bun install`, so only what survives gets installed. Lefthook hooks are installed by the root `prepare` script during that `bun install`. Regular `bun install` in this repo does **not** trigger scaffolding.
-- The scaffolder is **data-driven**: `discoverConfigs()` (in `configs/template/src/configs.ts`) scans every `configs/*/package.json` for a `scaffold` metadata field (`default`, `flag`, `prompt`, `type: "confirm" | "select"`, `options`, `removals`, `scriptsToRemove`, `setup`, `selfDestruct`). Configs with `"default": "always"` are always kept — except `selfDestruct` ones (the template itself), which are always removed. No config is hardcoded in the scaffolder.
-- After pruning, the scaffolder calls `regenerateDocs()` (root `AGENTS.md` + `README.md`) and `regenerateCI()` (`.github/workflows/*.yml`) by re-running the discovery-driven aggregation, so a generated project only contains sections and CI steps for the configs that survived.
-- `configs/template/` is a first-class Bun workspace (`@myorg/template`). `@clack/prompts` is a real devDependency there. Its `build` script (`bun build ./src/index.ts --outdir ./dist --target bun --packages bundle --minify`) produces the **committed** `configs/template/dist/index.js` bundle. Regenerate with `bun run --filter @myorg/template build` whenever the scaffolder sources change.
-- Sources: `src/index.ts` (CLI entry), `src/collector.ts` (`OptionsCollector` — Clack prompts, marker-based repo-root discovery), `src/scaffolder.ts` (`MonorepoScaffolder` — engine), `src/configs.ts` (`discoverConfigs`), `src/harness.ts` (`TemplateHarness` — full-pipeline integration helper using `BUN_CREATE_DIR`), `src/aggregate.ts` (`bun run docs:sync` — regenerates AGENTS.md, README.md, and `.github/workflows/` from `configs/*`; also imported by the scaffolder for post-prune regeneration). All tests live in `tests/`: unit suites per source file plus the full-pipeline integration suite in `tests/index.test.ts`.
-- Root `prepare` links the m-command bins and regenerates `lefthook.yml` (`configs/lefthook/setup.ts`) and `.changeset/config.json` (`configs/changeset/init.ts`) instead of committing generated state.
-- The scaffolder uses only Bun-native APIs in the bundle (`Bun.file`, `Bun.write`, `Bun.$`) — no external runtime deps (they are bundled with `--packages bundle`).
-- Run `bun run docs:sync` after editing config docs or workflow skeletons, and `bun run ci:lint` after regenerating workflows.
-<!-- AGENT:template:END -->
-
-<!-- AGENT:ts:START -->
-## TypeScript Configuration
-
-- Shared tsconfigs live in `configs/ts` under the `@myorg/ts` workspace package (`base.json`, `library.json`, `app.json`).
-- `@myorg/ts` hosts the `typescript` and `@types/bun` devDependencies so individual packages never declare them.
-- Library packages extend `@myorg/ts/library.json` (`--declaration` + source maps); apps extend `@myorg/ts/app.json` (`noEmit` + `"types": ["bun"]`); both extend `base.json`.
-- All package tsconfigs must include `"types": ["bun"]` (required for TS 7.x).
-- Path aliases `@src/*` and `@tests/*` are defined per-package (never in the shared configs).
-- Never use `baseUrl` — it was removed in TypeScript 7.0 (TS5102).
-- Type-check with `bun run typecheck` (per-package `tsc --noEmit`, orchestrated by Turbo).
-<!-- AGENT:ts:END -->
-
-<!-- AGENT:turbo:START -->
-## Build Orchestration
-
-- `mturbo` (from `@myorg/turbo`, `configs/turbo`) wraps Turbo and bakes in `--root-turbo-json=<configs/turbo/turbo.base.json>`; there is no root-level `turbo.json`.
-- Root scripts (`dev`, `build`, `test`, `test:e2e`, `typecheck`, and `coverage` via `mbun coverage`) delegate to `mturbo`, so Turbo infers inter-package dependency order automatically.
-- Do not add `turbo` to individual package devDependencies — it is owned by `@myorg/turbo` and hoisted from there.
-<!-- AGENT:turbo:END -->
-
-<!-- AGENT:unocss:START -->
-## UnoCSS Styling
-
-- `@myorg/unocss` (`configs/unocss`) is the opt-in UnoCSS styling config.
-  Apps spread `baseConfig` from `@myorg/unocss` into their own
-  `defineConfig()`.
-- `baseConfig` ships `presetWind3`, `transformerDirectives`,
-  `transformerVariantGroup`, a `brand` color palette, and the `btn-primary` /
-  `card` shortcuts.
-- The scaffolder's `removals` metadata handles the disabled case: it removes
-  the shared `uno.config.ts` and the `unocss` / `@unocss/reset` app
-  dependencies.
-<!-- AGENT:unocss:END -->
-

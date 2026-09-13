@@ -137,11 +137,13 @@ describe("Scaffolder integration", () => {
       expect(await pathExists(`${result.templateDir}/configs/turbo`)).toBe(true);
 
       // Docs and workflows reflect the pruned set: e2e steps disappear with
-      // Playwright, actionlint/lint steps stay.
+      // Playwright, actionlint/lint steps stay. AGENTS.md is now reference-based.
       const agentsMd = await file(`${result.templateDir}/AGENTS.md`).text();
-      expect(agentsMd).not.toContain("## E2E Testing");
-      expect(agentsMd).not.toContain("## AI Agent Skills");
-      expect(agentsMd).toContain("## Lint & Format");
+      expect(agentsMd).not.toContain("configs/playwright/AGENT.md");
+      expect(agentsMd).not.toContain("configs/skills/AGENT.md");
+      expect(agentsMd).not.toContain("configs/unocss/AGENT.md");
+      expect(agentsMd).not.toContain("configs/native/AGENT.md");
+      expect(agentsMd).toContain("configs/biome/AGENT.md");
 
       const ciYml = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
       expect(ciYml).not.toContain("test:e2e");

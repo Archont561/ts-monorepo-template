@@ -1,58 +1,24 @@
-# @myorg/external
+# Configs
 
-A TypeScript library monorepo built with Bun, Turborepo, and Bunup.
+Shared tooling configurations for the monorepo. Each sub-directory is a private workspace that owns one tool's config and exposes a single `m`-prefixed CLI bin.
 
-## Quick Start
+## Packages
 
-```bash
-bun install
-bun run dev
-```
+- [Biome](biome/README.md) — lint and format (`mbiome`)
+- [Bun Config](bun-config/README.md) — Bun runtime, test, coverage (`mbun`)
+- [Bunup](bunup/README.md) — bundling presets (`mbunup`)
+- [Changeset](changeset/README.md) — versioning and releases (`mchangeset`)
+- [Commitlint](commitlint/README.md) — Conventional Commits
+- [GitHub Actions](gh-actions/README.md) — CI workflows, `mci lint` / `mci act`
+- [Lefthook](lefthook/README.md) — Git hooks (`msetup`)
+- [Native](native/README.md) — NAPI-RS bindings, opt-in
+- [Playwright](playwright/README.md) — E2E testing (`me2e`)
+- [Skills](skills/README.md) — AI agent skills, opt-in (`mskills`)
+- [Template](template/README.md) — scaffolder, template-only (`mdocs`)
+- [TypeScript](ts/README.md) — shared tsconfigs (`mtsc`)
+- [Turbo](turbo/README.md) — task orchestration (`mturbo`)
+- [UnoCSS](unocss/README.md) — atomic CSS, opt-in
 
-The example server starts at [http://localhost:3000](http://localhost:3000).
+All bins are linked into `node_modules/.bin` on `bun install`. Root `README.md` and `AGENTS.md` reference these files instead of concatenating them.
 
-## Commands
-
-| Command | Description |
-| ------- | ----------- |
-| `bun run dev` | Start all packages in watch mode (Turbo) |
-| `bun run build` | Build all packages (Turbo orchestrated) |
-| `bun run test` | Run all unit tests (Turbo orchestrates per-package `mbun test`) |
-| `bun run test:e2e` | Run Playwright E2E tests (auto-skips if browsers missing) |
-| `bun run coverage` | Collect unit-test coverage (merged LCOV at coverage/lcov.info) |
-| `bun run typecheck` | Type-check all packages |
-| `bun run check` | Lint and format check (Biome) |
-| `bun run check:fix` | Auto-fix lint and format issues |
-| `bun run ci:lint` | Validate GitHub Actions workflows (actionlint) |
-| `bun run ci:list` | List `act` jobs |
-| `bun run ci:dry` | Dry-run CI locally (`act -n`) |
-| `bun run ci:local` | Run CI locally in Docker (`act`) |
-| `bun run skills:list` | List available AI agent skills |
-| `bun run skills:sync` | Sync AI agent skills into `.agents/skills/` |
-
-## Project Structure
-
-```
-apps/
-  example/          Bun.serve HTTP server
-configs/
-  <tool>/           One workspace per shared tool config (see sections below)
-  AGENT.md          Intro for AGENTS.md (aggregated)
-  README.md         This intro (aggregated into the root README.md)
-packages/
-  external/         Public library (published to npm)
-  internal/         Private implementation (inlined into external)
-```
-
-Every tool config lives in its own `configs/*` package and is reached through
-`m`-prefixed CLI aliases (`mturbo`, `mbiome`, `mbun`, ...) that bake in the
-config paths; there are no root tool-config files (`turbo.json`,
-`biome.json`, `bunfig.toml`, etc.) and the root ships zero `devDependencies`.
-
-The root `README.md`, `AGENTS.md`, and the workflows in `.github/workflows/` are
-generated from these `configs/*` packages by `bun run docs:sync` — do not edit
-them by hand.
-
-## License
-
-[MIT](LICENSE.md)
+Workflows in `.github/workflows/` are generated from `gh-actions/*.base.yml` skeletons with fragments from `*/ci.steps.yml` via `bun run docs:sync`.
