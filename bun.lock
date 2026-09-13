@@ -30,8 +30,10 @@
         "@myorg/external": "workspace:*",
       },
       "devDependencies": {
+        "@myorg/native": "workspace:*",
         "@myorg/playwright": "workspace:*",
         "@myorg/ts": "workspace:*",
+        "@myorg/unocss": "workspace:*",
       },
     },
     "configs/biome": {

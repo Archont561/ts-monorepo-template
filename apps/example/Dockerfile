@@ -2,7 +2,7 @@
 # Production-ready Dockerfile for @myorg/example
 # Follows guide: pinned tags, multi-stage, layer caching, non-root, exec form, HEALTHCHECK, OCI labels, BuildKit cache
 
-ARG BUN_VERSION=1.3.11
+ARG BUN_VERSION=1.4.2
 ARG RUST_VERSION=1.84
 
 # -----------------------------------------------------------------------------

@@ -33,7 +33,7 @@ bun run build:css        # generate public/uno.css (when unocss enabled)
 
 ## Docker
 
-Production-ready multi-stage Dockerfile (pinned `oven/bun:1.3.11`, non-root, HEALTHCHECK, OCI labels, BuildKit cache).
+Production-ready multi-stage Dockerfile (pinned `oven/bun:1.4.2`, non-root, HEALTHCHECK, OCI labels, BuildKit cache).
 
 ```bash
 # Build from monorepo root (context = root, Dockerfile = apps/example/Dockerfile)
@@ -52,7 +52,7 @@ docker run -p 3000:3000 example:latest
 # - deps stage (bun install --frozen-lockfile with --mount=type=cache)
 # - builder stage (UnoCSS + cargo check + bun run build:native)
 # - rust-builder stage (rust:1.84-bookworm + bun, cargo build --release + napi build)
-# - runner stage (oven/bun:1.3.11-alpine, non-root app user, HEALTHCHECK)
+# - runner stage (oven/bun:1.4.2-alpine, non-root app user, HEALTHCHECK)
 
 # BuildKit secrets (never baked into layers)
 docker build --secret id=npmrc,src=.npmrc -f apps/example/Dockerfile -t example:latest .
@@ -67,11 +67,11 @@ docker run --rm -p 3000:3000 example:latest
 
 Dockerfile layers (least→most frequently changing for cache):
 
-1. `base` - `oven/bun:1.3.11` + WORKDIR
+1. `base` - `oven/bun:1.4.2` + WORKDIR
 2. `deps` - copy package.json/bun.lock + workspace manifests, `bun install` with cache mount
 3. `builder` - copy source, build UnoCSS if enabled, `cargo check` + `build:native` if Cargo exists, `bun run build`
 4. `rust-builder` - `rust:1.84-bookworm` + bun, builds native `.node` artifacts (for `native=docker` option)
-5. `runner` - `oven/bun:1.3.11-alpine`, non-root `app`, OCI labels, copies from builder/rust-builder, `HEALTHCHECK`, `CMD ["bun", "run", "apps/example/src/index.ts"]`
+5. `runner` - `oven/bun:1.4.2-alpine`, non-root `app`, OCI labels, copies from builder/rust-builder, `HEALTHCHECK`, `CMD ["bun", "run", "apps/example/src/index.ts"]`
 
 `.dockerignore` excludes `node_modules`, `target`, `*.node`, `.git`, `dist`, etc. for fast context.
 

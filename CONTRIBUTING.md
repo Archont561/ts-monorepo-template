@@ -2,12 +2,12 @@
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) `1.3.11` (pinned in `package.json` as `packageManager`).
+- [Bun](https://bun.sh) `1.4.2` (pinned in `package.json` as `packageManager`).
   This repo's `bun.lock` uses `configVersion: 1`, which selects Bun's
-  **isolated** linker. On Bun 1.3.11/Linux the isolated linker hits
-  [oven-sh/bun#27110](https://github.com/oven-sh/bun/issues/27110): `bun install`
-  populates `node_modules/.bun` but creates **no top-level symlinks**, so nothing
-  is runnable. The root `bunfig.toml` works around this with `linker = "hoisted"`.
+  **isolated** linker (default in 1.4.2). Previously on Bun 1.3.11/Linux the isolated
+  linker hit [oven-sh/bun#27110](https://github.com/oven-sh/bun/issues/27110):
+  `bun install` populated `node_modules/.bun` but created **no top-level symlinks**.
+  The root `bunfig.toml` now uses `linker = "isolated"` (verified working in 1.4.2).
 
 ## Getting started
 

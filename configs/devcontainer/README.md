@@ -5,7 +5,7 @@
 ## What it provides
 
 - `.devcontainer/devcontainer.json` at repo root (pinned base image, pinned feature versions)
-- Features: Node 22, Bun 1.3.11, Rust stable, GitHub CLI, Docker-in-Docker
+- Features: Node 22, Bun 1.4.2, Rust stable, GitHub CLI, Docker-in-Docker
 - `postCreateCommand` for one-time `bun install`, `postStartCommand` optional
 - `forwardPorts` for dev server (3000)
 - `customizations.vscode` extensions for Bun, Biome, etc.
@@ -79,7 +79,7 @@ bun run dev   # → http://localhost:3000 forwarded
 | :--- | :--- | :--- |
 | `name` | Display name | `my-bun-monorepo` (replaced with scope) |
 | `image` | Base Docker image | `mcr.microsoft.com/devcontainers/base:1.2.1-ubuntu-22.04` pinned |
-| `features` | Runtimes/tools | Node 22, Bun 1.3.11, Rust stable, gh-cli, docker-in-docker — all pinned |
+| `features` | Runtimes/tools | Node 22, Bun 1.4.2, Rust stable, gh-cli, docker-in-docker — all pinned |
 | `postCreateCommand` | Once after create | `bun install` + Rust target add |
 | `forwardPorts` | Auto-forward | `[3000]` for example app |
 | `remoteUser` | User inside container | `vscode` |
@@ -96,7 +96,7 @@ bun run dev   # → http://localhost:3000 forwarded
   "image": "mcr.microsoft.com/devcontainers/base:1.2.1-ubuntu-22.04",
   "features": {
     "ghcr.io/devcontainers/features/node:1": { "version": "22.13.1" },
-    "ghcr.io/devcontainers/features/bun:1": { "version": "1.3.11" },
+    "ghcr.io/devcontainers/features/bun:1": { "version": "1.4.2" },
     "ghcr.io/devcontainers/features/rust:1": { "version": "stable" },
     "ghcr.io/devcontainers/features/github-cli:1": { "version": "2.74.2" },
     "ghcr.io/devcontainers/features/docker-in-docker:2": { "version": "2.12.0" }
