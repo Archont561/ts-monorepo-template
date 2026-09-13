@@ -251,7 +251,7 @@ Tool configs and their agent-facing docs (reference, not concatenated):
 ## Workflows
 
 > [!NOTE]
-> Workflows in `.github/workflows/` are generated from skeletons in `configs/gh-actions/*.base.yml` with fragments from `configs/*/*.steps.yml` + `dependabot.yml` fragments → `.github/dependabot.yml`. Edit skeletons and fragments, then run `bun run docs:sync` (`mdocs`).
+> Workflows in `.github/workflows/` are generated from skeletons in `configs/*/*.base.yml` with fragments from `configs/*/*.steps.yml` + `dependabot.yml` fragments → `.github/dependabot.yml`. Edit skeletons and fragments, then run `bun run docs:sync` (`mdocs`). `template-docs.yml` is template-only static file (docs/ → Pages) removed on scaffold.
 
 ```mermaid
 stateDiagram-v2

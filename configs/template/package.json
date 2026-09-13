@@ -8,7 +8,25 @@
     "selfDestruct": true,
     "scriptsToRemove": [
       "docs:sync"
-    ]
+    ],
+    "removals": {
+      "always": {
+        "extraRemovals": [
+          "docs",
+          ".github/workflows/template-docs.yml",
+          "apps/template-docs"
+        ],
+        "filePatternsToRemove": [
+          "**/template-docs.yml",
+          "**/template-docs/**",
+          "**/docs/**"
+        ],
+        "fileRegexesToRemove": [
+          "template-docs",
+          "^docs/"
+        ]
+      }
+    }
   },
   "bin": {
     "mdocs": "./src/docs.ts"

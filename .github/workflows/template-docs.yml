@@ -1,0 +1,58 @@
+# TEMPLATE-ONLY:START(template)
+# Template-only docs Pages — deploys docs/ to GitHub Pages
+# Removed during scaffolding via configs/template extraRemovals
+# This is separate from configs/pages/pages.yml (which deploys apps/example)
+# For template repo: docs/ is static template documentation
+# For generated monorepos: this file is removed, pages.yml is used if opt-in
+name: Template Docs
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "docs/**"
+      - ".github/workflows/template-docs.yml"
+      - "README.md"
+      - "AGENTS.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "template-docs"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      # No build step — docs/index.html is static
+      # If using VitePress, add:
+      # - uses: oven-sh/setup-bun@v2
+      # - run: bun install && bunx vitepress build docs
+      #   then path: docs/.vitepress/dist
+
+      - name: Upload template docs artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./docs"
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+# TEMPLATE-ONLY:END(template)

@@ -63,6 +63,8 @@ const COMMON_CASES: TemplateCase[] = [
         "configs/stale",
         "apps/example/src/pages/api/native",
         "apps/example/e2e",
+        "docs",
+        ".github/workflows/template-docs.yml",
       ],
       hasFiles: [
         "configs/biome",
@@ -334,6 +336,16 @@ describe("template cases — common flows with every combination", () => {
         // 1. No leaks — actual markers, not doc mentions
         const leaks = await scanForLeaks(result.templateDir);
         expect(leaks, `Leaks in ${c.name}: ${leaks.join(", ")}`).toEqual([]);
+
+        // 1b. Template-only docs removed
+        expect(
+          await pathExists(`${result.templateDir}/docs`),
+          `docs/ should be removed in ${c.name}`,
+        ).toBe(false);
+        expect(
+          await pathExists(`${result.templateDir}/.github/workflows/template-docs.yml`),
+          `template-docs.yml should be removed in ${c.name}`,
+        ).toBe(false);
 
         // 2. Scope replaced in key packages
         if (await pathExists(`${result.templateDir}/packages/internal/package.json`)) {

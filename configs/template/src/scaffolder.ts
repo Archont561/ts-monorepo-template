@@ -262,13 +262,42 @@ export class MonorepoScaffolder {
   /**
    * Resolves which removals apply for the selected value of a config.
    * Select-type configs map values to per-value removal sets.
+   * Merges top-level removals (ScaffoldMeta extends ScaffoldRemovals) with
+   * per-value removals so both are honored (e.g. template self-destruct has
+   * top-level scriptsToRemove + per-value extraRemovals).
    */
   private removalsFor(meta: ScaffoldMeta, selected: boolean | string): ScaffoldRemovals {
+    const base: ScaffoldRemovals = {
+      extraRemovals: meta.extraRemovals,
+      scriptsToRemove: meta.scriptsToRemove,
+      turboTasksToRemove: meta.turboTasksToRemove,
+      appDepsToRemove: meta.appDepsToRemove,
+      filePatternsToRemove: meta.filePatternsToRemove,
+      fileRegexesToRemove: meta.fileRegexesToRemove,
+    };
     if (meta.removals) {
       const perValue = meta.removals[String(selected)];
-      if (perValue) return perValue;
+      if (perValue) {
+        return {
+          extraRemovals: [...(base.extraRemovals ?? []), ...(perValue.extraRemovals ?? [])],
+          scriptsToRemove: [...(base.scriptsToRemove ?? []), ...(perValue.scriptsToRemove ?? [])],
+          turboTasksToRemove: [
+            ...(base.turboTasksToRemove ?? []),
+            ...(perValue.turboTasksToRemove ?? []),
+          ],
+          appDepsToRemove: [...(base.appDepsToRemove ?? []), ...(perValue.appDepsToRemove ?? [])],
+          filePatternsToRemove: [
+            ...(base.filePatternsToRemove ?? []),
+            ...(perValue.filePatternsToRemove ?? []),
+          ],
+          fileRegexesToRemove: [
+            ...(base.fileRegexesToRemove ?? []),
+            ...(perValue.fileRegexesToRemove ?? []),
+          ],
+        };
+      }
     }
-    return meta;
+    return base;
   }
 
   /**

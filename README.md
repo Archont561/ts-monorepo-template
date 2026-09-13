@@ -46,13 +46,23 @@ During scaffolding you will be prompted for:
 
 - Replaces `@myorg` with your scope in `package.json`, `tsconfig.json`, `config.json`
 - Strips `TEMPLATE-ONLY` blocks (`<!-- TEMPLATE-ONLY:START(...) -->`)
-- Removes template-only files (`configs/template/`, `docs:sync` script)
-- Prunes disabled opt-in configs (`playwright`, `unocss`, `native`, `skills`, `devcontainer`, `pages`)
-- Regenerates CI workflows from survivors (`configs/gh-actions/*.base.yml` + `*/*.steps.yml`)
+- Removes template-only files (`configs/template/`, `docs/`, `docs:sync` script, `template-docs.yml`)
+- Prunes disabled opt-in configs (`playwright`, `unocss`, `native`, `skills`, `devcontainer`, `pages`, `codeql`, `trivy`, `stale`)
+- Regenerates CI workflows from survivors (`configs/*/*.base.yml` + `*/*.steps.yml`)
 
 </details>
 
 After scaffolding, this README will describe your monorepo (see below).
+
+#### Template-only GitHub Pages docs
+
+This template ships a **template-only** static docs site in `docs/` (landing page + config matrix) deployed via `.github/workflows/template-docs.yml` to GitHub Pages. It's **removed** during `bun create` via `configs/template` `extraRemovals: ["docs", ".github/workflows/template-docs.yml"]`, so generated monorepos use `configs/pages` → `pages.yml` for `apps/example` instead.
+
+To add your own template-only docs page:
+1. Put static files in `docs/` (or `docs/.vitepress/` for VitePress)
+2. Keep workflow `template-docs.yml` template-only (wrapped in `# TEMPLATE-ONLY:START(template)` or removed via `extraRemovals`)
+3. Enable Pages: Settings → Pages → Source: GitHub Actions
+4. Push to `main` — workflow uploads `docs/` artifact and deploys
 
 ---
 
@@ -169,7 +179,10 @@ configs/
 
 ```
 configs/
-  template/         Scaffolder (mdocs)
+  template/         Scaffolder (mdocs) — self-destruct
+docs/               Template-only static docs (GitHub Pages) — removed via extraRemovals
+.github/workflows/
+  template-docs.yml Template-only Pages workflow for docs/ — removed
 ```
 
 </details>
@@ -276,7 +289,9 @@ See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](
 | `bun run skills:sync` | Sync curated → vendored + validate + index |
 | `bun run skills:add <pkg>` | Add skill via skills.sh |
 | `bun run skills:update` | Update skills via skills.sh |
-| `bun run docs:sync` | Regenerate workflows from `configs/*` (`mdocs`) |
+<!-- TEMPLATE-ONLY:START(template) -->
+| `bun run docs:sync` | Regenerate workflows from `configs/*` (`mdocs`) — template-only |
+<!-- TEMPLATE-ONLY:END(template) -->
 
 ### Agent Skills (skills.sh)
 
@@ -294,13 +309,13 @@ Skills live in: `.agents/skills/` — each is a folder containing `SKILL.md` wit
 ## Workflows
 
 > [!TIP]
-> Workflows in `.github/workflows/` are generated from skeletons in `configs/gh-actions/*.base.yml` with fragments from `configs/*/*.steps.yml`. Edit the skeletons and fragments, then run `bun run docs:sync`.
+> Workflows in `.github/workflows/` are generated from skeletons in `configs/*/*.base.yml` with fragments from `configs/*/*.steps.yml`. Edit the skeletons and fragments, then run `bun run docs:sync` (template repo) to regenerate.
 
 ```mermaid
 sequenceDiagram
     participant Dev as Developer
     participant Config as "configs/*/*.steps.yml"
-    participant Base as "gh-actions/*.base.yml"
+    participant Base as "configs/*/*.base.yml"
     participant Mdocs as "mdocs (aggregate.ts)"
     participant GH as ".github/workflows/*.yml"
 
@@ -309,7 +324,7 @@ sequenceDiagram
     Dev->>Mdocs: bun run docs:sync
     Mdocs->>Base: Read skeletons
     Mdocs->>Config: Collect fragments
-    Mdocs->>GH: Generate ci.yml + release.yml + pages.yml
+    Mdocs->>GH: Generate ci.yml + release.yml + pages.yml + ...
     GH-->>Dev: Ready for CI
 ```
 
@@ -322,6 +337,10 @@ sequenceDiagram
 - `coverage.yml` — generated from `coverage.base.yml` + all `coverage.steps.yml` (standalone coverage Pages site) — only when Pages **disabled**, otherwise coverage is in `pages.yml`
 - `dependabot.yml` — generated from `dependabot.base.yml` + all `dependabot.yml` fragments (npm, cargo, actions, docker)
 - `dependabot-auto-merge.yml` — generated from `dependabot-auto-merge.base.yml` + `dependabot-auto-merge.steps.yml` (auto-merge patch/minor)
+- `stale.yml` — generated from `stale.base.yml` + `stale.steps.yml` (opt-in)
+<!-- TEMPLATE-ONLY:START(template) -->
+- `template-docs.yml` — **template-only**, static (not generated), deploys `docs/` to Pages, removed on scaffold
+<!-- TEMPLATE-ONLY:END(template) -->
 - Fragments are discovered via `discoverConfigs()` scanning `configs/*/package.json` `scaffold` metadata
 
 </details>
