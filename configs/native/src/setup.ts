@@ -1,6 +1,10 @@
 #!/usr/bin/env bun
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { $, file, spawnSync } from "bun";
+// Setup scripts run inside a freshly copied project, before `bun install`, so
+// they cannot resolve workspace packages by name — the shared editor is
+// imported by path, and `configs/manifest` is an always-on config.
 import {
   addJsonArrayValue,
   readJson,
@@ -8,8 +12,7 @@ import {
   setJsonBlock,
   setJsonValue,
   updateManifestFile,
-} from "@myorg/manifest";
-import { $, file, spawnSync } from "bun";
+} from "../../manifest/src/index.ts";
 import {
   DEFAULT_NATIVE_CRATES,
   DEFAULT_NATIVE_SCOPE,

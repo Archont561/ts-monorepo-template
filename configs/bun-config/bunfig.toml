@@ -22,6 +22,10 @@ coveragePathIgnorePatterns = [
   "**/src/harness.ts",
   "**/src/aggregate.ts",
   "**/src/setup.ts",
+  # Shared code lives in its own config and is covered by its own package run:
+  # a `../manifest/src/index.ts` import would otherwise be judged by whichever
+  # package happens to import it.
+  "**/manifest/src/index.ts",
   "**/*.node",
   "**/*.wasi.cjs",
   "**/target/**",

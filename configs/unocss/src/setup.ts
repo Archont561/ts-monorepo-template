@@ -1,7 +1,15 @@
 #!/usr/bin/env bun
 import { join } from "node:path";
-import { readJson, removeJsonEntry, setJsonValue, updateManifestFile } from "@myorg/manifest";
 import { $, file } from "bun";
+// Setup scripts run inside a freshly copied project, before `bun install`, so
+// they cannot resolve workspace packages by name — the shared editor is
+// imported by path, and `configs/manifest` is an always-on config.
+import {
+  readJson,
+  removeJsonEntry,
+  setJsonValue,
+  updateManifestFile,
+} from "../../manifest/src/index.ts";
 
 /**
  * Setup script for UnoCSS — run when unocss config is enabled.
