@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { $, file } from "bun";
+import { $, file, spawnSync } from "bun";
 
 /**
  * Setup script for native bindings — run when native config is enabled (publish/docker).
@@ -26,7 +26,10 @@ import { $, file } from "bun";
  */
 
 const TARGET_DIR = process.cwd();
+/** Rewritten by the scaffolder (and by CI/local git) — never a real repo. */
+const REPO_PLACEHOLDER = "Archont561/ts-monorepo-template";
 const NATIVE_DIR = join(TARGET_DIR, "packages/native");
+const REPO_URL = repositoryUrl();
 
 async function exists(path: string): Promise<boolean> {
   return (
@@ -36,6 +39,28 @@ async function exists(path: string): Promise<boolean> {
       .quiet()
       .then((r) => r.exitCode === 0))
   );
+}
+
+/**
+ * Repository URL for the generated Cargo.toml.
+ *
+ * Prefers the repo Actions is running in, then the local git remote, so a
+ * project never inherits the template's URL. Falls back to an obvious
+ * placeholder the scaffolder rewrites.
+ */
+function repositoryUrl(): string {
+  const fromEnv = process.env.GITHUB_REPOSITORY;
+  if (fromEnv) return `https://github.com/${fromEnv}`;
+
+  const remote = spawnSync(["git", "config", "--get", "remote.origin.url"], { stdout: "pipe" })
+    .stdout?.toString()
+    .trim();
+  if (remote) {
+    const match = remote.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
+    if (match) return `https://github.com/${match[1]}/${match[2]}`;
+  }
+
+  return `https://github.com/${REPO_PLACEHOLDER}`;
 }
 
 async function main() {
@@ -60,7 +85,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Native Rust bindings for ${scope}/external — napi-rs with WASM fallback"
 license = "MIT"
-repository = "https://github.com/Archont561/ts-monorepo-template"
+repository = "${REPO_URL}"
 
 [lib]
 crate-type = ["cdylib"]
@@ -126,7 +151,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Native Rust bindings — napi-rs with WASM fallback"
 license = "MIT"
-repository = "https://github.com/Archont561/ts-monorepo-template"
+repository = "${REPO_URL}"
 
 [lib]
 crate-type = ["cdylib"]

@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { $, file, write } from "bun";
+import { $, file, spawnSync, write } from "bun";
 import { aggregateWorkflow } from "./aggregate";
 import type { ScaffoldMeta, ScaffoldRemovals } from "./configs";
 import { discoverConfigs } from "./configs";
@@ -8,9 +8,18 @@ export interface ScaffolderOptions {
   targetDir?: string;
   scope?: string;
   gitHooks?: boolean;
+  /** GitHub owner used for badge, Cargo and CODEOWNERS URLs. */
+  owner?: string;
+  /** Repository name used for badge, Cargo and Pages URLs. */
+  repo?: string;
   /** Flag -> selected value for opt-in configs (from scaffold metadata). */
   configs?: Record<string, boolean | string>;
 }
+
+/** Identity that badge/Cargo/Pages URLs are rewritten to. */
+export const IDENTITY_PLACEHOLDER = { owner: "Archont561", repo: "ts-monorepo-template" } as const;
+/** Used when no owner can be resolved — never a wrong repo, obviously a TODO. */
+const UNKNOWN_OWNER = "OWNER";
 
 const FILES_TO_REMOVE: string[] = ["tests/template.test.ts"];
 
@@ -35,6 +44,8 @@ export class MonorepoScaffolder {
   readonly targetDir: string;
   readonly scope: string;
   readonly gitHooks: boolean;
+  readonly owner: string;
+  readonly repo: string;
   readonly configs: Record<string, boolean | string>;
   private readonly placeholder = "@myorg";
   private disabledScopes = new Set<string>(["template"]);
@@ -43,6 +54,8 @@ export class MonorepoScaffolder {
     this.targetDir = options.targetDir ?? ".";
     this.scope = options.scope ?? "@myorg";
     this.gitHooks = options.gitHooks ?? true;
+    this.owner = options.owner ?? resolveOwner();
+    this.repo = options.repo ?? resolveRepo(this.targetDir);
     this.configs = options.configs ?? {};
   }
 
@@ -250,11 +263,40 @@ export class MonorepoScaffolder {
 
       if (await target.exists()) {
         const content = await target.text();
-        if (content.includes(this.placeholder)) {
-          await write(fullPath, content.replaceAll(this.placeholder, this.scope));
+        const next = this.replaceIdentity(content).replaceAll(this.placeholder, this.scope);
+        if (next !== content) {
+          await write(fullPath, next);
         }
       }
     }
+  }
+
+  /**
+   * Rewrites URLs that point at the template's own repository. Only URL forms
+   * are touched: the "bun create Archont561/ts-monorepo-template" instructions
+   * in the README must keep pointing at the template itself.
+   */
+  private replaceIdentity(content: string): string {
+    if (!content.includes(IDENTITY_PLACEHOLDER.owner)) return content;
+    const { owner, repo } = this;
+    return content
+      .replaceAll(
+        `github.com/${IDENTITY_PLACEHOLDER.owner}/${IDENTITY_PLACEHOLDER.repo}`,
+        `github.com/${owner}/${repo}`,
+      )
+      .replaceAll(
+        `codecov/c/github/${IDENTITY_PLACEHOLDER.owner}/${IDENTITY_PLACEHOLDER.repo}`,
+        `codecov/c/github/${owner}/${repo}`,
+      )
+      .replaceAll(
+        `codecov.io/gh/${IDENTITY_PLACEHOLDER.owner}/${IDENTITY_PLACEHOLDER.repo}`,
+        `codecov.io/gh/${owner}/${repo}`,
+      )
+      .replaceAll(
+        `${IDENTITY_PLACEHOLDER.owner}.github.io/${IDENTITY_PLACEHOLDER.repo}`,
+        `${owner}.github.io/${repo}`,
+      )
+      .replaceAll(`@${IDENTITY_PLACEHOLDER.owner}`, `@${owner}`);
   }
 
   /**
@@ -733,5 +775,40 @@ export class MonorepoScaffolder {
     await this.replaceScopePlaceholders();
     await this.regenerateCI(); // Workflows only — README/AGENTS are static reference files
     await this.setupGitHooks();
+
+    console.log(`\n🔗 Repository identity: ${this.owner}/${this.repo}`);
+    if (this.owner === UNKNOWN_OWNER) {
+      console.log(
+        "   Set SCAFFOLD_OWNER (or pass `owner`) to point badge and Cargo URLs at your GitHub account.",
+      );
+    }
   }
+}
+
+/**
+ * Resolves the GitHub owner for the generated project.
+ *
+ * `SCAFFOLD_OWNER` wins, then the repo Actions is running in, then the local
+ * git identity. Falls back to an obvious `OWNER` placeholder rather than
+ * leaving the template's owner behind.
+ */
+export function resolveOwner(): string {
+  const fromEnv = process.env.SCAFFOLD_OWNER ?? process.env.GITHUB_REPOSITORY?.split("/")[0];
+  if (fromEnv) return fromEnv;
+
+  const configured = spawnSync(["git", "config", "user.name"], { stdout: "pipe" })
+    .stdout?.toString()
+    .trim();
+  if (configured) {
+    const slug = configured.replace(/[^a-zA-Z0-9-]/g, "");
+    if (slug) return slug;
+  }
+  return UNKNOWN_OWNER;
+}
+
+/** The new project's repository name — its directory name. */
+export function resolveRepo(targetDir: string): string {
+  const base = (targetDir.replace(/\/$/, "").split("/").at(-1) ?? "").trim();
+  if (base && base !== "." && base !== "..") return base;
+  return IDENTITY_PLACEHOLDER.repo;
 }

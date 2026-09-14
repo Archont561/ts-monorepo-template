@@ -173,6 +173,11 @@ describe("Scaffolder integration", () => {
       const result = await new TemplateHarness({ skipInstall: true }).prepare();
       cleanup = result.cleanup;
 
+      // Pin the owner: resolving it from the local git identity would be
+      // environment-dependent (and here matches the template's owner, which
+      // would hide a broken rewrite).
+      process.env.SCAFFOLD_OWNER = "acme";
+
       // Drive the committed dist bundle — the exact artifact bun-create.preinstall
       // runs — against the copied repo, as the lifecycle hook does.
       const proc = Bun.spawn({
@@ -212,11 +217,16 @@ describe("Scaffolder integration", () => {
 
       // The bundle scopes to @myorg by default, so template artifacts — not
       // the scope itself — must not leak into the generated project.
+      // The template's own repo URLs (badges, Cargo.toml, CODEOWNERS) are
+      // rewritten to the new project — only the "bun create <template>"
+      // instructions keep pointing at it.
       expect(
         await scanForLeaks(result.templateDir, [
           "TEMPLATE-ONLY:START",
           "TEMPLATE-ONLY:END",
           "configs/template",
+          "github.com/Archont561/ts-monorepo-template",
+          "@Archont561",
         ]),
       ).toEqual([]);
     },

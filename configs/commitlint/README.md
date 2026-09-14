@@ -19,6 +19,23 @@
 | `scope` | Optional, e.g. `feat(external): ...` |
 | `subject` | Lowercase, no period |
 
+### Scopes
+
+Scopes are derived at runtime from the workspaces in the root `package.json` —
+one per package, with the scope stripped (`@myorg/pages` → `pages`) — plus
+cross-cutting ones that point at no single workspace:
+
+| Scope | Covers |
+| :--- | :--- |
+| `config` | several `configs/*` packages at once |
+| `repo` | the monorepo itself (root files, toolchain) |
+| `deps` | dependency bumps |
+| `release` | versioning and publishing |
+| `ci` | workflows and Actions |
+
+Nothing to update when you add a package: its name becomes a valid scope
+automatically.
+
 ## Usage
 
 ```bash
