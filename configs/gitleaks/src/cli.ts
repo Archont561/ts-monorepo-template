@@ -1,55 +1,29 @@
 #!/usr/bin/env bun
-import { spawnSync, which } from "bun";
-import { defineCommand, runMain } from "citty";
+import { defineCommand, defineSpawnSubcommand, runMain, spawnIfPresent } from "@myorg/citty";
 
-function hasGitleaks(): boolean {
-  return !!which("gitleaks");
-}
+const GITLEAKS_HINTS = [
+  "⚠️ gitleaks not found — skipping (install: brew install gitleaks or https://github.com/gitleaks/gitleaks)",
+  "   Docker fallback: docker run -v $(pwd):/path zricethezav/gitleaks:latest detect --source /path",
+];
 
 function runGitleaks(args: string[]): number {
-  if (!hasGitleaks()) {
-    console.warn(
-      "⚠️ gitleaks not found — skipping (install: brew install gitleaks or https://github.com/gitleaks/gitleaks)",
-    );
-    console.warn(
-      "   Docker fallback: docker run -v $(pwd):/path zricethezav/gitleaks:latest detect --source /path",
-    );
-    return 0;
-  }
-  const result = spawnSync({
-    cmd: ["gitleaks", ...args],
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  return result.exitCode;
+  return spawnIfPresent("gitleaks", ["gitleaks", ...args], GITLEAKS_HINTS);
 }
 
-const detectCommand = defineCommand({
-  meta: { name: "detect", description: "gitleaks detect --source . --no-git (scan repo)" },
-  run() {
-    const raw = process.argv.slice(3);
-    if (raw.length === 0) {
-      process.exit(runGitleaks(["detect", "--source", ".", "--no-git", "--verbose"]));
-    } else {
-      process.exit(runGitleaks(["detect", ...raw]));
-    }
-  },
+const detectCommand = defineSpawnSubcommand({
+  name: "detect",
+  description: "gitleaks detect --source . --no-git (scan repo)",
+  prefixArgs: ["detect"],
+  defaultArgs: ["--source", ".", "--no-git", "--verbose"],
+  spawn: runGitleaks,
 });
 
-const protectCommand = defineCommand({
-  meta: {
-    name: "protect",
-    description: "gitleaks protect --staged (scan staged changes, pre-commit)",
-  },
-  run() {
-    const raw = process.argv.slice(3);
-    if (raw.length === 0) {
-      process.exit(runGitleaks(["protect", "--staged", "--verbose"]));
-    } else {
-      process.exit(runGitleaks(["protect", ...raw]));
-    }
-  },
+const protectCommand = defineSpawnSubcommand({
+  name: "protect",
+  description: "gitleaks protect --staged (scan staged changes, pre-commit)",
+  prefixArgs: ["protect"],
+  defaultArgs: ["--staged", "--verbose"],
+  spawn: runGitleaks,
 });
 
 const main = defineCommand({

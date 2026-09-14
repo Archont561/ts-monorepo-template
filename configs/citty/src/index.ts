@@ -14,6 +14,34 @@ import { spawnSync } from "bun";
  */
 import { defineCommand } from "citty";
 
+/**
+ * Spawns a tool with inherited stdio and returns its exit code. Every wrapper
+ * in the repo funnels through here, so "spawn, inherit, exit with the code" is
+ * written once.
+ */
+export function spawnTool(cmd: string[]): number {
+  const result = spawnSync({
+    cmd,
+    stdout: "inherit",
+    stderr: "inherit",
+    stdin: "inherit",
+  });
+  return result.exitCode;
+}
+
+/**
+ * Spawns a tool that may not be installed. A missing binary is a skip, not a
+ * failure: the caller's install hints are warned and the check reports success
+ * so CI without the tool still passes.
+ */
+export function spawnIfPresent(tool: string, cmd: string[], hints: string[]): number {
+  if (!Bun.which(tool)) {
+    for (const hint of hints) console.warn(hint);
+    return 0;
+  }
+  return spawnTool(cmd);
+}
+
 export interface WrapperOptions {
   name: string;
   version?: string;
@@ -62,13 +90,7 @@ export function defineWrapperCommand(opts: WrapperOptions) {
           ? [opts.binPath, ...raw, ...config]
           : [opts.binPath, ...config, ...raw];
 
-      const result = spawnSync({
-        cmd,
-        stdout: "inherit",
-        stderr: "inherit",
-        stdin: "inherit",
-      });
-      process.exit(result.exitCode);
+      process.exit(spawnTool(cmd));
     },
   });
 }
@@ -76,14 +98,20 @@ export function defineWrapperCommand(opts: WrapperOptions) {
 export interface SpawnSubcommandOptions {
   name: string;
   description: string;
-  /** Description of the positional in `--help` (default: the generic wording). */
-  argsDescription?: string;
   /**
-   * Runs the tool with the arguments that follow the subcommand and returns its
-   * exit code, which the helper applies — the subcommand does not have to call
-   * `process.exit()` itself.
+   * Documents the arguments in `--help`. Omit it when the subcommand takes no
+   * arguments, so the usage text stays exactly as it was.
    */
-  spawn: (rawArgs: string[]) => number;
+  argsDescription?: string;
+  /** Arguments the subcommand always passes, e.g. the tool's own subcommand. */
+  prefixArgs?: string[];
+  /** Arguments to use when the caller passes none, e.g. a default scan target. */
+  defaultArgs?: string[];
+  /**
+   * Runs the tool and returns its exit code, which the helper applies — the
+   * subcommand does not have to call `process.exit()` itself.
+   */
+  spawn: (args: string[]) => number;
 }
 
 /**
@@ -91,17 +119,25 @@ export interface SpawnSubcommandOptions {
  * from argv after the subcommand name, so the parent's own flags stay intact.
  */
 export function defineSpawnSubcommand(opts: SpawnSubcommandOptions) {
+  const documented = opts.argsDescription
+    ? {
+        args: {
+          args: {
+            type: "positional" as const,
+            description: opts.argsDescription,
+            required: false,
+          },
+        },
+      }
+    : {};
+
   return defineCommand({
     meta: { name: opts.name, description: opts.description },
-    args: {
-      args: {
-        type: "positional",
-        description: opts.argsDescription ?? "Extra args passed to underlying tool",
-        required: false,
-      },
-    },
+    ...documented,
     run() {
-      process.exit(opts.spawn(process.argv.slice(3)));
+      const raw = process.argv.slice(3);
+      const args = raw.length === 0 && opts.defaultArgs ? opts.defaultArgs : raw;
+      process.exit(opts.spawn([...(opts.prefixArgs ?? []), ...args]));
     },
   });
 }
