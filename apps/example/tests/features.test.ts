@@ -1,4 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import type { FeatureFiles } from "@src/features";
 import {
   appFile,
   detectFeatures,
@@ -6,9 +10,14 @@ import {
   hasUnoConfig,
   hasUnocss,
   htmlHasUnocss,
+  NATIVE_ENDPOINTS,
+  nativeProvider,
+  PROVIDERS,
   repoFile,
   unocssPageEnabled,
+  unocssProvider,
 } from "@src/features";
+import { file } from "bun";
 
 /**
  * These live next to the app deliberately: the paths in `src/features.ts` are
@@ -83,5 +92,90 @@ describe("feature detection", () => {
     // so this asserts the shape rather than the values.
     const flags = await detectFeatures();
     expect(Object.keys(flags).sort()).toEqual(["native", "unocss"]);
+  });
+});
+
+/** Fixture file tree: `app/` and `repo/` are the two roots a provider may look in. */
+const fixtures: string[] = [];
+
+afterEach(() => {
+  for (const root of fixtures.splice(0)) {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+function fixtureFiles(tree: Record<string, string>): FeatureFiles {
+  const root = mkdtempSync(join(tmpdir(), "features-fixture-"));
+  fixtures.push(root);
+  for (const [relative, contents] of Object.entries(tree)) {
+    const path = join(root, relative);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, contents);
+  }
+  const at = (base: string) => (path: string) => file(join(root, base, path));
+  return { app: at("app"), repo: at("repo") };
+}
+
+describe("feature providers", () => {
+  test("PROVIDERS answers for exactly the reported flags", () => {
+    expect(PROVIDERS.map((provider) => provider.name)).toEqual(["unocss", "native"]);
+    expect(new Set(PROVIDERS.map((provider) => provider.name)).size).toBe(PROVIDERS.length);
+  });
+
+  test("the unocss provider serves /uno.css and follows the surviving files", async () => {
+    const provider = unocssProvider(
+      fixtureFiles({ "app/public/index.html": "<title>plain</title>" }),
+    );
+    expect(provider.endpoints()).toEqual(["/uno.css"]);
+    expect(await provider.enabled()).toBe(false);
+  });
+
+  test("the unocss provider turns on for a surviving page", async () => {
+    const provider = unocssProvider(
+      fixtureFiles({
+        "app/public/index.html": "<title>plain</title>",
+        "app/public/index-unocss.html": '<div class="flex">UnoCSS</div>',
+      }),
+    );
+    expect(await provider.enabled()).toBe(true);
+  });
+
+  test("the unocss provider turns on for an already-swapped page", async () => {
+    const provider = unocssProvider(
+      fixtureFiles({ "app/public/index.html": "<title>Bun Monorepo — UnoCSS</title>" }),
+    );
+    expect(await provider.enabled()).toBe(true);
+  });
+
+  test("the unocss provider turns on for a surviving config alone", async () => {
+    const provider = unocssProvider(
+      fixtureFiles({
+        "app/public/index.html": "<title>plain</title>",
+        "repo/configs/unocss/uno.config.ts": "export default {};",
+      }),
+    );
+    expect(await provider.enabled()).toBe(true);
+  });
+
+  test("the native provider serves the native endpoint list", async () => {
+    const provider = nativeProvider(
+      fixtureFiles({ "app/src/pages/api/native/index.ts": "export default () => {};" }),
+    );
+    expect(await provider.enabled()).toBe(true);
+    expect(provider.endpoints()).toEqual([...NATIVE_ENDPOINTS]);
+    expect(provider.endpoints()).toContain("/api/native/add?a=1&b=2");
+  });
+
+  test("the native provider stays off without the routes", async () => {
+    const provider = nativeProvider(fixtureFiles({ "app/src/pages/api/index.ts": "" }));
+    expect(await provider.enabled()).toBe(false);
+  });
+
+  test("detectFeatures reports whatever providers it is given", async () => {
+    const flags = await detectFeatures([
+      unocssProvider(fixtureFiles({ "app/public/index.html": "UnoCSS" })),
+      nativeProvider(fixtureFiles({ "app/src/pages/api/index.ts": "" })),
+    ]);
+    expect(flags).toEqual({ unocss: true, native: false });
   });
 });

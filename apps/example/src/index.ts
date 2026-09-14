@@ -1,10 +1,12 @@
 import { FileSystemRouter, serve } from "bun";
-import { appFile, hasNative, hasUnocss } from "./features";
+import { appFile, detectFeatures, hasUnocss } from "./features";
 import { PORT } from "./port";
 
 // Detect opt-in features via file existence (handled via scaffold file deletion)
+const { native: nativeEnabled } = await detectFeatures();
+// The log line describes which page `/` serves, so it asks about the page itself
+// rather than the flag (a surviving config alone does not swap the page).
 const unocssEnabled = await hasUnocss();
-const nativeEnabled = await hasNative();
 
 console.log(
   `🔍 Features: unocss=${unocssEnabled ? "yes" : "no"}, native=${nativeEnabled ? "yes" : "no"}`,

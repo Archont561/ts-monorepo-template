@@ -1,4 +1,8 @@
 import { detectFeatures } from "../../features";
+// TEMPLATE-ONLY:START(native)
+import { native } from "../../features/native";
+// TEMPLATE-ONLY:END(native)
+import { unocss } from "../../features/unocss";
 
 export default async function handleApiIndex(): Promise<Response> {
   const features = await detectFeatures();
@@ -8,30 +12,23 @@ export default async function handleApiIndex(): Promise<Response> {
   // declined, so the flag comes from file existence at runtime.
   // TEMPLATE-ONLY:START(native)
   if (features.native) {
-    endpoints.push(
-      "/api/native",
-      "/api/native/add?a=1&b=2",
-      "/api/native/fibonacci/:n",
-      "/api/native/primes/:n",
-      "/api/native/reverse?text=hello",
-      "/api/native/status",
-    );
+    endpoints.push(...native.endpoints());
   }
   // TEMPLATE-ONLY:END(native)
 
   // UnoCSS endpoint — either the config package or a UnoCSS page surviving
   // scaffolding means `munocss build` output is served at /uno.css.
   if (features.unocss) {
-    endpoints.push("/uno.css");
+    endpoints.push(...unocss.endpoints());
   }
 
   return Response.json({
     message: "Bun Monorepo Example",
     endpoints,
     features: {
-      unocss: endpoints.includes("/uno.css"),
+      unocss: features.unocss,
       // TEMPLATE-ONLY:START(native)
-      native: endpoints.some((e) => e.includes("/api/native")),
+      native: features.native,
       // TEMPLATE-ONLY:END(native)
     },
   });
