@@ -186,6 +186,9 @@ describe("native setup — crates and packages", () => {
     expect(read(root, "apps/example/src/pages/api/native/status.ts")).toContain(
       "isNativeAvailable()",
     );
+    // The per-endpoint folders come with the routes (they hold future pages).
+    expect(exists(root, "apps/example/src/pages/api/native/fibonacci")).toBe(true);
+    expect(exists(root, "apps/example/src/pages/api/native/primes")).toBe(true);
   });
 
   test("a second run is a no-op (bytes unchanged)", async () => {

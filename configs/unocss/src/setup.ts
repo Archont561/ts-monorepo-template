@@ -11,16 +11,18 @@ import { $, file } from "bun";
  */
 
 const TARGET_DIR = process.cwd();
+/** Rewritten by the scaffolder — keeps the unocss CLI call scope-correct. */
+const SCOPE = process.env.UNOCSS_SCOPE ?? "@myorg";
 
-async function main() {
-  console.log("\n🎨 Setting up UnoCSS (config via --config flag, no root file)...\n");
+/** The app owns its CSS build; the CLI reads `cli.entry` from the config file. */
+const BUILD_CSS_SCRIPT = "munocss build";
+const WATCH_CSS_SCRIPT = "munocss watch";
 
-  // 1. Ensure config exists in configs/unocss/uno.config.ts (not root)
-  const configPath = join(TARGET_DIR, "configs/unocss/uno.config.ts");
-  if (!(await file(configPath).exists())) {
-    console.log(`  ⚠️ Config not found at ${configPath}, creating...`);
-    const scope = process.env.UNOCSS_SCOPE ?? "@myorg";
-    const content = `import { baseConfig, defineConfig } from "./index.ts";
+const CONFIG_PATH = join(TARGET_DIR, "configs/unocss/uno.config.ts");
+
+/** Content of `configs/unocss/uno.config.ts` when the package had to create it. */
+function defaultConfig(): string {
+  return `import { baseConfig, defineConfig } from "./index.ts";
 
 export default defineConfig({
   ...baseConfig,
@@ -40,14 +42,26 @@ export default defineConfig({
     ],
   },
 });
-`.replaceAll("@myorg", scope);
-    await Bun.write(configPath, content);
-    console.log(`  ✓ Created ${configPath}`);
-  } else {
-    console.log(`  ✓ Config exists at ${configPath} (used via --config flag)`);
+`.replaceAll("@myorg", SCOPE);
+}
+
+/** Ensures the config exists in `configs/unocss/` — never at the repo root. */
+async function ensureConfig(): Promise<void> {
+  if (await file(CONFIG_PATH).exists()) {
+    console.log(`  ✓ Config exists at ${CONFIG_PATH} (used via --config flag)`);
+    return;
   }
 
-  // 2. Handle index-unocss.html → index.html replacement (no TEMPLATE-ONLY, via file deletion + mv)
+  console.log(`  ⚠️ Config not found at ${CONFIG_PATH}, creating...`);
+  await Bun.write(CONFIG_PATH, defaultConfig());
+  console.log(`  ✓ Created ${CONFIG_PATH}`);
+}
+
+/**
+ * Swaps the UnoCSS page in — the plain page is a separate file, so the swap is a
+ * rename rather than a template marker.
+ */
+async function swapIndexHtml(): Promise<void> {
   const publicDir = join(TARGET_DIR, "apps/example/public");
   const indexHtml = join(publicDir, "index.html");
   const indexUnocssHtml = join(publicDir, "index-unocss.html");
@@ -55,83 +69,92 @@ export default defineConfig({
   if (await file(indexUnocssHtml).exists()) {
     await $`mv ${indexUnocssHtml} ${indexHtml}`.quiet();
     console.log(`  ✓ Replaced index.html with UnoCSS version (mv index-unocss.html → index.html)`);
-  } else if (await file(indexHtml).exists()) {
-    const content = await file(indexHtml).text();
-    if (content.includes("UnoCSS")) {
-      console.log(`  ✓ index.html already is UnoCSS version`);
-    } else {
-      console.log(
-        `  ⚠️ index-unocss.html not found, index.html is plain — may already be scaffolded`,
-      );
-    }
+    return;
   }
 
-  // 3. Ensure example app has unocss dep and build:css script uses --config
+  if (!(await file(indexHtml).exists())) return;
+
+  const content = await file(indexHtml).text();
+  if (content.includes("UnoCSS")) {
+    console.log(`  ✓ index.html already is UnoCSS version`);
+  } else {
+    console.log(`  ⚠️ index-unocss.html not found, index.html is plain — may already be scaffolded`);
+  }
+}
+
+/** Gives the example app the unocss dependency and the per-app CSS scripts. */
+async function wireExampleApp(): Promise<void> {
   const appPkgPath = join(TARGET_DIR, "apps/example/package.json");
-  if (await file(appPkgPath).exists()) {
-    const pkg = await file(appPkgPath).json();
-    const scope = process.env.UNOCSS_SCOPE ?? "@myorg";
-    pkg.devDependencies = pkg.devDependencies ?? {};
-    pkg.scripts = pkg.scripts ?? {};
+  if (!(await file(appPkgPath).exists())) return;
 
-    if (!pkg.devDependencies[`${scope}/unocss`]) {
-      pkg.devDependencies[`${scope}/unocss`] = "workspace:*";
-      console.log(`  ✓ Added ${scope}/unocss to apps/example`);
-    }
+  const pkg = await file(appPkgPath).json();
+  pkg.devDependencies = pkg.devDependencies ?? {};
+  pkg.scripts = pkg.scripts ?? {};
 
-    // munocss owns the shared config path, so scripts stay one-liners and
-    // degrade to a no-op in monorepos scaffolded without UnoCSS.
-    const expectedBuildCss = "munocss build";
-    if (pkg.scripts["build:css"] !== expectedBuildCss) {
-      pkg.scripts["build:css"] = expectedBuildCss;
-      console.log(`  ✓ Updated build:css to use munocss`);
-    }
-
-    // CSS is built per app as part of its own build, never globally. munocss
-    // is a no-op when the config package is absent.
-    const expectedBuild = "munocss build";
-    if (pkg.scripts["build"] !== expectedBuild) {
-      pkg.scripts["build"] = expectedBuild;
-      console.log(`  ✓ Added build script to apps/example (per-app CSS build)`);
-    }
-
-    if (!pkg.scripts["build:css:watch"]) {
-      pkg.scripts["build:css:watch"] = "munocss watch";
-    } else {
-      // Update existing to remove --out-file (uses cli.entry in config)
-      const expectedWatch = "munocss watch";
-      if (pkg.scripts["build:css:watch"] !== expectedWatch) {
-        pkg.scripts["build:css:watch"] = expectedWatch;
-      }
-    }
-
-    await Bun.write(appPkgPath, JSON.stringify(pkg, null, 2) + "\n");
+  if (!pkg.devDependencies[`${SCOPE}/unocss`]) {
+    pkg.devDependencies[`${SCOPE}/unocss`] = "workspace:*";
+    console.log(`  ✓ Added ${SCOPE}/unocss to apps/example`);
   }
 
-  // 4. UnoCSS is built per app/package, never globally — drop the root script
-  // if a previous version of this setup left one behind.
+  // munocss owns the shared config path, so scripts stay one-liners and
+  // degrade to a no-op in monorepos scaffolded without UnoCSS.
+  if (pkg.scripts["build:css"] !== BUILD_CSS_SCRIPT) {
+    pkg.scripts["build:css"] = BUILD_CSS_SCRIPT;
+    console.log(`  ✓ Updated build:css to use munocss`);
+  }
+
+  if (pkg.scripts.build !== BUILD_CSS_SCRIPT) {
+    pkg.scripts.build = BUILD_CSS_SCRIPT;
+    console.log(`  ✓ Added build script to apps/example (per-app CSS build)`);
+  }
+
+  if (pkg.scripts["build:css:watch"] !== WATCH_CSS_SCRIPT) {
+    pkg.scripts["build:css:watch"] = WATCH_CSS_SCRIPT;
+  }
+
+  await Bun.write(appPkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+}
+
+/** CSS is built per app/package, never globally — drop a stale root script. */
+async function dropRootCssScript(): Promise<void> {
   const rootPkgPath = join(TARGET_DIR, "package.json");
-  if (await file(rootPkgPath).exists()) {
-    const pkg = await file(rootPkgPath).json();
-    if (pkg.scripts?.["build:css"]) {
-      delete pkg.scripts["build:css"];
-      await Bun.write(rootPkgPath, JSON.stringify(pkg, null, 2) + "\n");
-      console.log(`  ✓ Removed root build:css (CSS is built by the app that owns it)`);
-    }
-  }
+  if (!(await file(rootPkgPath).exists())) return;
 
-  // 5. Remove any stray root uno.config.ts if exists (avoid root level file)
+  const pkg = await file(rootPkgPath).json();
+  if (!pkg.scripts?.["build:css"]) return;
+
+  delete pkg.scripts["build:css"];
+  await Bun.write(rootPkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+  console.log(`  ✓ Removed root build:css (CSS is built by the app that owns it)`);
+}
+
+/** Config lives in `configs/unocss/` — an older setup may have left one at the root. */
+async function removeStrayRootConfig(): Promise<void> {
   const rootUnoConfig = join(TARGET_DIR, "uno.config.ts");
-  if (await file(rootUnoConfig).exists()) {
-    await $`rm -f ${rootUnoConfig}`.quiet();
-    console.log(`  ✓ Removed stray root uno.config.ts (avoid root level file)`);
-  }
+  if (!(await file(rootUnoConfig).exists())) return;
 
+  await $`rm -f ${rootUnoConfig}`.quiet();
+  console.log(`  ✓ Removed stray root uno.config.ts (avoid root level file)`);
+}
+
+function printNextSteps(): void {
   console.log(`\n✅ UnoCSS setup complete — config via the munocss CLI, no root file\n`);
   console.log(
     `   Usage: bun run build (apps/example builds its own CSS via munocss)\n` +
       `         bun --filter @myorg/example run build:css:watch\n`,
   );
+}
+
+async function main() {
+  console.log("\n🎨 Setting up UnoCSS (config via --config flag, no root file)...\n");
+
+  await ensureConfig();
+  await swapIndexHtml();
+  await wireExampleApp();
+  await dropRootCssScript();
+  await removeStrayRootConfig();
+
+  printNextSteps();
 }
 
 if (import.meta.main) {
