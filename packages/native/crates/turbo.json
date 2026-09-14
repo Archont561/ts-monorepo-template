@@ -1,0 +1,33 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "inputs": [
+        "*/src/**/*.rs",
+        "*/Cargo.toml",
+        "../Cargo.toml",
+        "../Cargo.lock",
+        "../rust-toolchain.toml"
+      ],
+      "outputs": [],
+      "cache": false
+    },
+    "test": {
+      "inputs": [
+        "*/src/**/*.rs",
+        "*/Cargo.toml",
+        "../Cargo.toml",
+        "../Cargo.lock",
+        "../rust-toolchain.toml"
+      ],
+      "outputs": [],
+      "cache": false
+    },
+    "cargo:check": {
+      "cache": false
+    },
+    "cargo:clippy": {
+      "cache": false
+    }
+  }
+}

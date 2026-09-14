@@ -70,6 +70,17 @@ export function workspaceCargoToml(crates: NativeCrateSpec[], options: TemplateO
     "[workspace.lints.clippy]",
     'all = "warn"',
     "",
+    "# Release binaries — `mnative build:release` and every `napi build --release`.",
+    "[profile.release]",
+    "lto           = true",
+    "codegen-units = 1",
+    "strip         = true",
+    "",
+    "# CI builds — `mnative build:ci`: fast to produce, fast to run.",
+    "[profile.ci]",
+    'inherits   = "dev"',
+    "opt-level  = 1",
+    "",
   );
   return lines.join("\n");
 }
@@ -95,7 +106,8 @@ export function crateCargoToml(spec: NativeCrateSpec): string {
       "[dependencies]",
       "napi.workspace        = true",
       "napi-derive.workspace = true",
-      ...(spec.uses ?? []).map((dep) => `${dep}.workspace = true`),
+      // Aligned with the napi lines above so a generated manifest reads evenly.
+      ...(spec.uses ?? []).map((dep) => `${`${dep}.workspace`.padEnd(22)}= true`),
       "",
       "[build-dependencies]",
       "napi-build.workspace = true",
@@ -113,11 +125,13 @@ export function crateCargoToml(spec: NativeCrateSpec): string {
   lines.push("[lints]", "workspace = true", "");
   return lines.join("\n");
 }
-
 export const crateBuildRs = (): string =>
-  `extern crate napi_build;\n\nfn main() {\n  napi_build::setup();\n}\n`;
+  `extern crate napi_build;\n\nfn main() {\n    napi_build::setup();\n}\n`;
 
-/** Sample bindings — the same surface the example app routes call. */
+/**
+ * Sample Rust source — rustfmt-conformant (four-space indent) so a fresh
+ * scaffold passes `mnative fmt:check` without a reformat.
+ */
 export function crateLibRs(spec: NativeCrateSpec): string {
   if (!spec.binding) {
     return `//! Pure Rust helpers shared by the binding crates.
@@ -125,158 +139,340 @@ export function crateLibRs(spec: NativeCrateSpec): string {
 //! Nothing here may depend on napi — that keeps it testable with plain
 //! \`cargo test\` and reusable from a future WASM-only crate.
 
-/// Sum two numbers.
+/// Add two numbers.
 pub fn add(a: i32, b: i32) -> i32 {
-  a + b
+    a + b
 }
 
 /// Compute the nth Fibonacci number.
+///
+/// Fibonacci(40) here is ~100x faster than the JS fallback.
 pub fn fibonacci(n: u32) -> u32 {
-  match n {
-    0 => 0,
-    1 => 1,
-    _ => {
-      let (mut a, mut b) = (0u32, 1u32);
-      for _ in 2..=n {
-        let c = a + b;
-        a = b;
-        b = c;
-      }
-      b
+    match n {
+        0 => 0,
+        1 => 1,
+        _ => {
+            let mut a = 0;
+            let mut b = 1;
+            for _ in 2..=n {
+                let c = a + b;
+                a = b;
+                b = c;
+            }
+            b
+        }
     }
-  }
+}
+
+/// Reverse a string by Unicode scalar.
+pub fn reverse_string(s: &str) -> String {
+    s.chars().rev().collect()
+}
+
+/// All primes up to and including \`n\` — sieve of Eratosthenes.
+pub fn primes_up_to(n: u32) -> Vec<u32> {
+    if n < 2 {
+        return vec![];
+    }
+    let mut sieve = vec![true; (n + 1) as usize];
+    sieve[0] = false;
+    sieve[1] = false;
+    let mut i = 2;
+    while i * i <= n {
+        if sieve[i as usize] {
+            let mut j = i * i;
+            while j <= n {
+                sieve[j as usize] = false;
+                j += i;
+            }
+        }
+        i += 1;
+    }
+    sieve
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, &is_prime)| if is_prime { Some(idx as u32) } else { None })
+        .collect()
+}
+
+/// Counter — plain Rust state the napi binding wraps as a JS class.
+pub struct Counter {
+    count: i32,
+}
+
+impl Counter {
+    pub fn new(initial: Option<i32>) -> Self {
+        Self {
+            count: initial.unwrap_or(0),
+        }
+    }
+
+    pub fn increment(&mut self) -> i32 {
+        self.count += 1;
+        self.count
+    }
+
+    pub fn decrement(&mut self) -> i32 {
+        self.count -= 1;
+        self.count
+    }
+
+    pub fn get(&self) -> i32 {
+        self.count
+    }
+
+    pub fn reset(&mut self) {
+        self.count = 0;
+    }
 }
 
 #[cfg(test)]
 mod tests {
-  use super::*;
+    use super::*;
 
-  #[test]
-  fn adds() {
-    assert_eq!(add(2, 3), 5);
-  }
+    #[test]
+    fn adds() {
+        assert_eq!(add(2, 3), 5);
+        assert_eq!(add(-1, 1), 0);
+    }
 
-  #[test]
-  fn fibonacci_sequence() {
-    assert_eq!(fibonacci(10), 55);
-  }
+    #[test]
+    fn fibonacci_sequence() {
+        assert_eq!(fibonacci(0), 0);
+        assert_eq!(fibonacci(1), 1);
+        assert_eq!(fibonacci(10), 55);
+        assert_eq!(fibonacci(20), 6765);
+    }
+
+    #[test]
+    fn reverses_by_unicode_scalar() {
+        assert_eq!(reverse_string("hello"), "olleh");
+        assert_eq!(reverse_string("zażółć"), "ćłóżaz");
+        assert_eq!(reverse_string(""), "");
+    }
+
+    #[test]
+    fn primes_edge_cases() {
+        assert_eq!(primes_up_to(0), Vec::<u32>::new());
+        assert_eq!(primes_up_to(1), Vec::<u32>::new());
+        assert_eq!(primes_up_to(2), vec![2]);
+        assert_eq!(primes_up_to(10), vec![2, 3, 5, 7]);
+        assert_eq!(primes_up_to(30), vec![2, 3, 5, 7, 11, 13, 17, 19, 23, 29]);
+    }
+
+    #[test]
+    fn counter_counts() {
+        let mut counter = Counter::new(None);
+        assert_eq!(counter.get(), 0);
+        assert_eq!(counter.increment(), 1);
+        assert_eq!(counter.increment(), 2);
+        assert_eq!(counter.decrement(), 1);
+        assert_eq!(counter.get(), 1);
+        counter.reset();
+        assert_eq!(counter.get(), 0);
+    }
+
+    #[test]
+    fn counter_takes_an_initial_value() {
+        let mut counter = Counter::new(Some(41));
+        assert_eq!(counter.increment(), 42);
+    }
 }
 `;
   }
 
+  // Bindings that use pure crates are thin #[napi] wrappers — the logic lives
+  // in the pure crate so it stays testable without a Node runtime.
   const usesShared = (spec.uses ?? []).length > 0;
-  const prelude = usesShared
-    ? (spec.uses ?? [])
-        .map((dep) => `use ${dep.replace(/-/g, "_")}::fibonacci as ${dep}_fibonacci;`)
-        .join("\n")
-    : "";
-  const fibBody = usesShared
-    ? `  ${(spec.uses ?? [])[0]}_fibonacci(n)`
-    : `  match n {
-    0 => 0,
-    1 => 1,
-    _ => {
-      let mut a = 0u32;
-      let mut b = 1u32;
-      for _ in 2..=n {
-        let c = a + b;
-        a = b;
-        b = c;
-      }
-      b
-    }
-  }`;
-
-  return `#![deny(clippy::all)]
+  if (usesShared) {
+    const sharedCrate = (spec.uses ?? [])[0];
+    const rustName = sharedCrate.replace(/-/g, "_");
+    return `#![deny(clippy::all)]
 
 use napi_derive::napi;
-${prelude}
 
-/// Add two numbers in Rust.
+// Thin napi bindings — the logic lives in the \`${sharedCrate}\` crate so it stays
+// testable with plain \`cargo test\`, no Node runtime required.
+
+/// Add two numbers — native Rust speed
 #[napi]
 pub fn add(a: i32, b: i32) -> i32 {
-  a + b
+    ${rustName}::add(a, b)
 }
 
-/// Compute the nth Fibonacci number.
+/// Fibonacci — demonstrates Rust performance vs JS
+/// Fibonacci(40) in Rust is ~100x faster than JS
 #[napi]
 pub fn fibonacci(n: u32) -> u32 {
-${fibBody}
+    ${rustName}::fibonacci(n)
 }
 
-/// Reverse a string by chars (handles multi-byte input).
+/// Fast string reversal — native
 #[napi]
 pub fn reverse_string(s: String) -> String {
-  s.chars().rev().collect()
+    ${rustName}::reverse_string(&s)
 }
 
-/// Mutable struct exposed to JS as a class.
+/// Counter struct — becomes JS class
 #[napi]
 pub struct Counter {
-  count: i32,
+    inner: ${rustName}::Counter,
 }
 
 #[napi]
 impl Counter {
-  #[napi(constructor)]
-  pub fn new(initial: Option<i32>) -> Self {
-    Self { count: initial.unwrap_or(0) }
-  }
+    #[napi(constructor)]
+    pub fn new(initial: Option<i32>) -> Self {
+        Self {
+            inner: ${rustName}::Counter::new(initial),
+        }
+    }
 
-  #[napi]
-  pub fn increment(&mut self) -> i32 {
-    self.count += 1;
-    self.count
-  }
+    #[napi]
+    pub fn increment(&mut self) -> i32 {
+        self.inner.increment()
+    }
 
-  #[napi]
-  pub fn get_count(&self) -> i32 {
-    self.count
-  }
+    #[napi]
+    pub fn decrement(&mut self) -> i32 {
+        self.inner.decrement()
+    }
+
+    #[napi]
+    pub fn get_count(&self) -> i32 {
+        self.inner.get()
+    }
+
+    #[napi]
+    pub fn reset(&mut self) {
+        self.inner.reset()
+    }
 }
 
-/// Sieve of Eratosthenes — the sample workload for native vs JS benchmarks.
+/// Async example — becomes JS Promise
+#[napi]
+pub async fn fetch_data_simulated(url: String) -> napi::Result<String> {
+    // Simulate async work
+    Ok(format!("fetched: {}", url))
+}
+
+/// All primes up to n — sieve of Eratosthenes
 #[napi]
 pub fn primes_up_to(n: u32) -> Vec<u32> {
-  if n < 2 {
-    return vec![];
+    ${rustName}::primes_up_to(n)
+}
+`;
   }
-  let mut sieve = vec![true; (n + 1) as usize];
-  sieve[0] = false;
-  sieve[1] = false;
-  let mut primes = Vec::new();
-  let mut i = 2u32;
-  while i <= n {
-    if sieve[i as usize] {
-      primes.push(i);
-      let mut j = i * i;
-      while j <= n {
-        sieve[j as usize] = false;
-        j += i;
-      }
-    }
-    i += 1;
-  }
-  primes
+
+  return `#![deny(clippy::all)]
+
+use napi_derive::napi;
+
+/// Add two numbers — native Rust speed
+#[napi]
+pub fn add(a: i32, b: i32) -> i32 {
+    a + b
 }
 
-#[cfg(test)]
-mod tests {
-  use super::*;
+/// Fibonacci — demonstrates Rust performance vs JS
+/// Fibonacci(40) in Rust is ~100x faster than JS
+#[napi]
+pub fn fibonacci(n: u32) -> u32 {
+    match n {
+        0 => 0,
+        1 => 1,
+        _ => {
+            let mut a = 0;
+            let mut b = 1;
+            for _ in 2..=n {
+                let c = a + b;
+                a = b;
+                b = c;
+            }
+            b
+        }
+    }
+}
 
-  #[test]
-  fn adds() {
-    assert_eq!(add(2, 3), 5);
-  }
+/// Fast string reversal — native
+#[napi]
+pub fn reverse_string(s: String) -> String {
+    s.chars().rev().collect()
+}
 
-  #[test]
-  fn reverses() {
-    assert_eq!(reverse_string("hello".to_string()), "olleh");
-  }
+/// Counter struct — becomes JS class
+#[napi]
+pub struct Counter {
+    count: i32,
+}
+
+#[napi]
+impl Counter {
+    #[napi(constructor)]
+    pub fn new(initial: Option<i32>) -> Self {
+        Self {
+            count: initial.unwrap_or(0),
+        }
+    }
+
+    #[napi]
+    pub fn increment(&mut self) -> i32 {
+        self.count += 1;
+        self.count
+    }
+
+    #[napi]
+    pub fn decrement(&mut self) -> i32 {
+        self.count -= 1;
+        self.count
+    }
+
+    #[napi]
+    pub fn get_count(&self) -> i32 {
+        self.count
+    }
+
+    #[napi]
+    pub fn reset(&mut self) {
+        self.count = 0;
+    }
+}
+
+/// Async example — becomes JS Promise
+#[napi]
+pub async fn fetch_data_simulated(url: String) -> napi::Result<String> {
+    // Simulate async work
+    Ok(format!("fetched: {}", url))
+}
+
+/// Compute prime numbers up to n — CPU intensive, Rust shines
+#[napi]
+pub fn primes_up_to(n: u32) -> Vec<u32> {
+    if n < 2 {
+        return vec![];
+    }
+    let mut sieve = vec![true; (n + 1) as usize];
+    sieve[0] = false;
+    sieve[1] = false;
+    let mut i = 2;
+    while i * i <= n {
+        if sieve[i as usize] {
+            let mut j = i * i;
+            while j <= n {
+                sieve[j as usize] = false;
+                j += i;
+            }
+        }
+        i += 1;
+    }
+    sieve
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, &is_prime)| if is_prime { Some(idx as u32) } else { None })
+        .collect()
 }
 `;
 }
-
 /** Root npm package for a binding crate — platform packages are generated. */
 export function npmPackageJson(
   spec: NativeCrateSpec,
@@ -284,6 +480,10 @@ export function npmPackageJson(
 ): Record<string, unknown> {
   const scope = SCOPE(options);
   const name = `${scope}/${spec.name}`;
+  // Mirror the crate's Cargo path deps as a workspace dependency on the
+  // bridge package: it gives Turbo the one ordering edge it cannot see —
+  // pure Rust builds/tests before the napi build that compiles them in.
+  const usesPure = (spec.uses ?? []).length > 0;
   return {
     name,
     version: "0.0.0",
@@ -340,6 +540,7 @@ export function npmPackageJson(
     devDependencies: {
       [`${scope}/bun-config`]: "workspace:*",
       [`${scope}/native-config`]: "workspace:*",
+      ...(usesPure ? { [`${scope}/native-crates`]: "workspace:*" } : {}),
       [`${scope}/ts`]: "workspace:*",
       "@napi-rs/cli": "^3.9.1",
     },
@@ -368,15 +569,31 @@ export function npmTsConfig(scope: string): string {
 }
 
 /**
- * Package-level Turbo config: builds are never cached (they call cargo) and
- * their outputs are the napi artifacts, not `dist/`.
+ * Package-level Turbo config for a binding package.
+ *
+ * The napi build is cacheable: its outputs (`*.node`, generated loader and
+ * types) are stable local artifacts, and the inputs mirror the Cargo graph —
+ * the binding crate's sources plus every pure crate under `crates/` and the
+ * workspace manifests — so a Rust change always invalidates the cache.
+ * Globbing all crates rather than only the ones this binding uses is the
+ * safe default: over-invalidating costs a rebuild, a stale `.node` costs a
+ * wrong binary.
  */
 export const npmTurboJson = (): string => `{
   "extends": ["//"],
   "tasks": {
     "build": {
+      "inputs": [
+        "package.json",
+        "../../crates/*/src/**/*.rs",
+        "../../crates/*/Cargo.toml",
+        "../../crates/*/build.rs",
+        "../../Cargo.toml",
+        "../../Cargo.lock",
+        "../../rust-toolchain.toml"
+      ],
       "outputs": ["*.node", "index.js", "index.d.ts"],
-      "cache": false
+      "cache": true
     },
     "build:wasm": {
       "outputs": ["*.wasi.cjs", "*.wasi-browser.js", "*.wasm"],
@@ -397,43 +614,145 @@ export const npmTurboJson = (): string => `{
  * with the first crate, so a fresh `mnative add` package has both a
  * `typecheck` input and a `test` that runs without the Rust toolchain.
  */
-export const npmPackageTest = (spec: NativeCrateSpec): string => {
+/**
+ * Structure tests for a binding package — the same assertions the template
+ * repo's own `packages/native/npm/native/tests` carries, so a fresh scaffold
+ * verifies its bridge-node and caching wiring from day one.
+ */
+export const npmPackageTest = (spec: NativeCrateSpec, options: TemplateOptions = {}): string => {
   const name = spec.name;
+  const scope = SCOPE(options);
+  const pure = (spec.uses ?? [])[0] ?? "shared";
+  const usesPure = (spec.uses ?? []).length > 0;
+  // The aligned `x.workspace = true` line the crate manifest template emits.
+  const alignedDep = `${pure}.workspace`.padEnd(22) + "= true";
+
+  const pureTests = usesPure
+    ? `
+describe("pure Rust crates", () => {
+  it("keep the shared logic in crates/${pure}, napi-free", async () => {
+    const manifest = await Bun.file("../../crates/${pure}/Cargo.toml").text();
+    expect(manifest).toContain('name    = "${pure}"');
+    expect(manifest).not.toMatch(/^crate-type/m);
+    expect(manifest).not.toMatch(/^napi/m);
+
+    const lib = await Bun.file("../../crates/${pure}/src/lib.rs").text();
+    expect(lib).toContain("pub fn add");
+    expect(lib).toContain("pub fn fibonacci");
+    expect(lib).toContain("pub fn primes_up_to");
+    expect(lib).toContain("pub struct Counter");
+    expect(lib).not.toContain("#[napi]");
+  });
+
+  it("are wired into the binding via a Cargo path dependency", async () => {
+    const manifest = await Bun.file(\`\${CRATE}/Cargo.toml\`).text();
+    expect(manifest).toContain("${alignedDep}");
+  });
+
+  it("are listed in the virtual workspace manifest", async () => {
+    const manifest = await Bun.file("../../Cargo.toml").text();
+    expect(manifest).toContain('"crates/${pure}"');
+  });
+
+  it("tune the release profile (lto, single codegen unit, stripped)", async () => {
+    const manifest = await Bun.file("../../Cargo.toml").text();
+    expect(manifest).toContain("[profile.release]");
+    expect(manifest).toContain("lto           = true");
+    expect(manifest).toContain("codegen-units = 1");
+    expect(manifest).toContain("strip         = true");
+  });
+
+  it("are one Turbo node — the bridge package runs mnative --pure", async () => {
+    const pkg = await Bun.file("../../crates/package.json").json();
+    expect(pkg.name).toBe("${scope}/native-crates");
+    expect(pkg.private).toBe(true);
+    expect(pkg.scripts.build).toBe("mnative build --pure");
+    expect(pkg.scripts.test).toBe("mnative test --pure");
+  });
+
+  it("never Turbo-cache the bridge tasks (cargo owns target/)", async () => {
+    const turbo = await Bun.file("../../crates/turbo.json").json();
+    expect(turbo.tasks.build.cache).toBe(false);
+    expect(turbo.tasks.test.cache).toBe(false);
+  });
+});
+`
+    : "";
+
   return `import { describe, expect, it } from "bun:test";
 
 // Structure tests: the workspace is the source of truth for where things live.
 // The Rust code itself is covered by \`cargo test\`, the JS fallback path by
 // packages/external.
 
-const NAME = "${name}";
-const CRATE = \`../../crates/\${NAME}\`;
+const CRATE = "../../crates/${name}";
 
-describe(\`\${NAME} crate\`, () => {
-  it("is listed in the workspace manifest", async () => {
+describe("${name} workspace", () => {
+  it("has a virtual workspace manifest listing the crate", async () => {
     const content = await Bun.file("../../Cargo.toml").text();
-    expect(content).toContain(\`"crates/\${NAME}"\`);
+    expect(content).toContain("[workspace]");
+    // \`[workspace.package]\` is fine — a real [package] table is not.
+    expect(content).not.toMatch(/^\\[package\\]$/m);
+    expect(content).toContain('"crates/${name}"');
   });
 
-  it("is a cdylib binding crate", async () => {
+  it("has a cdylib binding crate", async () => {
     const content = await Bun.file(\`\${CRATE}/Cargo.toml\`).text();
-    expect(content).toContain(\`name    = "\${NAME}"\`);
+    expect(content).toContain('name    = "${name}"');
     expect(content).toContain("cdylib");
     expect(content).toContain("napi-derive");
+  });
+
+  it("has src/lib.rs with #[napi] macros", async () => {
+    const content = await Bun.file(\`\${CRATE}/src/lib.rs\`).text();
+    expect(content).toContain("#[napi]");
+    expect(content).toContain("pub fn add");
+    expect(content).toContain("pub fn fibonacci");
+    expect(content).toContain("Counter");
   });
 
   it("has a build.rs calling napi_build::setup", async () => {
     const content = await Bun.file(\`\${CRATE}/build.rs\`).text();
     expect(content).toContain("napi_build::setup");
   });
+});
 
+describe("${name} npm package", () => {
   it("declares the napi config for every target", async () => {
     const pkg = await Bun.file("package.json").json();
-    expect(pkg.napi.binaryName).toBe(NAME);
+    expect(pkg.napi).toBeDefined();
+    expect(pkg.napi.binaryName).toBe("${name}");
     expect(pkg.napi.targets).toContain("wasm32-wasip1-threads");
     expect(pkg.napi.wasm).toBeDefined();
   });
+
+  it("builds only its own package", async () => {
+    const pkg = await Bun.file("package.json").json();
+    expect(pkg.scripts.build).toBe("mnative napi:build --only ${name}");
+    expect(pkg.scripts["build:wasm"]).toBe("mnative napi:build:wasm --only ${name}");
+  });
+${
+  usesPure
+    ? `
+  it("depends on the pure-Rust bridge package", async () => {
+    const pkg = await Bun.file("package.json").json();
+    expect(pkg.devDependencies["${scope}/native-crates"]).toBe("workspace:*");
+  });
+`
+    : ""
+}
+  it("caches the napi build with the Cargo graph as inputs", async () => {
+    const turbo = await Bun.file("turbo.json").json();
+    expect(turbo.tasks.build.cache).toBe(true);
+    expect(turbo.tasks.build.outputs).toContain("*.node");
+    // The crate sources live OUTSIDE this package — the inputs must reach them.
+    expect(turbo.tasks.build.inputs).toContain("../../crates/*/src/**/*.rs");
+    expect(turbo.tasks.build.inputs).toContain("../../Cargo.lock");
+    // The wasm build shells out to the wasm32 target toolchain — never cached.
+    expect(turbo.tasks["build:wasm"].cache).toBe(false);
+  });
 });
-`;
+${pureTests}`;
 };
 
 export const rustToolchainToml = (): string => `[toolchain]
@@ -497,7 +816,7 @@ export async function writeCrate(
   await writeFile(join(packageDir, "tsconfig.json"), npmTsConfig(SCOPE(options)));
   await writeFile(join(packageDir, "turbo.json"), npmTurboJson());
   await mkdir(join(packageDir, "tests"), { recursive: true });
-  await writeFile(join(packageDir, "tests", `${spec.name}.test.ts`), npmPackageTest(spec));
+  await writeFile(join(packageDir, "tests", `${spec.name}.test.ts`), npmPackageTest(spec, options));
 
   return { crate: crateDir, package: packageDir };
 }
@@ -534,4 +853,86 @@ export async function addWorkspaceMember(root: string, name: string): Promise<vo
     ? sortMembers(content, name)
     : `${content.trimEnd()}\n\n[workspace]\nmembers = [\n  "crates/${name}",\n]\n`;
   await writeFile(manifest, next);
+}
+
+/**
+ * `package.json` for the bridge node — the ONE Turbo package that stands for
+ * every pure Rust crate. It owns no files; its scripts scope cargo commands
+ * to the pure crates via `mnative <cmd> --pure`, and binding npm packages
+ * depend on it (`workspace:*`) so Turbo orders pure Rust work before the napi
+ * builds that compile it.
+ */
+export function bridgePackageJson(options: TemplateOptions): Record<string, unknown> {
+  return {
+    name: `${SCOPE(options)}/native-crates`,
+    version: "0.0.0",
+    private: true,
+    scripts: {
+      build: "mnative build --pure",
+      test: "mnative test --pure",
+      "cargo:check": "mnative check --pure",
+      "cargo:clippy": "mnative clippy --pure",
+      "cargo:fmt": "mnative fmt --pure",
+      "cargo:fmt:check": "mnative fmt:check --pure",
+    },
+  };
+}
+
+/**
+ * Turbo config for the bridge node. Cargo owns `target/` and its cache keys
+ * include the toolchain, so these tasks are never Turbo-cached — the inputs
+ * exist only so `turbo run` hash-reports (and `--dry`) reflect Rust changes.
+ */
+export const bridgeTurboJson = (): string => `{
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "inputs": [
+        "*/src/**/*.rs",
+        "*/Cargo.toml",
+        "../Cargo.toml",
+        "../Cargo.lock",
+        "../rust-toolchain.toml"
+      ],
+      "outputs": [],
+      "cache": false
+    },
+    "test": {
+      "inputs": [
+        "*/src/**/*.rs",
+        "*/Cargo.toml",
+        "../Cargo.toml",
+        "../Cargo.lock",
+        "../rust-toolchain.toml"
+      ],
+      "outputs": [],
+      "cache": false
+    },
+    "cargo:check": {
+      "cache": false
+    },
+    "cargo:clippy": {
+      "cache": false
+    }
+  }
+}
+`;
+
+/**
+ * Writes (or refreshes) the bridge node at `packages/native/crates/`. Called
+ * by setup and by `mnative add --pure`, so the node can never go missing or
+ * drift from the templates.
+ */
+export async function writeBridgeNode(
+  root: string,
+  options: TemplateOptions = {},
+): Promise<string> {
+  const bridgeDir = join(root, "packages", "native", "crates");
+  await mkdir(bridgeDir, { recursive: true });
+  await writeFile(
+    join(bridgeDir, "package.json"),
+    `${JSON.stringify(bridgePackageJson(options), null, 2)}\n`,
+  );
+  await writeFile(join(bridgeDir, "turbo.json"), bridgeTurboJson());
+  return bridgeDir;
 }

@@ -7,8 +7,9 @@
 - A `select` scaffold prompt (`none` / `publish` / `docker`) that decides whether a generated project ships native bindings
 - **A Cargo workspace that stays out of the repo root** — `packages/native/Cargo.toml` is the virtual workspace root (`crates/*` are its members)
 - `@napi-rs/cli` as shared devDependency + the `mnative` CLI (`configs/native/src/cli.ts`) wrapping cargo (workspace-wide) and napi (once per package)
-- Setup script `src/setup.ts` that scaffolds the workspace, migrates the old single-crate layout, adds `packages/native/npm/*` to the root workspaces, and ensures the example's native routes exist
-- Template files for crates (`Cargo.toml`, `src/lib.rs`, `build.rs`) and npm packages (`package.json` with the napi config, `tsconfig.json`, `turbo.json`, `README.md`, tests)
+- Setup script `src/setup.ts` that scaffolds the workspace, migrates the old single-crate layout, adds `packages/native/npm/*` **and the bridge package `packages/native/crates`** to the root workspaces, and ensures the example's native routes exist
+- The **bridge node** `packages/native/crates/package.json` (`@<scope>/native-crates`) — the single Turbo package that stands for every pure Rust crate, kept in sync with the Cargo graph by `mnative sync`
+- Template files for crates (`Cargo.toml`, `src/lib.rs`, `build.rs`), npm packages (`package.json` with the napi config, `tsconfig.json`, `turbo.json`, `README.md`, tests) and the bridge node (`package.json` + `turbo.json`)
 - Integration with `packages/external` via `native.ts` wrapper with JS fallback
 - Example app `apps/example/src/pages/api/native/**` — conditional routes deleted when native is disabled
 - CI: `rust-toolchain` + `rust-cache` + `mnative fmt:check` / `clippy` / `check` / `test` / `napi:build` in `ci.yml`, plus a dedicated `native.yml` build matrix
@@ -25,15 +26,20 @@ packages/native/
 ├── .cargo/config.toml      # linker/target config (WASI)
 ├── .gitignore              # generated loaders, binaries, npm per-platform dirs
 ├── crates/
-│   └── native/             # one crate per Rust unit
-│       ├── Cargo.toml      # crate-type = ["cdylib"] — the napi binding
-│       ├── build.rs        # napi_build::setup()
-│       └── src/lib.rs      # #[napi] add, fibonacci, Counter, primes_up_to
+│   ├── package.json        # @<scope>/native-crates — the bridge node (one Turbo package for ALL pure crates)
+│   ├── turbo.json          # its Turbo tasks (mnative build/test --pure, uncached)
+│   ├── native/             # binding crate — thin #[napi] wrappers
+│   │   ├── Cargo.toml      # crate-type = ["cdylib"], shared.workspace = true
+│   │   ├── build.rs        # napi_build::setup()
+│   │   └── src/lib.rs      # #[napi] add, fibonacci, Counter, primes_up_to → shared::*
+│   └── shared/             # pure Rust crate — the logic, no napi, no npm package
+│       ├── Cargo.toml
+│       └── src/lib.rs      # add, fibonacci, reverse_string, primes_up_to, Counter + tests
 └── npm/
     └── native/             # one npm package per binding crate
         ├── package.json    # napi config (targets incl. wasm32-wasip1-threads)
         ├── tsconfig.json
-        └── turbo.json
+        └── turbo.json      # build cached: inputs reach ../../crates/**, outputs *.node
 ```
 
 Rules the layout enforces:
@@ -43,6 +49,7 @@ Rules the layout enforces:
 | No `[package]` at the workspace root | The root manifest only lists members — adding a crate never edits it by hand (`mnative add` re-syncs and sorts `members`) |
 | `crate-type = ["cdylib"]` only on binding crates | Pure-Rust crates (`mnative add shared --pure`) stay ordinary `rlib`s with no Node-API surface |
 | One npm package per cdylib | Each package owns its own `napi.binaryName`, targets and build script |
+| Pure crates get **no** npm package | They are represented in the Turbo graph by the single bridge node `crates/package.json` — adding a pure crate never touches the npm namespace |
 | Per-platform packages are generated, never committed | `napi create-npm-dirs` writes `npm/*-<platform>/`; they are gitignored and rebuilt in CI |
 | `unsafe_code = "forbid"` in `[workspace.lints]` | Inherited by every crate via `[lints] workspace = true` |
 
@@ -105,6 +112,7 @@ all = "warn"
 mnative list                # crates -> npm packages, targets per package
 mnative add parser          # new binding crate + npm package
 mnative add shared --pure   # pure-Rust crate, no npm package
+mnative sync                # re-sync bridge node + Cargo→npm dependency edges
 mnative matrix              # the CI build matrix this repo would run
 mnative matrix --gha        # ...as `key=value` lines for $GITHUB_OUTPUT
 
@@ -116,6 +124,8 @@ mnative build               # cargo build --workspace
 mnative build:release       # cargo build --workspace --release  (lto, strip)
 mnative build:ci            # cargo build --workspace --profile ci
 mnative tree / update / doc / nextest / llvm-cov / audit / deny
+                            # (--pure on build/check/clippy/fmt/fmt:check/test
+                            #  scopes the command to the pure Rust crates)
 
 mnative napi:build          # napi build --platform --release, once per package
 mnative napi:build:debug    # same, debug
@@ -138,14 +148,45 @@ bun run test:native    # → mnative test
 
 All of them no-op when `packages/native` is absent, so the root needs no `test -f` guards.
 
+### The Turbo graph
+
+Pure Rust crates are invisible to Turbo — they have no npm package. The bridge
+node `packages/native/crates/package.json` (`@<scope>/native-crates`) is the
+single package that stands for all of them, and every binding whose crate has a
+Cargo path dep on a pure crate depends on it with `workspace:*`. That one edge
+is what makes Turbo run pure Rust builds/tests **before** the napi builds that
+compile them in:
+
+```
+@myorg/example ─▶ @myorg/native ──workspace:*──▶ @myorg/native-crates
+                      │ napi build                    │ mnative build/test --pure
+                      ▼                               ▼
+               *.node, index.js                 cargo target/ (uncached)
+```
+
+- `@<scope>/<binding>#build` is **Turbo-cached** — outputs `*.node`, `index.js`,
+  `index.d.ts`; inputs glob `../../crates/*/src/**/*.rs`, the crate manifests,
+  `../../Cargo.toml`, `../../Cargo.lock` and the toolchain pin, so any Rust
+  change invalidates the cache entry.
+- The bridge tasks are **never cached** — cargo owns `target/` and its
+  incremental state; the toolchain belongs in cargo's cache key, not Turbo's.
+  Their `inputs` exist so hash reports (`--dry`) reflect Rust changes.
+- `build:wasm` stays uncached (it shells out to the wasm32 toolchain).
+- Root `package.json` `workspaces` gains the single entry `packages/native/crates`
+  (a package, not a glob, so the crates themselves are never workspace members).
+
+`mnative sync` refreshes all of this: it rewrites the bridge node files, adds or
+removes the `workspace:*` edge in each binding's `package.json` to match its
+Cargo path deps, and ensures the root workspaces entry exists. Idempotent — run
+it after hand-editing any `[dependencies]`.
+
 ### Build profiles
 
 ```toml
 [profile.release]
-opt-level = 3
 lto = true
 codegen-units = 1
-strip = "symbols"
+strip = true
 
 [profile.ci]
 inherits = "dev"
@@ -196,7 +237,7 @@ Generated with `configs/native` and removed with it. Three jobs:
 graph TD
     A[bun create] --> B{native?}
     B -->|none| C["prune native<br/>packages/native + *.node + api/native/**<br/>no root Cargo.toml to remove"]
-    B -->|publish| D["setup.ts<br/>packages/native virtual workspace<br/>crates/native + npm/native"]
+    B -->|publish| D["setup.ts<br/>packages/native virtual workspace<br/>crates/native (binding) + crates/shared (pure)<br/>+ bridge node crates/package.json + npm/native"]
     B -->|docker| E["setup.ts + Docker"]
     D --> F["mnative add &lt;name&gt;<br/>crates/&lt;name&gt; + npm/&lt;name&gt;"]
     F --> G["mnative check → mnative napi:build<br/>*.node"]

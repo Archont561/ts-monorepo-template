@@ -1,0 +1,12 @@
+[package]
+name    = "shared"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+# Pure Rust — no napi dependency, no cdylib: testable without a Node runtime.
+[dependencies]
+
+[lints]
+workspace = true

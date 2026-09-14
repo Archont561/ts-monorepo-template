@@ -8,7 +8,8 @@
 - Never build a "cross-platform" package on a dev machine and publish it. Per-platform packages come from CI: `mnative create-npm-dirs` + `mnative artifacts`.
 - Use `mnative` for everything — `mnative check` for the fast inner loop, `mnative napi:build --only native` for artifacts. Do not `cd` into `crates/` and run cargo by hand.
 - Targets are declared in this package's `napi.targets`; adding one grows the CI matrix automatically. Do not edit the workflow.
-- Rust lives in `../../crates/native`, TypeScript types are generated here. Never put `#[napi]` code in this directory.
+- Rust lives in `../../crates/native` (thin `#[napi]` wrappers) and `../../crates/shared` (the logic), TypeScript types are generated here. Never put `#[napi]` code in this directory.
+- Keep the binding thin: new Rust logic goes in a pure crate (`mnative add <name> --pure`), the binding only wraps it. Mirror a new Cargo path dep as `@myorg/native-crates: workspace:*` via `mnative sync`.
 - Never add `typescript` or `bunup` here — `@myorg/ts` and `@myorg/bunup` own them.
 - Import the addon only from server modules; a browser bundle cannot load `.node`.
 - Keep the JS fallback in `@myorg/external` working — native is optional at runtime.

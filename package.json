@@ -6,7 +6,8 @@
     "apps/*",
     "packages/*",
     "configs/*",
-    "packages/native/npm/*"
+    "packages/native/npm/*",
+    "packages/native/crates"
   ],
   "devDependencies": {
     "@myorg/badges": "workspace:*",

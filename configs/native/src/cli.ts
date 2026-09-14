@@ -2,6 +2,13 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { defineCommand, runMain, spawnTool } from "@myorg/citty";
+import {
+  addJsonArrayValue,
+  readJson,
+  removeJsonEntry,
+  setJsonValue,
+  updateManifestFile,
+} from "@myorg/manifest";
 import { which } from "bun";
 import {
   DEFAULT_NATIVE_SCOPE,
@@ -12,7 +19,7 @@ import {
   nativePackageDir,
 } from "../index.ts";
 import { discoverBuildable, discoverCrates, discoverPackages, findNativeRoot } from "./discover.ts";
-import { addWorkspaceMember, writeCrate } from "./templates.ts";
+import { addWorkspaceMember, writeBridgeNode, writeCrate } from "./templates.ts";
 
 /**
  * mnative — Cargo + napi-rs wrapper for the `packages/native` workspace.
@@ -53,6 +60,30 @@ function runCargo(args: string[], opts: { cwd?: string } = {}): number {
   if (!nativeExistsOrWarn() || !cargoExistsOrWarn()) return 0;
   return spawnTool(["cargo", ...args], { cwd: opts.cwd ?? WORKSPACE_DIR });
 }
+
+/**
+ * `--exclude <binding>` for every cdylib crate, so the pure Rust crates can be
+ * built, checked, tested and linted as one unit (`mnative <cmd> --pure`) —
+ * the bridge package `packages/native/crates/package.json` runs these.
+ */
+function pureArgs(enabled: boolean): string[] {
+  if (!enabled) return [];
+  const bindings = discoverCrates(ROOT)
+    .filter((crate) => crate.binding)
+    .map((crate) => crate.name);
+  if (bindings.length === 0) return [];
+  console.log(`ℹ️ pure Rust only — excluding bindings: ${bindings.join(", ")}`);
+  return bindings.flatMap((name) => ["--exclude", name]);
+}
+
+/** Shared `--pure` flag for the cargo commands that support it. */
+const pureArg = {
+  pure: {
+    type: "boolean",
+    description: "Only the pure Rust crates (excludes every napi binding)",
+    default: false,
+  },
+} as const;
 
 function napiBin(): string {
   return Bun.fileURLToPath(import.meta.resolve("@napi-rs/cli/scripts/index.js"));
@@ -158,8 +189,9 @@ const napiArgs = {
 
 const checkCommand = defineCommand({
   meta: { name: "check", description: "cargo check --workspace (fast type-check)" },
-  run() {
-    process.exit(runCargo(["check", "--workspace"]));
+  args: { ...pureArg },
+  run({ args }) {
+    process.exit(runCargo(["check", "--workspace", ...pureArgs(Boolean(args.pure))]));
   },
 });
 
@@ -168,36 +200,51 @@ const clippyCommand = defineCommand({
     name: "clippy",
     description: "cargo clippy --workspace --all-targets -- -D warnings",
   },
-  run() {
-    process.exit(runCargo(["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]));
+  args: { ...pureArg },
+  run({ args }) {
+    process.exit(
+      runCargo([
+        "clippy",
+        "--workspace",
+        ...pureArgs(Boolean(args.pure)),
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings",
+      ]),
+    );
   },
 });
 
 const fmtCommand = defineCommand({
   meta: { name: "fmt", description: "cargo fmt --all (format write)" },
-  run() {
-    process.exit(runCargo(["fmt", "--all"]));
+  args: { ...pureArg },
+  run({ args }) {
+    process.exit(runCargo(["fmt", "--all", ...pureArgs(Boolean(args.pure))]));
   },
 });
 
 const fmtCheckCommand = defineCommand({
   meta: { name: "fmt:check", description: "cargo fmt --all -- --check (format check)" },
-  run() {
-    process.exit(runCargo(["fmt", "--all", "--", "--check"]));
+  args: { ...pureArg },
+  run({ args }) {
+    process.exit(runCargo(["fmt", "--all", ...pureArgs(Boolean(args.pure)), "--", "--check"]));
   },
 });
 
 const testCommand = defineCommand({
   meta: { name: "test", description: "cargo test --workspace (run Rust tests)" },
-  run() {
-    process.exit(runCargo(["test", "--workspace"]));
+  args: { ...pureArg },
+  run({ args }) {
+    process.exit(runCargo(["test", "--workspace", ...pureArgs(Boolean(args.pure))]));
   },
 });
 
 const buildCommand = defineCommand({
   meta: { name: "build", description: "cargo build --workspace (debug)" },
-  run() {
-    process.exit(runCargo(["build", "--workspace"]));
+  args: { ...pureArg },
+  run({ args }) {
+    process.exit(runCargo(["build", "--workspace", ...pureArgs(Boolean(args.pure))]));
   },
 });
 
@@ -456,9 +503,19 @@ const addCommand = defineCommand({
 
     await writeCrate(ROOT, spec, { scope });
     await addWorkspaceMember(ROOT, name);
+    if (args.pure) {
+      // The bridge node represents every pure crate in the Turbo graph.
+      await writeBridgeNode(ROOT, { scope });
+    }
     console.log(`\n✅ Added ${args.pure ? "pure Rust crate" : "crate + npm package"} "${name}"`);
     console.log(`   crate:   ${NATIVE_DIR}/crates/${name}/`);
-    if (!args.pure) console.log(`   package: ${nativePackageDir(name)}/`);
+    if (!args.pure) {
+      console.log(`   package: ${nativePackageDir(name)}/`);
+    } else {
+      console.log(`   bridge:  ${NATIVE_DIR}/crates/package.json (${scope}/native-crates)`);
+      console.log(`   Bindings that use "${name}" add it to workspace.dependencies + Cargo.toml,`);
+      console.log(`   and \`${scope}/native-crates: workspace:*\` in their package.json.`);
+    }
     console.log(`\n   Run: bun install && mnative check\n`);
     process.exit(0);
   },
@@ -560,6 +617,74 @@ const napiCommand = defineCommand({
   },
 });
 
+/**
+ * `mnative sync` — re-syncs the Turbo ↔ Cargo wiring:
+ *   1. refreshes the bridge node (packages/native/crates/{package,turbo}.json),
+ *   2. mirrors every binding's Cargo path deps as the `@scope/native-crates`
+ *      workspace dependency (and drops the edge when the Cargo dep is gone),
+ *   3. adds the `packages/native/crates` entry to the root workspaces.
+ * Idempotent; run it after hand-editing Cargo.toml dependencies.
+ */
+const syncCommand = defineCommand({
+  meta: {
+    name: "sync",
+    description: "Re-sync the Turbo bridge node and Cargo→npm dependency edges",
+  },
+  args: {
+    scope: { type: "string", description: "npm scope (default: the scope in packages/native)" },
+  },
+  async run({ args }) {
+    if (!nativeExistsOrWarn()) process.exit(1);
+    const scope = await resolveScope(args.scope as string | undefined);
+    const bridgeName = `${scope}/native-crates`;
+    let edits = 0;
+
+    await writeBridgeNode(ROOT, { scope });
+    console.log(`  ✓ ${NATIVE_DIR}/crates/{package,turbo}.json (bridge node)`);
+
+    for (const crate of discoverCrates(ROOT).filter((entry) => entry.binding)) {
+      const manifest = join(ROOT, nativePackageDir(crate.name), "package.json");
+      if (!existsSync(manifest)) continue;
+      const usesPure = (crate.uses ?? []).length > 0;
+      await updateManifestFile(manifest, (source) => {
+        const pkg = readJson<{ devDependencies?: Record<string, string> }>(source);
+        const current = pkg.devDependencies?.[bridgeName];
+        if (usesPure && current !== "workspace:*") {
+          console.log(
+            `  ✓ ${nativePackageDir(crate.name)}/package.json → ${bridgeName}: workspace:*`,
+          );
+          edits += 1;
+          return setJsonValue(source, `devDependencies.${bridgeName}`, "workspace:*");
+        }
+        if (!usesPure && current) {
+          console.log(
+            `  🗑️ ${nativePackageDir(crate.name)}/package.json ← ${bridgeName} (no Cargo path deps)`,
+          );
+          edits += 1;
+          return removeJsonEntry(source, `devDependencies.${bridgeName}`);
+        }
+        return source;
+      });
+    }
+
+    const rootManifest = join(ROOT, "package.json");
+    await updateManifestFile(rootManifest, (source) => {
+      const pkg = readJson<{ workspaces?: string[] }>(source);
+      if ((pkg.workspaces ?? []).includes(`${NATIVE_DIR}/crates`)) return source;
+      console.log(`  ✓ package.json workspaces += ${NATIVE_DIR}/crates`);
+      edits += 1;
+      return addJsonArrayValue(source, "workspaces", `${NATIVE_DIR}/crates`);
+    });
+
+    console.log(
+      edits === 0
+        ? "\n✅ Already in sync\n"
+        : `\n✅ Synced (${edits} fix${edits === 1 ? "" : "es"}) — run bun install\n`,
+    );
+    process.exit(0);
+  },
+});
+
 const main = defineCommand({
   meta: {
     name: "mnative",
@@ -593,6 +718,7 @@ const main = defineCommand({
     "create-npm-dirs": createNpmDirsCommand,
     artifacts: artifactsCommand,
     napi: napiCommand,
+    sync: syncCommand,
   },
   run() {
     const raw = process.argv.slice(2);
@@ -606,6 +732,7 @@ Usage:
 Workspace:
   list                 crates + npm packages discovered in ${NATIVE_DIR}
   add <name>           new crate + npm package (--pure for Rust-only, --uses shared)
+  sync                 re-sync the bridge node + Cargo→npm dependency edges
   typecheck            tsc --noEmit in every npm package
 
 Cargo (whole workspace, run in ${NATIVE_DIR}):
@@ -620,6 +747,8 @@ Cargo (whole workspace, run in ${NATIVE_DIR}):
   nextest              cargo nextest run
   llvm-cov             cargo llvm-cov --lcov → coverage/rust-lcov.info
   audit / deny         cargo audit / cargo deny
+  (--pure on build/check/clippy/fmt/fmt:check/test scopes the command to the
+   pure Rust crates — what the @scope/native-crates bridge package runs)
 
 NAPI (once per npm package):
   napi:build           napi build --platform --release
@@ -639,6 +768,7 @@ Examples:
   mnative matrix --gha        # in CI: feeds strategy.matrix
   mnative add parser
   mnative add shared --pure
+  mnative sync                # after editing Cargo.toml path deps
   mnative napi:build --only native
   mnative napi:build --target aarch64-unknown-linux-gnu --cross
 `);

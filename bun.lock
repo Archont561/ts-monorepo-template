@@ -421,6 +421,10 @@
         "@myorg/ts": "workspace:*",
       },
     },
+    "packages/native/crates": {
+      "name": "@myorg/native-crates",
+      "version": "0.0.0",
+    },
     "packages/native/npm/native": {
       "name": "@myorg/native",
       "version": "0.0.0",
@@ -428,6 +432,7 @@
         "@myorg/bun-config": "workspace:*",
         "@myorg/bunup": "workspace:*",
         "@myorg/native-config": "workspace:*",
+        "@myorg/native-crates": "workspace:*",
         "@myorg/ts": "workspace:*",
         "@napi-rs/cli": "^3.9.1",
       },
@@ -749,6 +754,8 @@
     "@myorg/native": ["@myorg/native@workspace:packages/native/npm/native"],
 
     "@myorg/native-config": ["@myorg/native-config@workspace:configs/native"],
+
+    "@myorg/native-crates": ["@myorg/native-crates@workspace:packages/native/crates"],
 
     "@myorg/pages": ["@myorg/pages@workspace:configs/pages"],
 

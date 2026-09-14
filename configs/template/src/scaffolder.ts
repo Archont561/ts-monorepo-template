@@ -156,6 +156,9 @@ const STATIC_SCOPE_TARGETS: readonly string[] = [
 
   // Native workspace (self-contained, no root Cargo.toml)
   "packages/native/Cargo.toml",
+  // The bridge package that stands for every pure Rust crate in the Turbo
+  // graph — a single static node, unlike the npm packages discovered below.
+  "packages/native/crates/package.json",
   // The npm packages underneath it are discovered below — there is one per
   // binding crate, so they cannot be listed here.
 
