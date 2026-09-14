@@ -175,6 +175,147 @@ export function stripMarkerBlocks(
   };
 }
 
+/** Files that always carry the placeholder scope, relative to the target dir. */
+const STATIC_SCOPE_TARGETS: readonly string[] = [
+  // Root manifests and wrappers
+  "package.json",
+  "lefthook.yml",
+
+  // Documentation
+  "README.md",
+  "AGENTS.md",
+  "CONTEXT.md",
+  "LICENSE.md",
+  // The per-package and per-app docs are discovered below — every package
+  // and app directory carries its own README/AGENTS/CONTEXT.
+
+  // Changesets
+  ".changeset/config.json",
+
+  // Internal package
+  "packages/internal/package.json",
+  "packages/internal/tsconfig.json",
+  "packages/internal/bunup.config.ts",
+
+  // External package
+  "packages/external/package.json",
+  "packages/external/tsconfig.json",
+  "packages/external/bunup.config.ts",
+  "packages/external/src/index.ts",
+  "packages/external/src/user.ts",
+  "packages/external/src/native.ts",
+
+  // Native workspace (self-contained, no root Cargo.toml)
+  "packages/native/Cargo.toml",
+  // The npm packages underneath it are discovered below — there is one per
+  // binding crate, so they cannot be listed here.
+
+  // Example app
+  "apps/example/package.json",
+  "apps/example/tsconfig.json",
+  "apps/example/src/index.ts",
+  "apps/example/src/pages/index.ts",
+  "apps/example/src/pages/api/index.ts",
+  "apps/example/src/pages/api/greet/[name].ts",
+  "apps/example/src/pages/api/shout/[name].ts",
+  "apps/example/src/pages/api/native/index.ts",
+  "apps/example/src/pages/api/native/add.ts",
+  "apps/example/src/pages/api/native/status.ts",
+  "apps/example/src/pages/api/native/fibonacci/[n].ts",
+  "apps/example/src/pages/api/native/primes/[n].ts",
+  "apps/example/src/pages/api/native/reverse.ts",
+  "apps/example/playwright.config.ts",
+  "apps/example/Dockerfile",
+  "apps/example/docker-compose.yml",
+  "apps/example/.dockerignore",
+  ".dockerignore",
+  ".github/dependabot.yml",
+  ".github/workflows/dependabot-auto-merge.yml",
+  // Community health (always)
+  ".github/CODEOWNERS",
+  ".github/PULL_REQUEST_TEMPLATE.md",
+  ".github/FUNDING.yml",
+  ".github/ISSUE_TEMPLATE/bug_report.yml",
+  ".github/ISSUE_TEMPLATE/feature_request.yml",
+  // Editor / Git
+  ".editorconfig",
+  ".gitattributes",
+];
+
+/** Extensions that are safe to rewrite as text. */
+const SCOPE_TEXT_FILE = /\.(json|ts|js|md|yml|yaml|toml)$/;
+
+/**
+ * Repo-relative text files under `searchPaths`.
+ *
+ * `names` mirrors the filters the discovery passes had inline (`-name "*.md"`
+ * for the package docs); omitting it walks every file and keeps the text ones.
+ * A missing path is not an error — the pass simply discovers nothing there.
+ */
+async function findTextFiles(
+  root: string,
+  searchPaths: readonly string[],
+  options: { names?: readonly string[]; exclude?: readonly string[] } = {},
+): Promise<string[]> {
+  const { names = [], exclude = [] } = options;
+  const args = [
+    ...searchPaths,
+    "-type",
+    "f",
+    ...names.flatMap((name, i) => [...(i > 0 ? ["-o"] : []), "-name", name]),
+    ...exclude.flatMap((path) => ["-not", "-path", path]),
+  ];
+  // Every discovery pass tolerated a missing path (`.catch(() => "")`).
+  const found = await $`find ${args}`.text().catch(() => "");
+  return found
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((absolute) => absolute.replace(`${root}/`, ""))
+    .filter((relative) => SCOPE_TEXT_FILE.test(relative));
+}
+
+/**
+ * Every file whose path or contents carry the placeholder scope.
+ *
+ * Three families are discovered rather than enumerated because their contents
+ * grow with the workspace: per-package docs, the per-crate npm packages, the
+ * config packages (except the template workspace itself, which is removed
+ * later) and the `.agents` tree the skills setup fills in. Duplicates are
+ * harmless — both replacements are idempotent — but deduping keeps the write
+ * pass to one visit per file.
+ */
+export async function collectScopeTargets(targetDir: string): Promise<string[]> {
+  const targets = new Set<string>(STATIC_SCOPE_TARGETS);
+
+  // Per-package and per-app documentation (README/AGENTS/CONTEXT).
+  const docs = await findTextFiles(targetDir, [`${targetDir}/packages`, `${targetDir}/apps`], {
+    names: ["*.md"],
+    exclude: ["*/node_modules/*", "*/dist/*", "*/target/*", "*/.turbo/*"],
+  });
+  for (const relativePath of docs) targets.add(relativePath);
+
+  // Native npm packages: one per binding crate (`crates/*` -> `npm/*`).
+  const nativeGlob = new Glob("packages/native/npm/**/*.{json,ts,md}");
+  for await (const relativePath of nativeGlob.scan({ cwd: targetDir })) {
+    targets.add(relativePath);
+  }
+
+  // Config package manifests and config files.
+  const configs = await findTextFiles(targetDir, [`${targetDir}/configs`], {
+    exclude: ["*/node_modules/*", "*/dist/*", "*/configs/template/*"],
+  });
+  for (const relativePath of configs) targets.add(relativePath);
+
+  // Skills setup copies files to .agents/skills after this method runs.
+  const agents = await findTextFiles(targetDir, [`${targetDir}/.agents`], {
+    exclude: ["*/node_modules/*"],
+  });
+  for (const relativePath of agents) targets.add(relativePath);
+
+  return [...targets];
+}
+
 export class MonorepoScaffolder {
   readonly targetDir: string;
   readonly scope: string;
@@ -274,131 +415,17 @@ export class MonorepoScaffolder {
    * Replaces the placeholder scope (@myorg) with the user's scope
    * across all workspace files, configs, docs, and source code.
    */
+  /** Rewrites the placeholder scope in every file that carries it. */
   async replaceScopePlaceholders(): Promise<void> {
-    const files = [
-      // Root manifests and wrappers
-      "package.json",
-      "lefthook.yml",
-
-      // Documentation
-      "README.md",
-      "AGENTS.md",
-      "CONTEXT.md",
-      "LICENSE.md",
-      // The per-package and per-app docs are discovered below — every package
-      // and app directory carries its own README/AGENTS/CONTEXT.
-
-      // Changesets
-      ".changeset/config.json",
-
-      // Internal package
-      "packages/internal/package.json",
-      "packages/internal/tsconfig.json",
-      "packages/internal/bunup.config.ts",
-
-      // External package
-      "packages/external/package.json",
-      "packages/external/tsconfig.json",
-      "packages/external/bunup.config.ts",
-      "packages/external/src/index.ts",
-      "packages/external/src/user.ts",
-      "packages/external/src/native.ts",
-
-      // Native workspace (self-contained, no root Cargo.toml)
-      "packages/native/Cargo.toml",
-      // The npm packages underneath it are discovered below — there is one per
-      // binding crate, so they cannot be listed here.
-
-      // Example app
-      "apps/example/package.json",
-      "apps/example/tsconfig.json",
-      "apps/example/src/index.ts",
-      "apps/example/src/pages/index.ts",
-      "apps/example/src/pages/api/index.ts",
-      "apps/example/src/pages/api/greet/[name].ts",
-      "apps/example/src/pages/api/shout/[name].ts",
-      "apps/example/src/pages/api/native/index.ts",
-      "apps/example/src/pages/api/native/add.ts",
-      "apps/example/src/pages/api/native/status.ts",
-      "apps/example/src/pages/api/native/fibonacci/[n].ts",
-      "apps/example/src/pages/api/native/primes/[n].ts",
-      "apps/example/src/pages/api/native/reverse.ts",
-      "apps/example/playwright.config.ts",
-      "apps/example/Dockerfile",
-      "apps/example/docker-compose.yml",
-      "apps/example/.dockerignore",
-      ".dockerignore",
-      ".github/dependabot.yml",
-      ".github/workflows/dependabot-auto-merge.yml",
-      // Community health (always)
-      ".github/CODEOWNERS",
-      ".github/PULL_REQUEST_TEMPLATE.md",
-      ".github/FUNDING.yml",
-      ".github/ISSUE_TEMPLATE/bug_report.yml",
-      ".github/ISSUE_TEMPLATE/feature_request.yml",
-      // Editor / Git
-      ".editorconfig",
-      ".gitattributes",
-    ];
-
-    // Package and app documentation: README/AGENTS/CONTEXT live in every
-    // package and app directory, including the native workspace root, so they
-    // are discovered rather than enumerated.
-    const docsFiles =
-      await $`find ${this.targetDir}/packages ${this.targetDir}/apps -type f -name "*.md" -not -path "*/node_modules/*" -not -path "*/dist/*" -not -path "*/target/*" -not -path "*/.turbo/*"`
-        .text()
-        .catch(() => "");
-    for (const absolutePath of docsFiles.trim().split("\n").filter(Boolean)) {
-      files.push(absolutePath.replace(`${this.targetDir}/`, ""));
-    }
-
-    // Native npm packages: one per binding crate (`crates/*` → `npm/*`), so
-    // they are discovered rather than enumerated.
-    const nativeGlob = new Glob("packages/native/npm/**/*.{json,ts,md}");
-    for await (const relativePath of nativeGlob.scan({ cwd: this.targetDir })) {
-      files.push(relativePath);
-    }
-
-    // Config package manifests and config files carry the @myorg scope in
-    // their names and contents (e.g. changeset ignore lists). Replacing the
-    // placeholder across all surviving config sources -- except the template
-    // workspace itself, which is removed later -- keeps generated projects
-    // free of the template scope.
-    const configFiles =
-      await $`find ${this.targetDir}/configs -type f -not -path "*/node_modules/*" -not -path "*/dist/*" -not -path "*/configs/template/*"`
-        .text()
-        .catch(() => "");
-    for (const absolutePath of configFiles.trim().split("\n").filter(Boolean)) {
-      const relativePath = absolutePath.replace(`${this.targetDir}/`, "");
-      if (/\.(json|ts|js|md|yml|yaml|toml)$/.test(relativePath)) {
-        files.push(relativePath);
-      }
-    }
-
-    // Skills setup copies files to .agents/skills after this method runs
-    // initially, so also include any already-present .agents files. A second
-    // pass after runSetup() catches files created by setup scripts.
-    const agentsFiles =
-      await $`find ${this.targetDir}/.agents -type f -not -path "*/node_modules/*" 2>/dev/null`
-        .text()
-        .catch(() => "");
-    for (const absolutePath of agentsFiles.trim().split("\n").filter(Boolean)) {
-      const relativePath = absolutePath.replace(`${this.targetDir}/`, "");
-      if (/\.(json|ts|js|md|yml|yaml|toml)$/.test(relativePath)) {
-        files.push(relativePath);
-      }
-    }
-
-    for (const relativePath of files) {
+    for (const relativePath of await collectScopeTargets(this.targetDir)) {
       const fullPath = `${this.targetDir}/${relativePath}`;
       const target = file(fullPath);
+      if (!(await target.exists())) continue;
 
-      if (await target.exists()) {
-        const content = await target.text();
-        const next = this.replaceIdentity(content).replaceAll(this.placeholder, this.scope);
-        if (next !== content) {
-          await write(fullPath, next);
-        }
+      const content = await target.text();
+      const next = this.replaceIdentity(content).replaceAll(this.placeholder, this.scope);
+      if (next !== content) {
+        await write(fullPath, next);
       }
     }
   }

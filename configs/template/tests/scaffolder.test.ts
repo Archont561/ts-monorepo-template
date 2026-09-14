@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir } from "node:fs/promises";
 import { $, file, write } from "bun";
-import { MonorepoScaffolder, removeJsonObjectEntry, stripMarkerBlocks } from "../src/scaffolder";
+import {
+  collectScopeTargets,
+  MonorepoScaffolder,
+  removeJsonObjectEntry,
+  stripMarkerBlocks,
+} from "../src/scaffolder";
 
 describe("MonorepoScaffolder (unit)", () => {
   let workDir: string;
@@ -940,6 +945,47 @@ describe("MonorepoScaffolder (unit)", () => {
         disabled,
       ).content;
       expect(stripMarkerBlocks(once, disabled)).toEqual({ content: once, changed: false });
+    });
+  });
+  // ── Scope target discovery ───────────────────────
+
+  describe("collectScopeTargets", () => {
+    test("includes the static targets even in an empty tree", async () => {
+      const targets = await collectScopeTargets(workDir);
+      expect(targets).toContain("package.json");
+      expect(targets).toContain("apps/example/src/index.ts");
+      expect(targets).toContain("packages/external/src/native.ts");
+    });
+
+    test("discovers package docs, config packages and the agents tree", async () => {
+      await mkdir(`${workDir}/packages/demo`, { recursive: true });
+      await mkdir(`${workDir}/apps/demo`, { recursive: true });
+      await mkdir(`${workDir}/configs/demo`, { recursive: true });
+      await mkdir(`${workDir}/.agents/skills/demo`, { recursive: true });
+      await write(`${workDir}/packages/demo/README.md`, "@myorg/demo\n");
+      await write(`${workDir}/apps/demo/AGENTS.md`, "@myorg/demo\n");
+      await write(`${workDir}/configs/demo/package.json`, '{ "name": "@myorg/demo" }\n');
+      await write(`${workDir}/.agents/skills/demo/SKILL.md`, "@myorg/demo\n");
+      // Non-text files are never rewritten, and node_modules is not walked.
+      await write(`${workDir}/packages/demo/logo.png`, "@myorg/demo\n");
+      await mkdir(`${workDir}/packages/demo/node_modules/x`, { recursive: true });
+      await write(`${workDir}/packages/demo/node_modules/x/README.md`, "@myorg/demo\n");
+
+      const targets = await collectScopeTargets(workDir);
+      expect(targets).toContain("packages/demo/README.md");
+      expect(targets).toContain("apps/demo/AGENTS.md");
+      expect(targets).toContain("configs/demo/package.json");
+      expect(targets).toContain(".agents/skills/demo/SKILL.md");
+      expect(targets).not.toContain("packages/demo/logo.png");
+      expect(targets.some((p) => p.includes("node_modules"))).toBe(false);
+    });
+
+    test("visits every file at most once", async () => {
+      await mkdir(`${workDir}/packages/demo`, { recursive: true });
+      await mkdir(`${workDir}/apps/demo`, { recursive: true });
+      await write(`${workDir}/packages/demo/README.md`, "@myorg/demo\n");
+      const targets = await collectScopeTargets(workDir);
+      expect(new Set(targets).size).toBe(targets.length);
     });
   });
 });
