@@ -1,26 +1,32 @@
 import { expect, test } from "@playwright/test";
 
+// `/` serves whichever page survived scaffolding: the plain index.html, or the
+// UnoCSS version (already swapped in, or served from index-unocss.html in dev).
+// The assertions below hold for both.
 test.describe("HTML Page (Browser)", () => {
   test("renders the greeting div", async ({ page }) => {
     await page.goto("/");
 
     const greeting = page.locator("#greeting");
     await expect(greeting).toBeVisible();
-    await expect(greeting).toHaveText("Hello, World!");
+    // The UnoCSS page fetches /api/greet/UnoCSS, so the text can be either one.
+    await expect(greeting).toContainText(/Hello, (World|UnoCSS)!/);
   });
 
   test("has correct page title", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveTitle("Bun Monorepo Example");
+    // The UnoCSS page appends "— UnoCSS".
+    await expect(page).toHaveTitle(/Bun Monorepo Example/);
   });
 
   test("applies dark background styling", async ({ page }) => {
     await page.goto("/");
 
-    const greeting = page.locator("#greeting");
-    const bgColor = await greeting.evaluate((el) => getComputedStyle(el).backgroundColor);
-    // #18181b → rgb(24, 24, 27)
-    expect(bgColor).toBe("rgb(24, 24, 27)");
+    // The body colour comes from the plain page's stylesheet and from the
+    // UnoCSS page's fallback style, so it holds with or without the CDN runtime.
+    const bgColor = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    // #09090b → rgb(9, 9, 11)
+    expect(bgColor).toBe("rgb(9, 9, 11)");
   });
 });
 

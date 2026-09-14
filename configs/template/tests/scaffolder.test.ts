@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir } from "node:fs/promises";
 import { $, file, write } from "bun";
-import { MonorepoScaffolder } from "../src/scaffolder";
+import { MonorepoScaffolder, removeJsonObjectEntry } from "../src/scaffolder";
 
 describe("MonorepoScaffolder (unit)", () => {
   let workDir: string;
@@ -410,6 +410,52 @@ describe("MonorepoScaffolder (unit)", () => {
       const content = await file(`${workDir}/test.md`).text();
       expect(content).not.toMatch(/\n{3,}/);
     });
+
+    test("keeps the indentation of the code around an indented block", async () => {
+      // Regression: the marker line's indentation used to be left behind, so a
+      // removed block glued it onto the next line and a kept block got its
+      // first line indented twice.
+      await write(
+        `${workDir}/app.ts`,
+        [
+          "const routes = {",
+          '  "/keep": () => 1,',
+          "  // TEMPLATE-ONLY:START(native)",
+          '  "/native": () => 2,',
+          "  // TEMPLATE-ONLY:END(native)",
+          "};",
+          "",
+          "const other = {",
+          "  // TEMPLATE-ONLY:START(unocss)",
+          "  a: 1,",
+          "  // TEMPLATE-ONLY:END(unocss)",
+          "};",
+        ].join("\n"),
+      );
+
+      const removed = new MonorepoScaffolder({ targetDir: workDir });
+      setDisabledScopes(removed, ["template", "native"]);
+      await removed.stripTemplateMarkers();
+      expect(await file(`${workDir}/app.ts`).text()).toContain(
+        'const routes = {\n  "/keep": () => 1,\n};',
+      );
+
+      await write(
+        `${workDir}/kept.ts`,
+        [
+          "const other = {",
+          "  // TEMPLATE-ONLY:START(unocss)",
+          "  a: 1,",
+          "  // TEMPLATE-ONLY:END(unocss)",
+          "};",
+        ].join("\n"),
+      );
+
+      const kept = new MonorepoScaffolder({ targetDir: workDir, configs: { unocss: true } });
+      setDisabledScopes(kept, ["template"]);
+      await kept.stripTemplateMarkers();
+      expect(await file(`${workDir}/kept.ts`).text()).toContain("const other = {\n  a: 1,\n};");
+    });
   });
 
   // ── removeTemplateFiles ──────────────────────────
@@ -759,6 +805,63 @@ describe("MonorepoScaffolder (unit)", () => {
 
       const after = await file(`${workDir}/.git/HEAD`).text();
       expect(after).toBe(before);
+    });
+  });
+
+  // ── removeJsonObjectEntry ────────────────────────
+
+  describe("removeJsonObjectEntry", () => {
+    const turbo = [
+      "{",
+      '  "$schema": "https://turborepo.dev/schema.json",',
+      '  "tasks": {',
+      '    "build": {',
+      '      "dependsOn": ["^build"],',
+      '      "outputs": ["dist/**", "public/uno.css"]',
+      "    },",
+      '    "test:e2e": {',
+      '      "dependsOn": ["^build"],',
+      '      "cache": false',
+      "    },",
+      '    "typecheck": {',
+      '      "dependsOn": ["^build"]',
+      "    }",
+      "  }",
+      "}",
+      "",
+    ].join("\n");
+
+    test("removes a middle entry and its comma without reformatting", () => {
+      const next = removeJsonObjectEntry(turbo, "test:e2e");
+      expect(next).not.toContain("test:e2e");
+      // Serializing the rest would have reflowed arrays onto their own lines.
+      expect(next).toContain('"dependsOn": ["^build"]');
+      expect(next).toContain('"outputs": ["dist/**", "public/uno.css"]');
+      expect(JSON.parse(next).tasks).toEqual({
+        build: { dependsOn: ["^build"], outputs: ["dist/**", "public/uno.css"] },
+        typecheck: { dependsOn: ["^build"] },
+      });
+    });
+
+    test("removes the last entry and the preceding comma", () => {
+      const next = removeJsonObjectEntry(turbo, "typecheck");
+      expect(next).not.toContain("typecheck");
+      expect(next).toContain('"cache": false\n    }\n  }');
+      expect(JSON.parse(next).tasks).toEqual({
+        build: { dependsOn: ["^build"], outputs: ["dist/**", "public/uno.css"] },
+        "test:e2e": { dependsOn: ["^build"], cache: false },
+      });
+    });
+
+    test("leaves the source untouched for an unknown key", () => {
+      expect(removeJsonObjectEntry(turbo, "build:wasm")).toBe(turbo);
+    });
+
+    test("survives braces inside strings", () => {
+      const source =
+        '{\n  "a": {\n    "cmd": "echo {\\"x\\"}"\n  },\n  "b": {\n    "n": 1\n  }\n}\n';
+      const next = removeJsonObjectEntry(source, "a");
+      expect(JSON.parse(next)).toEqual({ b: { n: 1 } });
     });
   });
 });

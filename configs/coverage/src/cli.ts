@@ -117,9 +117,18 @@ const htmlCommand = defineCommand({
 });
 
 const checkCommand = defineCommand({
-  meta: { name: "check", description: "Check coverage threshold (default 80%) against coverage/lcov.info" },
+  meta: {
+    name: "check",
+    description: `Check coverage threshold (default ${COVERAGE_THRESHOLD}%) against coverage/lcov.info`,
+  },
   args: {
-    threshold: { type: "string", description: "Threshold percent", default: "80" },
+    // The default comes from COVERAGE_THRESHOLD so the CLI and CI enforce the
+    // same number; hardcoding it here made the constant decorative.
+    threshold: {
+      type: "string",
+      description: "Threshold percent",
+      default: String(COVERAGE_THRESHOLD),
+    },
   },
   run({ args }) {
     const result = totals();

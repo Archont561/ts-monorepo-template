@@ -5,7 +5,7 @@
 ## Current state
 
 - Threshold: **80% lines** (`COVERAGE_THRESHOLD` in `index.ts`), mirrored as `0.80` in `configs/bun-config/bunfig.toml`.
-- Measured today: **96.7% lines (145/150)** — well above the gate.
+- Measured today: **96.95% lines (159/164)** — well above the gate.
 - Fragments owned: `ci.steps.yml` (setup → html → artifact 14d → check → PR comment), `pages.steps.yml`, `coverage.base.yml` + `coverage.steps.yml` (standalone Pages site when Pages is off).
 - Rust coverage joins the same LCOV through `mnative llvm-cov` when `packages/native/Cargo.toml` exists.
 

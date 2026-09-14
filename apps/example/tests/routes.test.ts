@@ -85,6 +85,7 @@ describe("handleShout (page)", () => {
   });
 });
 
+// TEMPLATE-ONLY:START(native)
 describe("native routes (optional)", () => {
   test("native routes exist when native enabled", async () => {
     try {
@@ -114,3 +115,4 @@ describe("native routes (optional)", () => {
     }
   });
 });
+// TEMPLATE-ONLY:END(native)

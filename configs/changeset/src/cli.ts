@@ -58,6 +58,9 @@ const initCommand = defineCommand({
   },
   async run({ args }) {
     await minit((args.target as string) ?? "changeset");
+    // citty falls through to the root command afterwards, which would spawn the
+    // real `changeset init` on top of the config we just wrote.
+    process.exit(0);
   },
 });
 

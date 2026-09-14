@@ -40,6 +40,62 @@ const PACKAGE_JSON_SCRIPTS_TO_REMOVE = [
   "docs:site",
 ];
 
+/**
+ * Deletes a `"key": { ... }` entry from a JSON document without touching the
+ * formatting of the entries around it.
+ *
+ * Parsing and re-serializing is the obvious way to drop a Turbo task, but
+ * `JSON.stringify(value, null, 2)` reflows every array in the file onto its own
+ * line, and the scaffolded project's own `biome check` then rejects the config
+ * it was just handed. Editing the text keeps every surviving byte as committed.
+ */
+export function removeJsonObjectEntry(source: string, key: string): string {
+  const keyIndex = source.indexOf(`"${key}"`);
+  if (keyIndex === -1) return source;
+
+  const openBrace = source.indexOf("{", keyIndex);
+  if (openBrace === -1) return source;
+
+  // Walk to the entry's matching closing brace, ignoring braces inside strings.
+  let depth = 0;
+  let closeBrace = -1;
+  for (let i = openBrace; i < source.length; i++) {
+    const char = source[i];
+    if (char === '"') {
+      for (i++; i < source.length; i++) {
+        if (source[i] === "\\") i++;
+        else if (source[i] === '"') break;
+      }
+      continue;
+    }
+    if (char === "{") depth++;
+    else if (char === "}") {
+      depth--;
+      if (depth === 0) {
+        closeBrace = i;
+        break;
+      }
+    }
+  }
+  if (closeBrace === -1) return source;
+
+  const start = source.lastIndexOf("\n", keyIndex) + 1;
+  let end = closeBrace + 1;
+
+  const trailingComma = /^[ \t]*,[ \t]*\n?/.exec(source.slice(end));
+  if (trailingComma) {
+    end += trailingComma[0].length;
+  } else {
+    // Last entry in the object — its predecessor keeps the comma instead.
+    const before = source.slice(0, start).replace(/[ \t]*\n$/, "");
+    if (before.endsWith(",")) {
+      return `${before.slice(0, -1)}${source.slice(end)}`;
+    }
+  }
+
+  return source.slice(0, start) + source.slice(end);
+}
+
 export class MonorepoScaffolder {
   readonly targetDir: string;
   readonly scope: string;
@@ -389,18 +445,23 @@ export class MonorepoScaffolder {
     }> = [
       {
         // YAML/TOML/shell: # TEMPLATE-ONLY:START(scope)
+        //
+        // The marker line's own indentation is part of the match: leaving it
+        // behind glues it onto whatever follows (a kept block gets its first
+        // line double-indented, a removed block leaves a whitespace-only line
+        // that `biome check` rejects in the scaffolded project).
         regex:
-          /#[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)#[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
+          /[ \t]*#[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)[ \t]*#[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
       },
       {
         // TS/JS: // TEMPLATE-ONLY:START(scope)
         regex:
-          /\/\/[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)\/\/[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
+          /[ \t]*\/\/[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)[ \t]*\/\/[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
       },
       {
         // HTML/MD: <!-- TEMPLATE-ONLY:START(scope) -->
         regex:
-          /<!--[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[ \t]*-->([\s\S]*?)<!--[ \t]*TEMPLATE-ONLY:END\([^)]*\)[ \t]*-->[ \t]*\n?/g,
+          /[ \t]*<!--[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[ \t]*-->([\s\S]*?)<!--[ \t]*TEMPLATE-ONLY:END\([^)]*\)[ \t]*-->[ \t]*\n?/g,
       },
     ];
 
@@ -451,7 +512,13 @@ export class MonorepoScaffolder {
       }
 
       if (modified) {
-        content = content.replace(/\n{3,}/g, "\n\n");
+        content = content
+          // Marker lines left over from a removal, e.g. an indented block that
+          // was cut out whole.
+          .replace(/[ \t]+\n/g, "\n")
+          .replace(/\n{3,}/g, "\n\n")
+          // A block that ended the file leaves a blank tail behind.
+          .replace(/\n{2,}$/, "\n");
         await write(filePath, content);
       }
     }
@@ -595,15 +662,15 @@ export class MonorepoScaffolder {
         delete rootPkg.scripts?.[script];
       }
 
-      // 5. Turbo tasks
+      // 5. Turbo tasks — text surgery so the committed formatting survives.
       if (removals.turboTasksToRemove) {
         const turboPath = `${this.targetDir}/configs/turbo/turbo.base.json`;
         if (await file(turboPath).exists()) {
-          const turbo = await file(turboPath).json();
+          let turbo = await file(turboPath).text();
           for (const task of removals.turboTasksToRemove) {
-            delete turbo.tasks?.[task];
+            turbo = removeJsonObjectEntry(turbo, task);
           }
-          await write(turboPath, `${JSON.stringify(turbo, null, 2)}\n`);
+          await write(turboPath, turbo);
         }
       }
 
@@ -620,7 +687,76 @@ export class MonorepoScaffolder {
       }
     }
 
+    // A config removal can take a whole workspace with it (native=none deletes
+    // packages/native, the npm packages under npm/* included). A root
+    // dependency or workspace glob left pointing at the missing directory makes
+    // `bun install` fail outright, so both are reconciled with what survived.
+    const reconciled = await this.reconcileWorkspaces(
+      rootPkg.workspaces ?? [],
+      rootPkg.devDependencies ?? {},
+      rootPkg.dependencies ?? {},
+    );
+    rootPkg.workspaces = reconciled.workspaces;
+    rootPkg.devDependencies = reconciled.devDependencies;
+    rootPkg.dependencies = reconciled.dependencies;
+
     await write(rootPkgPath, `${JSON.stringify(rootPkg, null, 2)}\n`);
+  }
+
+  /**
+   * Drops workspace globs that no longer match a package and `workspace:*`
+   * dependencies that no longer resolve to one.
+   *
+   * Only entries with a `workspace:` specifier can be checked this way — a
+   * regular npm dependency is left alone, even when its name matches nothing
+   * locally.
+   */
+  private async reconcileWorkspaces(
+    workspaces: string[],
+    devDependencies: Record<string, string>,
+    dependencies: Record<string, string>,
+  ): Promise<{
+    workspaces: string[];
+    devDependencies: Record<string, string>;
+    dependencies: Record<string, string>;
+  }> {
+    const surviving: string[] = [];
+    for (const pattern of workspaces) {
+      const manifests = [...new Glob(`${pattern}/package.json`).scanSync({ cwd: this.targetDir })];
+      if (manifests.length > 0) surviving.push(pattern);
+    }
+
+    // Package names come from the whole tree rather than only the surviving
+    // globs: a nested package (`packages/native/npm/*`) or one whose glob is
+    // imprecise enough that a manifest is missed still resolves, and dropping
+    // it would break `bun install` in the other direction.
+    const names = new Set<string>();
+    const manifests = new Glob("{apps,packages,configs}/**/package.json").scanSync({
+      cwd: this.targetDir,
+      onlyFiles: true,
+    });
+    for (const manifest of manifests) {
+      if (/(^|\/)(node_modules|dist|target|\.git|\.turbo)\//.test(manifest)) continue;
+      try {
+        const name = (await file(`${this.targetDir}/${manifest}`).json()).name;
+        if (typeof name === "string") names.add(name);
+      } catch {
+        // Unreadable manifest — treat the package as absent.
+      }
+    }
+
+    const keepResolvable = (deps: Record<string, string>): Record<string, string> =>
+      Object.fromEntries(
+        Object.entries(deps).filter(
+          ([name, spec]) => !spec.startsWith("workspace:") || names.has(name),
+        ),
+      );
+
+    return {
+      workspaces: surviving,
+      devDependencies: keepResolvable(devDependencies),
+      dependencies: keepResolvable(dependencies),
+    };
   }
 
   /**

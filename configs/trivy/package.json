@@ -12,6 +12,10 @@
       "false": {
         "filePatternsToRemove": [
           "**/trivy*"
+        ],
+        "scriptsToRemove": [
+          "security:trivy",
+          "security:check"
         ]
       }
     }

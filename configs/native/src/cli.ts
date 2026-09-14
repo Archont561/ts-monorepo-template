@@ -409,6 +409,31 @@ const listCommand = defineCommand({
   },
 });
 
+/**
+ * npm scope for a newly added package: `--scope` wins, then the scope the
+ * existing packages already use (a scaffolded monorepo renames `@myorg` to the
+ * user's own scope, and `mnative add` must not reintroduce the template's),
+ * then `NATIVE_SCOPE`, then the template default.
+ */
+async function resolveScope(explicit?: string): Promise<string> {
+  if (explicit) return explicit;
+
+  const first = discoverPackages(ROOT)[0];
+  if (first) {
+    try {
+      const manifest = (await Bun.file(join(ROOT, first.dir, "package.json")).json()) as {
+        name?: string;
+      };
+      const prefix = manifest.name?.split("/")[0];
+      if (prefix?.startsWith("@")) return prefix;
+    } catch {
+      // Unreadable manifest — fall through to the env/default scope.
+    }
+  }
+
+  return process.env.NATIVE_SCOPE ?? "@myorg";
+}
+
 const addCommand = defineCommand({
   meta: {
     name: "add",
@@ -449,11 +474,7 @@ const addCommand = defineCommand({
       sample: "arithmetic" as const,
     };
 
-    const scope =
-      (args.scope as string) ??
-      (discoverPackages(ROOT)[0]?.name ? undefined : undefined) ??
-      process.env.NATIVE_SCOPE ??
-      "@myorg";
+    const scope = await resolveScope(args.scope as string | undefined);
 
     await writeCrate(ROOT, spec, { scope });
     await addWorkspaceMember(ROOT, name);

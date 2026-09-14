@@ -23,10 +23,12 @@ const checkCommand = defineCommand({
     const issues = checkBadges(content, owner, scope);
     if (issues.length === 0) {
       console.log("✅ Badges look OK (no placeholder owner/scope in badge URLs)");
-    } else {
-      console.warn("⚠️ Badge issues:\n" + issues.map((i) => `  - ${i}`).join("\n"));
-      process.exit(1);
+      // citty runs the parent command after a subcommand, so leaving without an
+      // exit code would re-run the default check (and print this line twice).
+      process.exit(0);
     }
+    console.warn("⚠️ Badge issues:\n" + issues.map((i) => `  - ${i}`).join("\n"));
+    process.exit(1);
   },
 });
 
