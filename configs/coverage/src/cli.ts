@@ -172,13 +172,13 @@ const checkCommand = defineCommand({
       return;
     }
     const threshold = Number((args.threshold as string) ?? COVERAGE_THRESHOLD);
-    const percent = Number(result.percent.toFixed(2));
-    console.log(`Line coverage: ${percent}% (${result.hit}/${result.found} lines) — threshold ${threshold}%`);
+    const percent = result.percent;
+    console.log(`Line coverage: ${percent.toFixed(2)}% (${result.hit}/${result.found} lines) — threshold ${threshold}%`);
     if (!meetsThreshold(percent, threshold)) {
-      console.error(`::error::Coverage ${percent}% is below ${threshold}% threshold`);
+      console.error(`::error::Coverage ${percent.toFixed(2)}% is below ${threshold}% threshold`);
       process.exit(1);
     }
-    console.log(`✅ Coverage ${percent}% meets threshold`);
+    console.log(`✅ Coverage ${percent.toFixed(2)}% meets threshold`);
     process.exit(0);
   },
 });
