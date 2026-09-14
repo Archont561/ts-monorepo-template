@@ -12,20 +12,35 @@
         "extraRemovals": [
           ".agents"
         ],
+        "filePatternsToRemove": [
+          ".agents/**",
+          "**/.claude/**",
+          "**/skills/**"
+        ],
+        "fileRegexesToRemove": [
+          "\\.agents",
+          "skills"
+        ],
         "scriptsToRemove": [
-          "skills:sync",
-          "skills:list"
+          "skills"
         ]
       }
     }
   },
   "bin": {
-    "mskills": "./cli.ts"
+    "mskills": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "exports": {
     "./skills/*": "./skills/*"
   },
   "devDependencies": {
     "skills": "^1.5.26"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

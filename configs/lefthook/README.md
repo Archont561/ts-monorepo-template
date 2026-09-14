@@ -1,29 +1,28 @@
 # @myorg/lefthook
 
-> Git hooks for the monorepo, configured once.
+Git hooks, managed — plus `msetup`, the command that links every `m`-bin into `node_modules/.bin`.
 
 ## What it provides
 
-- `lefthook` as a shared devDependency.
-- `lefthook.yml` — hooks that are merged into the root wrapper on install.
-- `msetup` — regenerates the root `lefthook.yml` wrapper, re-links the
-  `m`-prefixed CLI bins into `node_modules/.bin`, and installs the hooks.
+- `lefthook` as a shared workspace dependency
+- `lefthook.yml` — the hooks source (the root `lefthook.yml` is generated from it)
+- `msetup` — links `m`-bins, regenerates the root wrapper, installs the hooks, and makes sure the Changesets config exists
+
+> [!NOTE]
+> The root `lefthook.yml` is generated. Edit `configs/lefthook/lefthook.yml` instead.
 
 ### Hooks
 
-| Hook | Command |
-| ---- | ------- |
-| pre-commit | `mbiome check --write {staged_files}` (formats staged files) |
-| pre-commit | `bun run ci:lint` when workflow files are staged |
-| commit-msg | `bunx commitlint --config configs/commitlint/index.js --edit {1}` |
+| Hook | Command | Purpose |
+| :--- | :--- | :--- |
+| `pre-commit` | `mbiome check --write {staged_files}` | Format and lint staged files |
+| `commit-msg` | `commitlint --edit {1}` | Validate the commit message |
 
-## Lifecycle
+## Usage
 
-The root `prepare` script invokes `bun configs/lefthook/setup.ts lefthook` —
-it runs on every `bun install`. Because the root ships zero
-`devDependencies`, the wrapper regeneration + bin linking are what make the
-`m`-commands resolvable through `node_modules/.bin`.
+```bash
+bun install        # runs `prepare` → msetup lefthook + mchangeset init
+msetup lefthook    # regenerate lefthook.yml and reinstall the hooks
+```
 
-Use `msetup lefthook` directly to re-apply after changing hooks.
-
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+`msetup` scans each `configs/*/package.json` `bin` field and symlinks the bins, which is why the root ships zero `devDependencies`.

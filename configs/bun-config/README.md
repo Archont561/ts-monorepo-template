@@ -1,33 +1,38 @@
 # @myorg/bun-config
 
-> Shared Bun runtime, test, and coverage configuration.
+The shared Bun runtime configuration — tests, coverage and a `mbun` wrapper that always points Bun at it.
 
 ## What it provides
 
-- `bunfig.toml` — the single source of truth for test + coverage settings.
-- `mbun` — wraps `bun`; passes `--config=<configs/bun-config/bunfig.toml>` for
-  `bun test` (other commands pass through unchanged).
-- `mcoverage` — runs `mturbo coverage` (per-package coverage in dependency
-  order) then merges the per-package `coverage/lcov.info` reports into a single
-  `coverage/lcov.info` with `lcov-result-merger --prepend-source-files`.
+- `bunfig.toml` — the single source of truth for test and coverage settings
+- `mbun` — one bin that runs Bun with that config, so no package needs its own `bunfig.toml`
+
+> [!NOTE]
+> There are no per-package `bunfig.toml` symlinks. The shared config is passed explicitly by `mbun`.
+
+### Bins
+
+| Bin | Wraps | Description |
+| :--- | :--- | :--- |
+| `mbun <cmd>` | `bun` | Injects `--config=bunfig.toml` for `bun test` |
+| `mbun coverage` | `mturbo coverage` | Per-package coverage only — `bun run coverage` adds `mcoverage merge` |
+| `mbun clean:modules` | — | Removes workspace `node_modules` dirs, keeps the root one |
 
 ### Config highlights (`bunfig.toml`)
 
-- Coverage always on: LCOV + text reporters → `coverage/lcov.info`.
-- 80% line/function threshold; test/config/bundle/`e2e` paths ignored.
+| Setting | Value |
+| :--- | :--- |
+| Coverage reporters | `text` + `lcov` → `coverage/lcov.info` |
+| Coverage threshold | `lines = 0.80`, `functions = 0.80` (mirrors `COVERAGE_THRESHOLD` in `@myorg/coverage`) |
+| Skip test files | Yes |
+| Ignores | tests, `dist`, `node_modules`, `configs/*`, CLI entry points, `*.node`, `target/**`, devcontainer |
 
 ## Usage
 
 ```bash
-bun run test       # mturbo test   (Turbo runs per-package mbun test)
-bun run coverage   # mcoverage     (mturbo coverage + merged root lcov.info)
+bun run test       # mturbo test — each package runs its own `mbun test`
+bun run coverage   # mturbo coverage && mcoverage merge → coverage/lcov.info
+bun run coverage:html   # genhtml report at coverage/html/
 ```
 
-## Rules
-
-- No per-package `bunfig.toml` symlinks — the shared config is always passed
-  explicitly, so coverage output stays deterministic.
-- Bun uses JavaScriptCore (JSC), not V8: never use Node coverage APIs, and
-  don't expect `bun test --coverage` to capture separately spawned processes.
-
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+Rendering the HTML report needs `lcov` installed (`mcoverage setup` installs it, or `sudo apt-get install -y lcov`).

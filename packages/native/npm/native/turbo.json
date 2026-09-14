@@ -1,0 +1,19 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "outputs": ["*.node", "index.js", "index.d.ts"],
+      "cache": false
+    },
+    "build:wasm": {
+      "outputs": ["*.wasi.cjs", "*.wasi-browser.js", "*.wasm"],
+      "cache": false
+    },
+    "cargo:check": {
+      "cache": false
+    },
+    "cargo:clippy": {
+      "cache": false
+    }
+  }
+}

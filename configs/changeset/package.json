@@ -7,12 +7,20 @@
     "default": "always",
     "flag": "changeset",
     "prompt": "Configure Changesets (versioning + releases)?",
-    "setup": "bun configs/changeset/init.ts"
+    "setup": "mchangeset init"
   },
   "bin": {
-    "minit": "./init.ts"
+    "mchangeset": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "devDependencies": {
-    "@changesets/cli": "^3.0.2"
+    "@changesets/cli": "^3.0.2",
+    "@myorg/citty": "workspace:*"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

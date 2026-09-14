@@ -1,43 +1,60 @@
 import { expect, test } from "@playwright/test";
 
+// `/` serves whichever page survived scaffolding: the plain index.html, or the
+// UnoCSS version (already swapped in, or served from index-unocss.html in dev).
+// The assertions below hold for both.
 test.describe("HTML Page (Browser)", () => {
   test("renders the greeting div", async ({ page }) => {
     await page.goto("/");
 
     const greeting = page.locator("#greeting");
     await expect(greeting).toBeVisible();
-    await expect(greeting).toHaveText("Hello, World!");
+    // The UnoCSS page fetches /api/greet/UnoCSS, so the text can be either one.
+    await expect(greeting).toContainText(/Hello, (World|UnoCSS)!/);
   });
 
   test("has correct page title", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveTitle("Bun Monorepo Example");
+    // The UnoCSS page appends "— UnoCSS".
+    await expect(page).toHaveTitle(/Bun Monorepo Example/);
   });
 
   test("applies dark background styling", async ({ page }) => {
     await page.goto("/");
 
-    const greeting = page.locator("#greeting");
-    const bgColor = await greeting.evaluate((el) => getComputedStyle(el).backgroundColor);
-    // #18181b → rgb(24, 24, 27)
-    expect(bgColor).toBe("rgb(24, 24, 27)");
+    // The body colour comes from the plain page's stylesheet and from the
+    // UnoCSS page's fallback style, so it holds with or without the CDN runtime.
+    const bgColor = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    // #09090b → rgb(9, 9, 11)
+    expect(bgColor).toBe("rgb(9, 9, 11)");
   });
 });
 
-test.describe("API Routes (HTTP)", () => {
-  test("GET /api returns welcome message", async ({ request }) => {
+test.describe("Server routes", () => {
+  test("GET /health returns 200 OK (Tier 1 static route)", async ({ request }) => {
+    const response = await request.get("/health");
+    expect(response.ok()).toBeTruthy();
+    expect(response.status()).toBe(200);
+    expect(await response.text()).toBe("OK");
+  });
+
+  test("GET / returns HTML (Tier 2 file-based)", async ({ page }) => {
+    await page.goto("/");
+    const greeting = page.locator("#greeting");
+    await expect(greeting).toBeVisible();
+    await expect(greeting).toHaveText("Hello, World!");
+  });
+
+  test("GET /api returns endpoint list", async ({ request }) => {
     const response = await request.get("/api");
     expect(response.ok()).toBeTruthy();
 
     const data = await response.json();
-    expect(data.message).toBe("Bun Monorepo Example");
+    expect(data.endpoints).toContain("/health");
     expect(data.endpoints).toContain("/api/greet/:name");
-    expect(data.endpoints).toContain("/api/shout/:name");
   });
 
-  test("GET /api/greet/:name returns greeting via external → internal chain", async ({
-    request,
-  }) => {
+  test("GET /api/greet/:name resolves and returns greeting", async ({ request }) => {
     const response = await request.get("/api/greet/Alice");
     expect(response.ok()).toBeTruthy();
 
@@ -45,7 +62,7 @@ test.describe("API Routes (HTTP)", () => {
     expect(data.greeting).toBe("Hello, Alice!");
   });
 
-  test("GET /api/shout/:name returns uppercased greeting", async ({ request }) => {
+  test("GET /api/shout/:name resolves and returns shouted greeting", async ({ request }) => {
     const response = await request.get("/api/shout/bob");
     expect(response.ok()).toBeTruthy();
 

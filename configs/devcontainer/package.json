@@ -1,0 +1,37 @@
+{
+  "name": "@myorg/devcontainer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scaffold": {
+    "default": false,
+    "flag": "devcontainer",
+    "prompt": "Include devcontainer config for Codespaces / Dev Containers?",
+    "type": "confirm",
+    "setup": "configs/devcontainer/src/setup.ts",
+    "removals": {
+      "true": {},
+      "false": {
+        "extraRemovals": [
+          ".devcontainer"
+        ],
+        "filePatternsToRemove": [
+          "**/.devcontainer/**",
+          ".devcontainer/**",
+          "**/devcontainer.json"
+        ],
+        "fileRegexesToRemove": [
+          "devcontainer",
+          "\\.devcontainer"
+        ]
+      }
+    }
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "devDependencies": {
+    "@myorg/bunup": "workspace:*",
+    "@myorg/ts": "workspace:*"
+  }
+}

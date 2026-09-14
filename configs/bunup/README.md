@@ -1,49 +1,36 @@
 # @myorg/bunup
 
-> Shared [Bunup](https://bun.sh) bundling configuration for library and CLI packages.
+Bundling presets for library packages, plus the package-health check CI runs before publish.
 
 ## What it provides
 
-Re-exports Bunup's complete public API — `defineConfig`, `defineWorkspace`,
-`build`, and the full set of types (`BuildOptions`, `BuildResult`,
-`BunupPlugin`, `DefineConfigItem`, …) — so packages import from `@myorg/bunup`
-instead of `bunup` directly.
+- `bunup` as a shared workspace dependency
+- `baseConfig` and `defineConfig` — ESM + `.d.ts` output, dependencies externalized, `@myorg/internal` inlined
+- `mbunup` — the bin that resolves the preset; `mbunup health` builds, then runs `publint` + `arethetypeswrong` over every publishable package
 
-### Presets
-
-| Preset | Extends | DTS | Purpose |
-| ------ | ------- | --- | ------- |
-| `baseConfig` | — | ✅ | Defaults: ESM, clean builds, Node target, no minification |
-| `libraryConfig` | `baseConfig` | ✅ | Published packages (adds source maps) |
-| `inlinedConfig` | `baseConfig` | ❌ | Internal packages inlined by Bunup |
-| `cliConfig` | `baseConfig` | — | Executables: minified, Bun target, deps bundled inline |
+> [!IMPORTANT]
+> Library packages are bundled. Apps are **not** — Bun runs their TypeScript directly.
 
 ## Usage
 
-```ts
-// packages/external/bunup.config.ts
-import { defineConfig, libraryConfig } from "@myorg/bunup";
+```bash
+bun run build      # mturbo build → per-package mbunup
+bun run dev        # watch mode via Turbo
+mbunup health      # build + publint + arethetypeswrong
+```
+
+```typescript
+// bunup.config.ts
+import { baseConfig, defineConfig } from "@myorg/bunup";
 
 export default defineConfig({
-  ...libraryConfig,
-  entry: ["src/index.ts"],
+  ...baseConfig,
+  entry: ["src/index.ts", "src/http.ts"],
 });
 ```
 
-```json
-{
-  "scripts": {
-    "build": "bunup",
-    "dev": "bunup --watch",
-    "typecheck": "tsc --noEmit"
-  }
-}
-```
+A CLI package uses `...cliConfig` instead of `...baseConfig` when it ships a bin.
 
-## Rules
+## Internal inlining
 
-- Never depend on `bunup` from an individual package — it is owned here and
-  hoisted from `configs/bunup`.
-- Do not edit anything inside `dist/` (generated, never committed).
-
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+`packages/external` declares `packages/internal` as a devDependency and Bunup inlines it, so consumers install one bundle. `internal` must never depend on `external` — that would be circular.

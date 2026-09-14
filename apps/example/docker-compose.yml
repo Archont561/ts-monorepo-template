@@ -1,0 +1,52 @@
+# Docker Compose for @myorg/example
+# Usage:
+#   docker compose -f apps/example/docker-compose.yml up --build
+#   docker compose -f apps/example/docker-compose.yml up -d
+#   docker compose down
+
+services:
+  example:
+    build:
+      context: ../..  # monorepo root as context (for workspace deps)
+      dockerfile: apps/example/Dockerfile
+      # BUN_VERSION / RUST_VERSION default in the Dockerfile — only override
+      # them here when pinning to something else.
+      # BuildKit cache for bun
+      cache_from:
+        - type=gha
+      cache_to:
+        - type=gha,mode=max
+    image: example:latest
+    container_name: example-app
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
+      HOST: 0.0.0.0
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:${PORT:-3000}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    # For secrets, use BuildKit secret mount in Dockerfile, not env
+    # secrets:
+    #   - npmrc
+
+  # Optional: with native bindings built in separate rust stage
+  # Already handled in Dockerfile multi-stage, but you can override:
+  # example-native:
+  #   build:
+  #     context: ../..
+  #     dockerfile: apps/example/Dockerfile
+  #     target: runner
+  #   image: example:native
+  #   ports:
+  #     - "3001:3000"
+
+# For BuildKit secrets example:
+# secrets:
+#   npmrc:
+#     file: ./.npmrc

@@ -42,11 +42,21 @@ describe("Scaffolder integration", () => {
       expect(rootPkg.devDependencies?.["@myorg/template"]).toBeUndefined();
       expect(rootPkg.scripts?.["build:template"]).toBeUndefined();
       expect(rootPkg.scripts?.["docs:sync"]).toBeUndefined();
+
+      // docs/ is template-only, so the VitePress toolchain must not leak.
+      expect(rootPkg.devDependencies?.vitepress).toBeUndefined();
+      expect(rootPkg.scripts?.["docs:dev"]).toBeUndefined();
+      expect(rootPkg.scripts?.["docs:build"]).toBeUndefined();
+      expect(rootPkg.scripts?.["docs:preview"]).toBeUndefined();
+      expect(await pathExists(`${result.templateDir}/docs`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/.github/workflows/template-docs.yml`)).toBe(
+        false,
+      );
       expect(rootPkg.workspaces).not.toContain("configs/template");
 
-      // 3. Prepare script still runs setup.ts + init.ts on install.
-      expect(rootPkg.scripts?.prepare).toContain("configs/lefthook/setup.ts");
-      expect(rootPkg.scripts?.prepare).toContain("configs/changeset/init.ts");
+      // 3. Prepare script still wires up lefthook + changeset on install.
+      expect(rootPkg.scripts?.prepare).toContain("msetup");
+      expect(rootPkg.scripts?.prepare).toContain("mchangeset");
 
       // 4. Scope replacement reached workspace packages.
       const internalPkg = await file(`${result.templateDir}/packages/internal/package.json`).json();
@@ -62,9 +72,10 @@ describe("Scaffolder integration", () => {
       ).text();
       expect(changesetConfig).not.toContain("@myorg");
 
-      // 7. Template markers are stripped from surviving documents.
+      // 7. Template markers are stripped from surviving documents (markers, not doc mentions).
       const agentsMd = await file(`${result.templateDir}/AGENTS.md`).text();
-      expect(agentsMd).not.toContain("TEMPLATE-ONLY");
+      expect(agentsMd).not.toContain("TEMPLATE-ONLY:START");
+      expect(agentsMd).not.toContain("TEMPLATE-ONLY:END");
 
       // 8. Docs and workflows are regenerated from the surviving config set.
       const readmeMd = await file(`${result.templateDir}/README.md`).text();
@@ -129,6 +140,8 @@ describe("Scaffolder integration", () => {
       expect(await pathExists(`${result.templateDir}/configs/unocss`)).toBe(false);
       expect(await pathExists(`${result.templateDir}/configs/native`)).toBe(false);
       expect(await pathExists(`${result.templateDir}/configs/skills`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/configs/devcontainer`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/.devcontainer`)).toBe(false);
 
       // Always-on configs remain.
       expect(await pathExists(`${result.templateDir}/configs/ts`)).toBe(true);
@@ -137,11 +150,14 @@ describe("Scaffolder integration", () => {
       expect(await pathExists(`${result.templateDir}/configs/turbo`)).toBe(true);
 
       // Docs and workflows reflect the pruned set: e2e steps disappear with
-      // Playwright, actionlint/lint steps stay.
+      // Playwright, actionlint/lint steps stay. AGENTS.md is now reference-based.
       const agentsMd = await file(`${result.templateDir}/AGENTS.md`).text();
-      expect(agentsMd).not.toContain("## E2E Testing");
-      expect(agentsMd).not.toContain("## AI Agent Skills");
-      expect(agentsMd).toContain("## Lint & Format");
+      expect(agentsMd).not.toContain("configs/playwright/AGENTS.md");
+      expect(agentsMd).not.toContain("configs/skills/AGENTS.md");
+      expect(agentsMd).not.toContain("configs/unocss/AGENTS.md");
+      expect(agentsMd).not.toContain("configs/native/AGENTS.md");
+      expect(agentsMd).not.toContain("configs/devcontainer/AGENTS.md");
+      expect(agentsMd).toContain("configs/biome/AGENTS.md");
 
       const ciYml = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
       expect(ciYml).not.toContain("test:e2e");
@@ -156,6 +172,11 @@ describe("Scaffolder integration", () => {
     async () => {
       const result = await new TemplateHarness({ skipInstall: true }).prepare();
       cleanup = result.cleanup;
+
+      // Pin the owner: resolving it from the local git identity would be
+      // environment-dependent (and here matches the template's owner, which
+      // would hide a broken rewrite).
+      process.env.SCAFFOLD_OWNER = "acme";
 
       // Drive the committed dist bundle — the exact artifact bun-create.preinstall
       // runs — against the copied repo, as the lifecycle hook does.
@@ -172,12 +193,12 @@ describe("Scaffolder integration", () => {
       // Template package is fully removed.
       expect(await pathExists(`${result.templateDir}/configs/template`)).toBe(false);
 
-      // Root package.json is sanitized; prepare still runs setup.ts + init.ts.
+      // Root package.json is sanitized; prepare still wires up lefthook + changeset.
       const rootPkg = await file(`${result.templateDir}/package.json`).json();
       expect(rootPkg["bun-create"]).toBeUndefined();
       expect(rootPkg.workspaces).not.toContain("configs/template");
-      expect(rootPkg.scripts?.prepare).toContain("configs/lefthook/setup.ts");
-      expect(rootPkg.scripts?.prepare).toContain("configs/changeset/init.ts");
+      expect(rootPkg.scripts?.prepare).toContain("msetup");
+      expect(rootPkg.scripts?.prepare).toContain("mchangeset");
       expect(rootPkg.scripts?.["docs:sync"]).toBeUndefined();
 
       // The bundle regenerates docs and workflows from the pruned tree.
@@ -191,12 +212,23 @@ describe("Scaffolder integration", () => {
       expect(await pathExists(`${result.templateDir}/configs/unocss`)).toBe(false);
       expect(await pathExists(`${result.templateDir}/configs/native`)).toBe(false);
       expect(await pathExists(`${result.templateDir}/configs/skills`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/configs/devcontainer`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/.devcontainer`)).toBe(false);
 
       // The bundle scopes to @myorg by default, so template artifacts — not
       // the scope itself — must not leak into the generated project.
-      expect(await scanForLeaks(result.templateDir, ["TEMPLATE-ONLY", "configs/template"])).toEqual(
-        [],
-      );
+      // The template's own repo URLs (badges, Cargo.toml, CODEOWNERS) are
+      // rewritten to the new project — only the "bun create <template>"
+      // instructions keep pointing at it.
+      expect(
+        await scanForLeaks(result.templateDir, [
+          "TEMPLATE-ONLY:START",
+          "TEMPLATE-ONLY:END",
+          "configs/template",
+          "github.com/Archont561/ts-monorepo-template",
+          "@Archont561",
+        ]),
+      ).toEqual([]);
     },
     { timeout: 60_000 },
   );
@@ -207,10 +239,11 @@ describe("Scaffolder integration", () => {
  * text-readable files (JSON/TS/Markdown/YAML). Bun.lock and binary outputs
  * are intentionally ignored: the lockfile is regenerated on the first
  * install in the generated project.
+ * Checks for actual marker syntax, not doc mentions of TEMPLATE-ONLY.
  */
 async function scanForLeaks(
   cwd: string,
-  needles: string[] = ["@myorg", "TEMPLATE-ONLY"],
+  needles: string[] = ["@myorg", "TEMPLATE-ONLY:START", "TEMPLATE-ONLY:END"],
 ): Promise<string[]> {
   const findArgs = [
     cwd,
@@ -222,6 +255,15 @@ async function scanForLeaks(
     "-not",
     "-path",
     "*/.git/*",
+    "-not",
+    "-path",
+    "*/dist/*",
+    "-not",
+    "-path",
+    "*/target/*",
+    "-not",
+    "-path",
+    "*/.turbo/*",
   ];
   const result = await $`find ${findArgs}`.text();
   const files = result.trim().split("\n").filter(Boolean);

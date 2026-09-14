@@ -1,47 +1,53 @@
 # @myorg/ts
 
-> Shared TypeScript configuration for the monorepo.
+The TypeScript setup, in one place: the compiler, Bun's types, and the two presets every package extends.
 
 ## What it provides
 
-- `typescript` and `@types/bun` as a single, shared devDependency (the only
-  place in the repo that declares them).
-- Three `tsconfig` presets, all extending `base.json`:
+- `typescript` and `@types/bun` as shared workspace dependencies
+- `base.json` — shared compiler options plus the `typeRoots` that make `types: ["bun"]` resolve from every package
+- `library.json` — preset for `packages/*`
+- `app.json` — preset for `apps/*`
+- `mtsc` — `tsc` with shared config resolution
 
-| Preset | Intent |
-| ------ | ------ |
-| `base.json` | Strict, modern defaults (ES2022, `moduleResolution: "Bundler"`, `strict`, `verbatimModuleSyntax`, `noUncheckedIndexedAccess`) |
-| `library.json` | `base` + declaration files and source maps (library packages) |
-| `app.json` | `base` + `noEmit` and `"types": ["bun"]` (apps, run directly by Bun) |
+> [!CAUTION]
+> Never add `typescript`, `bunup` or `@types/bun` to an individual package's devDependencies. They are owned here and hoisted.
+
+### Presets
+
+| Preset | Extends | For | Notable options |
+| :--- | :--- | :--- | :--- |
+| `library.json` | `base.json` | `packages/*` | `rootDir: .`, `outDir: dist`, `types: [bun]` |
+| `app.json` | `library.json` | `apps/*` | `noEmit`, `types: [bun]` |
 
 ## Usage
 
-Add the workspace dependency and extend the preset from any package:
-
-```bash
-bun add -d @myorg/ts --filter @myorg/<package>  # workspace:* protocol
-```
-
 ```jsonc
-// packages/<name>/tsconfig.json
+// packages/external/tsconfig.json
 {
   "extends": "@myorg/ts/library.json",
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "./dist",
     "types": ["bun"],
-    "paths": { "@src/*": ["./src/*"], "@tests/*": ["./tests/*"] }
+    "paths": {
+      "@src/*": ["./src/*"],
+      "@tests/*": ["./tests/*"]
+    }
   }
 }
 ```
 
-## Files
+```bash
+bun run typecheck   # mturbo typecheck → mtsc --noEmit per package
+mtsc --noEmit       # one package
+```
 
-- `base.json`, `library.json`, `app.json`
+<details>
+<summary>Path aliases</summary>
 
-## Rules
+- `@src/*` → `./src/*`
+- `@tests/*` → `./tests/*`
+- No `baseUrl` — it was removed in TS 7.0 (TS5102); use `paths` only.
 
-- Path aliases are per-package — never add them to the shared presets.
-- Never use `baseUrl` (removed in TypeScript 7.0, TS5102).
-
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+</details>

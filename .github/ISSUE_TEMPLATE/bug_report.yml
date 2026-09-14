@@ -1,0 +1,47 @@
+name: Bug report
+description: Report a bug to help us improve
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please fill out the sections below.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug, what you expected, and what actually happened.
+      placeholder: "I ran `bun run test` and got..."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Minimal steps to reproduce.
+      placeholder: |
+        1. bun install
+        2. bun run dev
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Bun version, OS, Node, etc.
+      placeholder: |
+        - bun --version: 1.4.2
+        - OS: macOS 15 / Ubuntu 24.04 / Windows 11
+        - packageManager: bun@1.4.2
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Screenshots
+      description: Paste relevant logs or screenshots.
+      render: shell
+    validations:
+      required: false

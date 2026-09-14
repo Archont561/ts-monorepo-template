@@ -9,13 +9,20 @@
     "prompt": "Configure GitHub Actions (CI + release workflows)?"
   },
   "bin": {
-    "mactionlint": "./cli.ts",
-    "mact": "./act.ts"
+    "mci": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "exports": {
     "./actionlint.yaml": "./actionlint.yaml"
   },
   "devDependencies": {
+    "@myorg/citty": "workspace:*",
     "github-actionlint": "^1.7.12"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

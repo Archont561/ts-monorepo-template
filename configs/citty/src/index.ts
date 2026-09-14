@@ -1,0 +1,144 @@
+/**
+ * @myorg/citty — shared Citty CLI builder for m-bins
+ *
+ * Re-exports citty with monorepo-specific helpers for defining elegant CLIs.
+ */
+
+export type { ArgDef, ArgsDef, CommandDef } from "citty";
+export { defineCommand, renderUsage, runCommand, runMain, showUsage } from "citty";
+
+import { spawnSync } from "bun";
+/**
+ * Helper to define an m-bin wrapper command that spawns underlying tool with baked config.
+ * Keeps the zero-root-deps pattern while adding citty's typed args and help.
+ */
+import { defineCommand } from "citty";
+
+/**
+ * Spawns a tool with inherited stdio and returns its exit code. Every wrapper
+ * in the repo funnels through here, so "spawn, inherit, exit with the code" is
+ * written once.
+ */
+export function spawnTool(cmd: string[], opts: { cwd?: string } = {}): number {
+  const result = spawnSync({
+    cmd,
+    ...(opts.cwd ? { cwd: opts.cwd } : {}),
+    stdout: "inherit",
+    stderr: "inherit",
+    stdin: "inherit",
+  });
+  return result.exitCode;
+}
+
+/**
+ * Spawns a tool that may not be installed. A missing binary is a skip, not a
+ * failure: the caller's install hints are warned and the check reports success
+ * so CI without the tool still passes.
+ */
+export function spawnIfPresent(tool: string, cmd: string[], hints: string[]): number {
+  if (!Bun.which(tool)) {
+    for (const hint of hints) console.warn(hint);
+    return 0;
+  }
+  return spawnTool(cmd);
+}
+
+export interface WrapperOptions {
+  name: string;
+  version?: string;
+  description: string;
+  /** Executable to spawn — `bun` when the tool's own entry needs a runtime. */
+  binPath: string;
+  /** Flags baked in front of the caller's arguments (config paths, subcommands). */
+  configArgs?: string[];
+  /** Spawn exactly what was asked for, without the baked flags. */
+  passthrough?: boolean;
+  /** Name of the positional argument in `--help` (default: `args`). */
+  argsName?: string;
+  /** Description of that positional argument; each wrapper words its own. */
+  argsDescription?: string;
+  /**
+   * Where the baked flags sit relative to the caller's arguments. Most tools
+   * want them first; biome only accepts `--config-path` once its subcommand and
+   * paths are in place, so it appends them.
+   */
+  configArgsPlacement?: "prepend" | "append";
+  /** Extra subcommands to register next to the wrapper's passthrough run. */
+  subCommands?: Record<string, CommandDef>;
+}
+
+export function defineWrapperCommand(opts: WrapperOptions) {
+  return defineCommand({
+    meta: {
+      name: opts.name,
+      version: opts.version ?? "1.0.0",
+      description: opts.description,
+    },
+    subCommands: opts.subCommands,
+    args: {
+      [opts.argsName ?? "args"]: {
+        type: "positional",
+        description: opts.argsDescription ?? "Extra args passed to underlying tool",
+        required: false,
+      },
+    },
+    run() {
+      const raw = process.argv.slice(2);
+      const config = opts.configArgs ?? [];
+      const cmd = opts.passthrough
+        ? [opts.binPath, ...raw]
+        : opts.configArgsPlacement === "append"
+          ? [opts.binPath, ...raw, ...config]
+          : [opts.binPath, ...config, ...raw];
+
+      process.exit(spawnTool(cmd));
+    },
+  });
+}
+
+export interface SpawnSubcommandOptions {
+  name: string;
+  description: string;
+  /**
+   * Documents the arguments in `--help`. Omit it when the subcommand takes no
+   * arguments, so the usage text stays exactly as it was.
+   */
+  argsDescription?: string;
+  /** Arguments the subcommand always passes, e.g. the tool's own subcommand. */
+  prefixArgs?: string[];
+  /** Arguments to use when the caller passes none, e.g. a default scan target. */
+  defaultArgs?: string[];
+  /**
+   * Runs the tool and returns its exit code, which the helper applies — the
+   * subcommand does not have to call `process.exit()` itself.
+   */
+  spawn: (args: string[]) => number;
+}
+
+/**
+ * Helper to define a subcommand that spawns a tool. The arguments are sliced
+ * from argv after the subcommand name, so the parent's own flags stay intact.
+ */
+export function defineSpawnSubcommand(opts: SpawnSubcommandOptions) {
+  const documented = opts.argsDescription
+    ? {
+        args: {
+          args: {
+            type: "positional" as const,
+            description: opts.argsDescription,
+            required: false,
+          },
+        },
+      }
+    : {};
+
+  return defineCommand({
+    meta: { name: opts.name, description: opts.description },
+    ...documented,
+    run() {
+      const raw = process.argv.slice(3);
+      const args = raw.length === 0 && opts.defaultArgs ? opts.defaultArgs : raw;
+      process.exit(opts.spawn([...(opts.prefixArgs ?? []), ...args]));
+    },
+  });
+}

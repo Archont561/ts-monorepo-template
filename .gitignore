@@ -2,12 +2,25 @@ node_modules/
 dist/
 *.tsbuildinfo
 .turbo/
+.turbo/**
+apps/*/.turbo/
+packages/*/.turbo/
+configs/*/.turbo/
 *.log
 *.log.*
 .env
 .env.*
 !.env.example
 coverage/
+!configs/coverage/
+!configs/coverage/**
+# Keep the tracked coverage config package visible, but not its generated output
+configs/coverage/node_modules/
+configs/coverage/dist/
+configs/coverage/.turbo/
+# Bun coverage temp files
+**/coverage/.lcov.info.*.tmp
+**/coverage/lcov.info.tmp
 
 .DS_Store
 Thumbs.db
@@ -16,6 +29,9 @@ Thumbs.db
 test-results/
 playwright-report/
 blob-report/
+test-results
+playwright-report
+blob-report
 
 # Lefthook (developer-local overrides, never committed)
 lefthook-local.yml
@@ -26,5 +42,44 @@ lefthook-local.yml
 # act secrets (never commit)
 .secrets
 
-# AI agent skills (synced via `bun run skills:sync`)
-.agents/
+# AI agent skills — vendored via skills.sh + curated
+# .agents/ is the skills.sh ecosystem folder:
+# - .agents/skills/ — vendored skills (committed for reproducibility)
+# - .agents/skills.index.json — generated index (committed)
+# Other .agents/* (e.g. Claude, Cursor) may be local and are ignored
+.agents/*
+!.agents/skills/
+!.agents/skills/**
+!.agents/skills.index.json
+!.agents/README.md
+
+# Rust / Cargo
+# Workspace target dir (shared across members) — always ignored
+/target/
+target/
+**/target/
+# Cargo.lock — commit for binaries, ignore for libraries (native is cdylib lib)
+Cargo.lock
+# NAPI-RS generated
+**/*.node
+**/*.wasi.cjs
+**/wasi-worker.mjs
+# A stray npm dir at the repo root — NOT packages/native/npm, which is source.
+/npm/
+# Generated napi loaders/binaries are ignored per package in
+# packages/native/.gitignore (npm/*/index.js, npm/*/*.node, npm/*-*/, ...)
+# Generic JS loader (if generated at root)
+index.js
+index.d.ts
+
+# UnoCSS generated
+**/uno.css
+apps/example/public/uno.css
+
+# VitePress (template-only docs site)
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+# Coverage HTML rendered into the docs site by `mdocs site` (served at /coverage/)
+docs/public/coverage/
+# Pages staging dir — assembled by `mpages build` from declared packages
+.pages/

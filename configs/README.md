@@ -1,58 +1,62 @@
-# @myorg/external
+# Configs
 
-A TypeScript library monorepo built with Bun, Turborepo, and Bunup.
+Every tool in this monorepo is configured here. One directory per tool, one `m`-prefixed command per tool, and **no configuration files at the repo root** — `turbo.json`, `biome.json`, `bunfig.toml`, `commitlint.config.js` and the rest all live in `configs/<name>/` and are reached through their CLI.
 
-## Quick Start
+Keeping them here means a tool can be dropped by deleting one directory: the scaffolder prunes the package, its scripts, its turbo tasks and its CI steps from metadata alone.
 
-```bash
-bun install
-bun run dev
+## The packages
+
+| Package | Command | Scaffold default | Flag |
+| :--- | :--- | :--- | :--- |
+| [badges](badges/README.md) | `mbadges` | always | `badges` |
+| [biome](biome/README.md) | `mbiome` | always | `biome` |
+| [bun-config](bun-config/README.md) | `mbun` | always | `bun-config` |
+| [bunup](bunup/README.md) | `mbunup` | always | `bunup` |
+| [changeset](changeset/README.md) | `mchangeset` | always | `changeset` |
+| [citty](citty/README.md) | `mcitty` | always | `citty` |
+| [codeql](codeql/README.md) | `mcodeql` | true | `codeql` |
+| [commitlint](commitlint/README.md) | — | always | `commitlint` |
+| [community](community/README.md) | — | always | `community` |
+| [coverage](coverage/README.md) | `mcoverage` | always | `coverage` |
+| [dependabot](dependabot/README.md) | — | always | `dependabot` |
+| [devcontainer](devcontainer/README.md) | — | false | `devcontainer` |
+| [editorconfig](editorconfig/README.md) | — | always | `editorconfig` |
+| [gh-actions](gh-actions/README.md) | `mci` | always | `gh-actions` |
+| [gitattributes](gitattributes/README.md) | — | always | `gitattributes` |
+| [gitleaks](gitleaks/README.md) | `mgitleaks` | always | `gitleaks` |
+| [lefthook](lefthook/README.md) | `msetup` | always | `lefthook` |
+| [native-config](native/README.md) | `mnative` | none | `native` |
+| [pages](pages/README.md) | `mpages` | false | `pages` |
+| [playwright](playwright/README.md) | `me2e` | true | `playwright` |
+| [skills](skills/README.md) | `mskills` | false | `skills` |
+| [stale](stale/README.md) | — | false | `stale` |
+| [template](template/README.md) | `mdocs` | always | — |
+| [trivy](trivy/README.md) | `mtrivy` | false | `trivy` |
+| [ts](ts/README.md) | `mtsc` | always | `ts` |
+| [turbo](turbo/README.md) | `mturbo` | always | `turbo` |
+| [unocss](unocss/README.md) | `munocss` | false | `unocss` |
+
+`always` means every generated project gets it; `true`/`false`/`none` are the defaults for the opt-in prompts, overridable with the flag at scaffold time.
+
+## How a config is built
+
+```
+configs/<name>/
+├── package.json     # name, bin, exports, and the `scaffold` metadata
+├── README.md        # what it is, how to use it
+├── AGENTS.md        # the rules that hold in this area
+├── CONTEXT.md       # what is true here right now
+├── src/cli.ts       # the `m…` command (citty)
+├── <tool>.config.*  # the tool's own config, referenced by CLI flag
+└── *.steps.yml      # optional CI fragment, spliced into a generated workflow
 ```
 
-The example server starts at [http://localhost:3000](http://localhost:3000).
+Adding a config takes four steps:
 
-## Commands
+1. Create `configs/<name>/` as a workspace with a `package.json` exposing one `m…` bin.
+2. Put the tool's config file inside that directory and reference it by flag — never from the root.
+3. Add `README.md`, `AGENTS.md` and `CONTEXT.md`.
+4. If it needs CI, contribute a `*.steps.yml` fragment and run `bun run docs:sync`.
 
-| Command | Description |
-| ------- | ----------- |
-| `bun run dev` | Start all packages in watch mode (Turbo) |
-| `bun run build` | Build all packages (Turbo orchestrated) |
-| `bun run test` | Run all unit tests (Turbo orchestrates per-package `mbun test`) |
-| `bun run test:e2e` | Run Playwright E2E tests (auto-skips if browsers missing) |
-| `bun run coverage` | Collect unit-test coverage (merged LCOV at coverage/lcov.info) |
-| `bun run typecheck` | Type-check all packages |
-| `bun run check` | Lint and format check (Biome) |
-| `bun run check:fix` | Auto-fix lint and format issues |
-| `bun run ci:lint` | Validate GitHub Actions workflows (actionlint) |
-| `bun run ci:list` | List `act` jobs |
-| `bun run ci:dry` | Dry-run CI locally (`act -n`) |
-| `bun run ci:local` | Run CI locally in Docker (`act`) |
-| `bun run skills:list` | List available AI agent skills |
-| `bun run skills:sync` | Sync AI agent skills into `.agents/skills/` |
-
-## Project Structure
-
-```
-apps/
-  example/          Bun.serve HTTP server
-configs/
-  <tool>/           One workspace per shared tool config (see sections below)
-  AGENT.md          Intro for AGENTS.md (aggregated)
-  README.md         This intro (aggregated into the root README.md)
-packages/
-  external/         Public library (published to npm)
-  internal/         Private implementation (inlined into external)
-```
-
-Every tool config lives in its own `configs/*` package and is reached through
-`m`-prefixed CLI aliases (`mturbo`, `mbiome`, `mbun`, ...) that bake in the
-config paths; there are no root tool-config files (`turbo.json`,
-`biome.json`, `bunfig.toml`, etc.) and the root ships zero `devDependencies`.
-
-The root `README.md`, `AGENTS.md`, and the workflows in `.github/workflows/` are
-generated from these `configs/*` packages by `bun run docs:sync` — do not edit
-them by hand.
-
-## License
-
-[MIT](LICENSE.md)
+> [!IMPORTANT]
+> Every config that touches CI declares its own `removals` in `scaffold` metadata, so pruning it leaves nothing behind.

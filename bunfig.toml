@@ -1,0 +1,6 @@
+[install]
+# Bun 1.4.2 uses isolated linker by default (fixed oven-sh/bun#27110)
+# Previously pinned to hoisted as workaround for 1.3.11 bug where isolated
+# populated node_modules/.bun but created no top-level symlinks.
+# Now verified working: bun install → node_modules/* are symlinks into .bun
+linker = "isolated"

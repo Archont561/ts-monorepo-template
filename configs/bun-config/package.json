@@ -9,13 +9,19 @@
     "prompt": "Configure Bun (coverage, test settings)?"
   },
   "bin": {
-    "mbun": "./cli.ts",
-    "mcoverage": "./coverage.ts"
+    "mbun": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "exports": {
     "./bunfig.toml": "./bunfig.toml"
   },
   "devDependencies": {
-    "lcov-result-merger": "^6.0.0"
+    "@myorg/citty": "workspace:*"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

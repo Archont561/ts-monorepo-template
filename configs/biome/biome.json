@@ -13,7 +13,15 @@
     "rules": {
       "preset": "recommended",
       "style": {
-        "noNonNullAssertion": "warn"
+        "noNonNullAssertion": "warn",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "bunup": "Use @myorg/bunup instead of bunup directly. Import defineConfig from @myorg/bunup."
+            }
+          }
+        }
       },
       "correctness": {
         "noUnusedVariables": "warn",
@@ -41,10 +49,62 @@
       "!**/configs/biome",
       "!**/node_modules",
       "!**/dist",
+      "!**/.vitepress/cache",
       "!**/.turbo",
       "!**/coverage",
       "!**/test-results",
-      "!**/playwright-report"
+      "!**/playwright-report",
+      "!**/uno.css",
+      "!**/.pages"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/**", "configs/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "bunup": "Use @myorg/bunup instead of bunup directly. Import defineConfig from @myorg/bunup.",
+                  "@myorg/example": "Packages and configs must not depend on apps — apps consume packages, never the reverse."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/internal/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "bunup": "Use @myorg/bunup instead of bunup directly. Import defineConfig from @myorg/bunup.",
+                  "@myorg/external": "internal must not depend on external — it is inlined into external at build time, so this would be circular.",
+                  "@myorg/example": "Packages and configs must not depend on apps — apps consume packages, never the reverse."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["configs/bunup/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    }
+  ]
 }

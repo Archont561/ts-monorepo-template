@@ -3,6 +3,8 @@ coverage = true
 coverageReporter = ["text", "lcov"]
 coverageDir = "./coverage"
 coverageSkipTestFiles = true
+# Mirrors COVERAGE_THRESHOLD (80%) in configs/coverage/index.ts, which
+# mcoverage check enforces in CI — expressed as a fraction here.
 coverageThreshold = { lines = 0.80, functions = 0.80 }
 coveragePathIgnorePatterns = [
   "**/*.test.ts",
@@ -13,4 +15,22 @@ coveragePathIgnorePatterns = [
   "**/bunup.config.ts",
   "**/playwright.config.ts",
   "**/configs/**",
+  "**/src/cli.ts",
+  "**/src/e2e.ts",
+  "**/src/docs.ts",
+  "**/src/collector.ts",
+  "**/src/harness.ts",
+  "**/src/aggregate.ts",
+  "**/src/setup.ts",
+  # Shared code lives in its own config and is covered by its own package run:
+  # a `../manifest/src/index.ts` import would otherwise be judged by whichever
+  # package happens to import it.
+  "**/manifest/src/index.ts",
+  "**/citty/src/index.ts",
+  "**/*.node",
+  "**/*.wasi.cjs",
+  "**/target/**",
+  "**/.devcontainer/**",
+  "**/apps/example/src/index.ts",
+  "**/pages/index.ts",
 ]

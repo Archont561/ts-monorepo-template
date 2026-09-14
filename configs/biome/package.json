@@ -9,12 +9,20 @@
     "prompt": "Configure Biome (lint + format)?"
   },
   "bin": {
-    "mbiome": "./cli.ts"
+    "mbiome": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "exports": {
     ".": "./biome.json"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.13"
+    "@biomejs/biome": "^2.5.13",
+    "@myorg/citty": "workspace:*"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

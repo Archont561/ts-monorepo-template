@@ -12,19 +12,47 @@
       "true": {},
       "false": {
         "extraRemovals": [
-          "uno.config.ts"
+          "apps/example/public/index-unocss.html",
+          "apps/example/public/uno.css",
+          "apps/example/uno.config.ts"
+        ],
+        "filePatternsToRemove": [
+          "**/index-unocss.html",
+          "**/uno.css",
+          "**/*.unocss.*"
+        ],
+        "fileRegexesToRemove": [
+          "index-unocss"
         ],
         "appDepsToRemove": [
           "@unocss/reset",
-          "unocss"
+          "unocss",
+          "@myorg/unocss"
         ]
       }
-    }
+    },
+    "setup": "configs/unocss/src/setup.ts"
   },
   "exports": {
     ".": "./index.ts"
   },
   "devDependencies": {
+    "@myorg/bunup": "workspace:*",
+    "@myorg/citty": "workspace:*",
+    "@myorg/manifest": "workspace:*",
+    "@myorg/ts": "workspace:*",
+    "@unocss/cli": "^66.10.2",
     "unocss": "^66.10.2"
+  },
+  "bin": {
+    "munocss": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch",
+    "test": "mbun test"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

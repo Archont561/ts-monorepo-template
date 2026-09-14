@@ -9,12 +9,20 @@
     "prompt": "Configure Turbo (task orchestration)?"
   },
   "bin": {
-    "mturbo": "./cli.ts"
+    "mturbo": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "exports": {
     "./turbo.json": "./turbo.base.json"
   },
   "devDependencies": {
+    "@myorg/citty": "workspace:*",
     "turbo": "^2.10.12"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

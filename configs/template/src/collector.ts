@@ -1,6 +1,6 @@
 import { cancel, confirm, intro, isCancel, outro, select, text } from "@clack/prompts";
 import { file } from "bun";
-import { discoverConfigs } from "./configs";
+import { DEFAULT_SCOPE, discoverConfigs, type NativeMode, type ScaffoldSelection } from "./configs";
 import type { ScaffolderOptions } from "./scaffolder";
 
 export interface CollectorOptions {
@@ -32,7 +32,7 @@ export class OptionsCollector {
         !process.stdin.isTTY);
 
     this.defaults = {
-      scope: "@myorg",
+      scope: DEFAULT_SCOPE,
       gitHooks: true,
       configs: {},
       ...options.defaults,
@@ -98,9 +98,9 @@ export class OptionsCollector {
    */
   private async collectDynamicPrompts(
     targetDir: string,
-  ): Promise<Record<string, boolean | string>> {
+  ): Promise<Record<string, ScaffoldSelection>> {
     const configs = await discoverConfigs(targetDir);
-    const results: Record<string, boolean | string> = {};
+    const results: Record<string, ScaffoldSelection> = {};
 
     for (const config of configs) {
       const meta = config.meta;
@@ -108,7 +108,7 @@ export class OptionsCollector {
       if (!meta.flag || !meta.prompt) continue;
 
       if (this.nonInteractive) {
-        results[meta.flag] = meta.default as boolean | string;
+        results[meta.flag] = meta.default;
         continue;
       }
 
@@ -116,10 +116,10 @@ export class OptionsCollector {
         const answer = await select({
           message: meta.prompt,
           options: meta.options,
-          initialValue: meta.default as string,
+          initialValue: meta.default as NativeMode,
         });
         this.handleCancel(answer);
-        results[meta.flag] = answer as string;
+        results[meta.flag] = answer as NativeMode;
       } else {
         const answer = await confirm({
           message: meta.prompt,
@@ -133,6 +133,7 @@ export class OptionsCollector {
     return results;
   }
 
+  /** Exits when the prompt was cancelled (Ctrl-C / Esc). */
   private handleCancel(value: unknown): void {
     if (isCancel(value)) {
       cancel("Setup cancelled.");
@@ -144,7 +145,7 @@ export class OptionsCollector {
     const result = await text({
       message: "Organization / Scope name?",
       placeholder: "@acme",
-      defaultValue: this.defaults.scope ?? "@myorg",
+      defaultValue: this.defaults.scope ?? DEFAULT_SCOPE,
       validate: (value?: string) => {
         if (!value) return "Scope cannot be empty";
         if (!value.startsWith("@")) return "Scope must start with '@'";

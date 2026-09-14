@@ -6,16 +6,22 @@
   "scaffold": {
     "default": "always",
     "flag": "lefthook",
-    "prompt": "Configure Lefthook (Git hooks)?",
-    "setup": "bun configs/lefthook/setup.ts"
+    "prompt": "Configure Lefthook (Git hooks)?"
   },
   "bin": {
-    "msetup": "./setup.ts"
+    "msetup": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch"
   },
   "exports": {
     "./lefthook.yml": "./lefthook.yml"
   },
   "devDependencies": {
     "lefthook": "^2.1.12"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

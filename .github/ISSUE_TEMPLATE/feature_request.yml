@@ -1,0 +1,50 @@
+name: Feature request
+description: Suggest an idea or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting! Describe the problem and proposed solution.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Use case
+      description: What problem does this solve? Who benefits?
+      placeholder: "As a developer, I want ... so that ..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should it work? Any alternatives considered?
+      placeholder: |
+        - Add config in `configs/<tool>/`
+        - Expose via `m`-bin
+        - Update docs:sync
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the template?
+      options:
+        - Tooling (configs/*)
+        - CI / Workflows
+        - Packages (external/internal/native)
+        - Apps (example)
+        - Docs / Template scaffolder
+        - Security / Compliance
+        - Other
+    validations:
+      required: false
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Links, screenshots, prior art.
+    validations:
+      required: false

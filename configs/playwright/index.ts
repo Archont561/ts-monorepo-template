@@ -47,7 +47,7 @@ export const browsers = {
  * Handles CI/local reuse logic automatically.
  *
  * Usage:
- *   webServer: bunWebServer({ command: "bun run start", url: "http://localhost:3000/" })
+ *   webServer: bunWebServer({ command: "bun run start", url: `http://localhost:${PORT}/` })
  */
 export function bunWebServer(options: { command: string; url: string }) {
   return {

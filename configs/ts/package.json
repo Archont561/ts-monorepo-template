@@ -8,13 +8,20 @@
     "flag": "ts",
     "prompt": "Configure TypeScript (shared tsconfigs)?"
   },
+  "bin": {
+    "mtsc": "./src/cli.ts"
+  },
   "exports": {
     "./base.json": "./base.json",
     "./library.json": "./library.json",
     "./app.json": "./app.json"
   },
   "devDependencies": {
+    "@myorg/citty": "workspace:*",
     "@types/bun": "^1.4.2",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
   }
 }

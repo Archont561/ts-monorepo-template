@@ -1,0 +1,101 @@
+name: Native
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - packages/native/**
+      - configs/native/**
+      - .github/workflows/native.yml
+  pull_request:
+    paths:
+      - packages/native/**
+      - configs/native/**
+      - .github/workflows/native.yml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+# The WASI SDK is only downloaded for the wasm32-wasip1-threads job; the version
+# is pinned in configs/native ({{NATIVE_WASI_SDK_VERSION}}) so the toolchain and
+# the CI stay on the same release.
+env:
+  WASI_SDK_VERSION: {{NATIVE_WASI_SDK_VERSION}}
+
+jobs:
+  # One entry per target triple, printed by `mnative matrix --gha`: the runner
+  # and container images live in configs/native next to the `napi.targets` each
+  # package declares, so this file never lists a platform by hand.
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.matrix.outputs.targets }}
+      has_targets: ${{ steps.matrix.outputs.has_targets }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: {{BUN_VERSION}}
+
+      - run: bun install --frozen-lockfile
+
+      - id: matrix
+        run: bunx mnative matrix --gha >> "$GITHUB_OUTPUT"
+
+  # Compile the bindings. Each job uploads its .node/.wasm; nothing here is
+  # published — the fan-in job assembles the platform packages.
+  build:
+    needs: matrix
+    if: needs.matrix.outputs.has_targets == 'true'
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    # Blank for targets that build on the runner itself (macOS, Windows, WASI).
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.targets) }}
+    steps:
+
+{{STEPS}}
+  # Download every target's binary and let napi sort them into the per-platform
+  # npm packages (`napi create-npm-dirs` + `napi artifacts`). Those directories
+  # are generated here and never committed.
+  assemble:
+    needs: [matrix, build]
+    if: needs.matrix.outputs.has_targets == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: {{BUN_VERSION}}
+
+      - run: bun install --frozen-lockfile
+
+      - name: Download bindings
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bindings-*
+          path: {{NATIVE_DIR}}/npm/.artifacts
+          merge-multiple: true
+
+      - name: Create platform package dirs
+        run: bunx mnative create-npm-dirs
+
+      - name: Move binaries into their platform packages
+        run: bunx mnative artifacts --dir {{NATIVE_DIR}}/npm/.artifacts
+
+      - name: Upload npm packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-npm-packages
+          path: |
+            {{NATIVE_DIR}}/npm/**
+            !{{NATIVE_DIR}}/npm/.artifacts/**

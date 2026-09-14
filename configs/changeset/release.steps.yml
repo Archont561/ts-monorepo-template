@@ -6,7 +6,7 @@
       - uses: oven-sh/setup-bun@v2
         if: ${{ !env.ACT }}
         with:
-          bun-version: latest
+          bun-version: {{BUN_VERSION}}
 
       - run: bun install --frozen-lockfile
         if: ${{ !env.ACT }}

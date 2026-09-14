@@ -1,0 +1,31 @@
+{
+  "name": "@myorg/coverage",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "mcoverage": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "mbunup",
+    "dev": "mbunup --watch",
+    "test": "mbun test"
+  },
+  "scaffold": {
+    "default": "always",
+    "flag": "coverage",
+    "prompt": "Configure coverage reporting (LCOV, HTML, artifact, Pages, threshold)?"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
+  },
+  "devDependencies": {
+    "@myorg/bunup": "workspace:*",
+    "@myorg/citty": "workspace:*",
+    "@myorg/ts": "workspace:*",
+    "lcov-result-merger": "^6.0.0"
+  }
+}

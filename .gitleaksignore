@@ -1,0 +1,10 @@
+# .gitleaksignore — ignore false positives for gitleaks
+# Format: one per line, either file path or rule ID or file:line
+# Docs: https://github.com/gitleaks/gitleaks#gitleaksignore
+
+# Example:
+# packages/internal/src/secrets.test.ts:generic-api-key
+# generic-api-key
+# path/to/file/with/false/positive
+
+# Add your ignores below:

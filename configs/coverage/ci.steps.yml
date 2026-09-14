@@ -1,0 +1,30 @@
+      # Coverage reporting — all logic lives in the mcoverage CLI
+      # (configs/coverage/src/cli.ts): setup installs genhtml, html renders the
+      # report, check enforces the threshold by parsing LCOV directly.
+      - name: Setup coverage tooling
+        run: bunx mcoverage setup
+        shell: bash
+
+      - name: Generate coverage HTML
+        run: bunx mcoverage html
+        shell: bash
+
+      - name: Upload coverage HTML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/html/
+          retention-days: 14
+
+      # Threshold comes from COVERAGE_THRESHOLD in configs/coverage/index.ts.
+      - name: Check coverage threshold (mcoverage)
+        run: bunx mcoverage check
+        shell: bash
+
+      - name: Report coverage to PR
+        if: github.event_name == 'pull_request'
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          lcov-file: ./coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          delete-old-comments: true

@@ -1,0 +1,64 @@
+{
+  "name": "@myorg/native",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "*.node",
+    "native.wasi.cjs",
+    "native.wasi-browser.js",
+    "native.wasm"
+  ],
+  "napi": {
+    "binaryName": "native",
+    "packageName": "@myorg/native",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-linux-gnu",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "wasm32-wasip1-threads"
+    ],
+    "wasm": {
+      "initialMemory": 16,
+      "maximumMemory": 65536,
+      "browser": {
+        "fs": false,
+        "asyncInit": true,
+        "errorEvent": true
+      }
+    }
+  },
+  "scripts": {
+    "build": "mnative napi:build --only native",
+    "build:debug": "mnative napi:build:debug --only native",
+    "build:wasm": "mnative napi:build:wasm --only native",
+    "create-npm-dirs": "mnative create-npm-dirs --only native",
+    "artifacts": "mnative artifacts --only native",
+    "test": "mbun test",
+    "test:watch": "mbun test --watch",
+    "typecheck": "mtsc --noEmit",
+    "cargo:check": "mnative check",
+    "cargo:clippy": "mnative clippy",
+    "cargo:fmt": "mnative fmt",
+    "cargo:fmt:check": "mnative fmt:check",
+    "cargo:test": "mnative test",
+    "cargo:tree": "mnative tree",
+    "cargo:update": "mnative update",
+    "cargo:doc": "mnative doc",
+    "cargo:audit": "mnative audit"
+  },
+  "devDependencies": {
+    "@myorg/bun-config": "workspace:*",
+    "@myorg/bunup": "workspace:*",
+    "@myorg/native-config": "workspace:*",
+    "@myorg/ts": "workspace:*",
+    "@napi-rs/cli": "^3.9.1"
+  }
+}

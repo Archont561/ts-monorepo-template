@@ -40,3 +40,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # TEMPLATE-ONLY:START(native)
+      - name: Setup Rust toolchain (release)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: wasm32-wasip1-threads
+
+      - name: Rust cache (release)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "packages/native"
+
+      - name: Cargo build release (mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: bunx mnative build:release
+        shell: bash
+
+      - name: Build native bindings for release (napi via mnative)
+        if: hashFiles('packages/native/Cargo.toml') != ''
+        run: bunx mnative napi:build
+        shell: bash
+      # TEMPLATE-ONLY:END(native)

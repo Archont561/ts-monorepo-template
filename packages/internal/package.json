@@ -13,10 +13,11 @@
     "dist"
   ],
   "scripts": {
-    "build": "bunup",
-    "dev": "bunup --watch",
-    "typecheck": "tsc --noEmit",
+    "build": "mbunup",
+    "dev": "mbunup --watch",
+    "typecheck": "mtsc --noEmit",
     "test": "mbun test",
+    "test:watch": "mbun test --watch",
     "coverage": "mbun test --coverage"
   },
   "devDependencies": {

@@ -1,29 +1,30 @@
 # @myorg/playwright
 
-> Shared Playwright E2E testing.
+End-to-end testing with Playwright — enabled by default, and it skips itself when browsers are not installed.
 
 ## What it provides
 
-- `@playwright/test` as a shared devDependency.
-- `e2e.ts` — `me2e`, a CLI alias that:
-  - auto-skips (exit 0) with a hint when no browser is installed;
-  - runs `playwright test` against `apps/example/playwright.config.ts` from the
-    repository root, so it works with zero flags.
+- `@playwright/test` as a shared workspace dependency
+- `playwright.config.ts` for the example app
+- `me2e` — wraps `playwright test` with browser detection and graceful auto-skip
+
+### Config highlights
+
+| Setting | Value |
+| :--- | :--- |
+| `testDir` | `e2e/` |
+| Browsers | Chromium, Firefox, WebKit |
+| `baseURL` | `http://localhost:3000` (follows the app's configured port) |
+| Missing browsers | Skipped, not failed |
 
 ## Usage
 
 ```bash
-bunx playwright install   # one-time browser download
-bun run test:e2e           # run the E2E suite (Turbo-driven)
+bun run test:e2e   # me2e → playwright test
+me2e --ui          # UI mode
 ```
 
-## Rules
+E2E specs live in `apps/example/e2e/`, never in `tests/`. Unit tests use `bun:test`, E2E uses `@playwright/test` — never import one in the other.
 
-- Keep E2E config in the consuming app (`apps/example/playwright.config.ts`); this
-  package ships the shared primitives (browser detection, reporter setup).
-- Playwright specs import from `@playwright/test`; unit tests import from
-  `bun:test`. Never mix.
-- Playwright's `page.coverage` is Chromium V8 coverage only — it never reaches
-  into Bun's JSC runtime, so coverage merges happen at the LCOV layer only.
-
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+> [!NOTE]
+> Opt-in, but **on by default**. When declined, the config, its workflow steps and the app's E2E specs are pruned together.

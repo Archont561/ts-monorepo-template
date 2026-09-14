@@ -1,0 +1,20 @@
+[package]
+name    = "native"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[lib]
+# required — produces the .node binary napi packages
+crate-type = ["cdylib"]
+
+[dependencies]
+napi.workspace        = true
+napi-derive.workspace = true
+
+[build-dependencies]
+napi-build.workspace = true
+
+[lints]
+workspace = true

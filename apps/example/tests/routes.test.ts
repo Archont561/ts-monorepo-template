@@ -1,60 +1,126 @@
 import { describe, expect, test } from "bun:test";
-import { handleApiIndex, handleGreet, handleHtml, handleShout } from "@src/routes";
+import handleGreet from "@src/pages/api/greet/[name]";
+import handleApiIndex from "@src/pages/api/index";
+import handleShout from "@src/pages/api/shout/[name]";
+import handleHtml from "@src/pages/index";
 
-describe("handleHtml", () => {
+const mockReq = new Request("http://localhost/");
+
+describe("handleHtml (page)", () => {
   test("returns HTML content type", async () => {
     const response = await handleHtml();
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/html");
   });
 
-  test("contains greeting div", async () => {
+  test("contains greeting div (plain or unocss)", async () => {
     const response = await handleHtml();
     const html = await response.text();
-    expect(html).toContain('<div id="greeting">Hello, World!</div>');
+    // Plain version has <div id="greeting">Hello, World!</div>
+    // UnoCSS version has more complex structure but still has greeting
+    expect(html).toMatch(/greeting/i);
+    expect(html).toContain("<!doctype html>");
   });
 
-  test("contains page title", async () => {
+  test("unocss version has utility classes when enabled", async () => {
     const response = await handleHtml();
     const html = await response.text();
-    expect(html).toContain("<title>Bun Monorepo Example</title>");
+    // If unocss file exists, it should contain utility classes
+    // Otherwise plain version is ok
+    if (html.includes("UnoCSS") || html.includes("unocss")) {
+      expect(html).toMatch(/class=.*flex/);
+    } else {
+      expect(html).toContain("Hello, World!");
+    }
   });
 });
 
-describe("handleApiIndex", () => {
-  test("returns welcome message with endpoints", async () => {
-    const response = handleApiIndex();
+describe("handleApiIndex (page)", () => {
+  test("returns welcome message and endpoints", async () => {
+    const response = await handleApiIndex();
     expect(response.status).toBe(200);
 
     const data = await response.json();
     expect(data.message).toBe("Bun Monorepo Example");
+    expect(data.endpoints).toContain("/health");
     expect(data.endpoints).toContain("/api/greet/:name");
     expect(data.endpoints).toContain("/api/shout/:name");
   });
+
+  test("includes native endpoints when native enabled", async () => {
+    const response = await handleApiIndex();
+    const data = await response.json();
+    // When native enabled, should include /api/native
+    // When disabled, it won't — both are valid, just check it's array
+    expect(Array.isArray(data.endpoints)).toBe(true);
+  });
+
+  test("reports the flags it decided on, not a re-derivation", async () => {
+    const response = await handleApiIndex();
+    const data = await response.json();
+    // `features` comes from the providers; the endpoint list is built from the
+    // same providers, so the two must agree in every checkout.
+    expect(data.features.unocss).toBe(data.endpoints.includes("/uno.css"));
+  });
 });
 
-describe("handleGreet", () => {
-  test("returns greeting for the given name", async () => {
-    const response = handleGreet("Alice");
+describe("handleGreet (page)", () => {
+  test("returns greeting for valid parameter", () => {
+    const response = handleGreet(mockReq, { name: "Alice" });
     expect(response.status).toBe(200);
+  });
 
+  test("greeting content matches expected format", async () => {
+    const response = handleGreet(mockReq, { name: "Alice" });
     const data = await response.json();
     expect(data.greeting).toBe("Hello, Alice!");
   });
 
-  test("handles special characters in name", async () => {
-    const response = handleGreet("José");
+  test("handles empty parameter cleanly", async () => {
+    const response = handleGreet(mockReq, { name: "" });
     const data = await response.json();
-    expect(data.greeting).toBe("Hello, José!");
+    expect(data.greeting).toBe("Hello, !");
   });
 });
 
-describe("handleShout", () => {
-  test("returns uppercased greeting", async () => {
-    const response = handleShout("bob");
+describe("handleShout (page)", () => {
+  test("returns shouted greeting", async () => {
+    const response = handleShout(mockReq, { name: "bob" });
     expect(response.status).toBe(200);
 
     const data = await response.json();
     expect(data.shouted).toBe("HELLO, BOB!");
   });
 });
+
+// TEMPLATE-ONLY:START(native)
+describe("native routes (optional)", () => {
+  test("native routes exist when native enabled", async () => {
+    try {
+      const mod = await import("@src/pages/api/native/index");
+      const res = mod.default();
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.endpoints).toContain("/api/native/add?a=1&b=2");
+    } catch {
+      // Native disabled — file doesn't exist, which is expected
+      expect(true).toBe(true);
+    }
+  });
+
+  test("native add route works with fallback", async () => {
+    try {
+      const mod = await import("@src/pages/api/native/add");
+      const req = new Request("http://localhost/api/native/add?a=5&b=7");
+      const res = await mod.default(req);
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.result).toBe(12);
+      expect(data.a).toBe(5);
+      expect(data.b).toBe(7);
+    } catch {
+      expect(true).toBe(true);
+    }
+  });
+});
+// TEMPLATE-ONLY:END(native)

@@ -1,0 +1,27 @@
+# Virtual Cargo workspace — no [package] here, only members.
+# Everything Rust lives under packages/native, so the repo root stays clean.
+[workspace]
+resolver = "3"
+members = [
+  "crates/native",
+]
+
+[workspace.package]
+edition    = "2024"
+version    = "0.1.0"
+license    = "MIT"
+repository = "https://github.com/Archont561/ts-monorepo-template"
+
+[workspace.dependencies]
+# napi crates — pinned together
+napi         = { version = "3", features = ["napi4"] }
+napi-derive  = "3"
+napi-build   = "2"
+
+[workspace.lints.rust]
+# pedantic is left off on purpose: #[napi] generates code that trips it,
+# and CI runs clippy with -D warnings.
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"
