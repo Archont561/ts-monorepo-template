@@ -76,7 +76,7 @@ Each config declares how it behaves when disabled:
 | `turboTasksToRemove` | task names | `turbo.base.json` tasks |
 | `appDepsToRemove` | dependency names | `apps/example` devDeps |
 
-Configs with `"default": "always"` are kept — except `selfDestruct` ones, which are always removed.
+Configs with `"default": "always"` are kept — except `selfDestruct` ones, which are always removed. The template config's `always` removals also prune the template's own development state: `docs/`, `template-docs`, and pending `.changeset/*.md` — a generated project starts with a clean changeset slate, keeping only the scope-replaced `config.json`.
 
 ## Workflow placeholders
 

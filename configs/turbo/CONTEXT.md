@@ -20,3 +20,4 @@
 | :--- | :--- |
 | `fb3a47c` | per-package build/test/dev/coverage offloaded to Turbo; root scripts collapsed |
 | `c8024de` | coverage threshold and paths given a single source |
+| this change | `mturbo` sets `TURBO_GLOBAL_WARNING_DISABLED` — under bun's isolated linker turbo cannot detect the configs/turbo-local install from the repo root, so its "globally installed" warning was a false positive |

@@ -19,7 +19,8 @@
         "filePatternsToRemove": [
           "**/template-docs.yml",
           "**/template-docs/**",
-          "**/docs/**"
+          "**/docs/**",
+          ".changeset/*.md"
         ],
         "fileRegexesToRemove": [
           "template-docs",

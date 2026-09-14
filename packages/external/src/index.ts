@@ -10,6 +10,7 @@ export {
   fibonacciSync,
   getNativeBinding,
   isNativeAvailable,
+  type NativeBinding,
   reverseString,
   reverseStringFallback,
 } from "@src/native";

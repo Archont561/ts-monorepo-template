@@ -19,3 +19,4 @@
 | Commit | What |
 | :--- | :--- |
 | `fb3a47c` | root scripts collapsed to one-liners; bins kept their citty interfaces |
+| this change | `spawnTool` passes `env: { ...process.env }` — Bun's default spawn env is a startup snapshot, so runtime `process.env` mutations were invisible to every wrapped tool |

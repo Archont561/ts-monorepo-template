@@ -29,3 +29,4 @@
 | `05e8dc6` | root docs split; static reference files with `TEMPLATE-ONLY` blocks |
 | `a8ea08c` | `native.steps.yml` registered as an aggregated fragment |
 | `c8024de` | paths and versions centralised and exposed as `{{…}}` placeholders |
+| this change | pending `.changeset/*.md` pruned via the template config's `always` removals — the template's release state must not leak into generated projects |
