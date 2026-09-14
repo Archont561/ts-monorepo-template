@@ -5,7 +5,7 @@
 ## Current state
 
 - Threshold: **80% lines** (`COVERAGE_THRESHOLD` in `index.ts`), mirrored as `0.80` in `configs/bun-config/bunfig.toml`.
-- Measured today: **96.95% lines (159/164)** — well above the gate.
+- Measured today: **99.37% lines (791/796)** across apps, packages and configs — well above the gate. The merge reads `{packages,apps,configs}/*/coverage/lcov.info`; `mcoverage merge --no-include-configs` reproduces the older, narrower set (97.47%, 193/198).
 - Fragments owned: `ci.steps.yml` (setup → html → artifact 14d → check → PR comment), `pages.steps.yml`, `coverage.base.yml` + `coverage.steps.yml` (standalone Pages site when Pages is off).
 - Rust coverage joins the same LCOV through `mnative llvm-cov` when `packages/native/Cargo.toml` exists.
 

@@ -27,12 +27,23 @@ Branch `arena/01a09f8a-ts-monorepo-template`.
 | — | `01b1436` | 167 | 96.95% (159/164) | Phase 2 boundary: baselines + log. |
 | R7 | `bfc0b3c` | 176 (+9) | 96.95% (159/164) | Demo-app features behind `FeatureProvider` (`features/{index,paths,provider,unocss,native}.ts`); `/api` reports the flags it decided on. Markers untouched; the new native import sits inside the native scope so a native-free scaffold has no unused import. |
 | R8 | `2787e5d` | 179 (+3) | 96.95% (159/164) | Named vocabularies: `NATIVE_MODES`/`NativeMode`/`ScaffoldSelection`/`DEFAULT_SCOPE`, per-package default scopes, `DEFAULT_PORT`, `CSS_CACHE_MAX_AGE_SECONDS`, plus three scaffold-metadata drift tests. Bundle rebuilt (42.10 KB). |
+| — | `e32dbd2` | 179 | 96.95% (159/164) | Phase 3 boundary: baselines + log. |
+| R9 | `1132d85` | 182 (+3) | 96.95% (159/164) | The coverage floor has two spellings (`COVERAGE_THRESHOLD = 80` and the bunfig's `lines = 0.80`); a drift test in the coverage package now requires them to agree, verified by mutating each side. Gate floor untouched. |
+| R10a | `86d4bae` | 190 (+8) | 97.47% (193/198) | Merge pattern built once (`coveragePattern`/`coverageReports`), threshold comparison named, `--report-only` dry run, and the gate's own parsing/discovery/globbing is now tested. Report-only: widening would measure 99.37% (791/796). |
+| R10b | `a8a3450` | 190 | **99.37% (791/796)** | Config packages included by default; `--no-include-configs` reproduces the narrow set. The measured floor rose 1.90 points / 598 lines; the 80% threshold was not touched. |
 
 Phase 1 boundary: Scaffold Gate run on both variants and **green** — `native=none`
 (install, check 74 files/0 errors, typecheck 6/6, test 9+15+26 pass) and `native=publish`
 + unocss (install, check 97 files/0 errors, typecheck 11/11, test 9+15+6+28 pass, then
 `mnative add probe` → install → typecheck 12/12). Baselines updated in `CONTEXT.md`,
 `AGENTS.md`, `configs/biome/CONTEXT.md` and `configs/biome/AGENTS.md`.
+
+Phase 4 boundary: Scaffold Gate **green** — `native=none` (check 78 files/0 errors,
+typecheck 6/6, test 7/7 tasks) and `native=publish` + unocss (check 103 files/0 errors,
+typecheck 11/11, test 14/14 tasks, then `mnative add probe` → install → typecheck 12/12).
+No scaffold has a config package that emits coverage, so the widened merge changes nothing
+there, and the coverage package's new tests run in both. The gate measures more than before
+on purpose: 99.37% over 19 files across apps, packages and configs.
 
 Phase 3 boundary: Scaffold Gate **green** — `native=none` (check 78 files/0 errors,
 typecheck 6/6, test 6/6 tasks) and `native=publish` + unocss (check 103 files/0 errors,
@@ -94,13 +105,13 @@ scaffolded tree, then `mnative add probe` → install → typecheck 12/12). Base
 
 Nothing in Phases 2–7 was started, so no proposal was left half-done.
 
-## Gate output (at the Phase 2 boundary)
+## Gate output (at the Phase 4 boundary)
 
 ```
-bun run test           # 167 pass / 0 fail, 16/16 tasks
-bun run check          # exit 0 — 142 files, 14 warnings + 10 infos
+bun run test           # 190 pass / 0 fail, 17/17 tasks
+bun run check          # exit 0 — 146 files, 14 warnings + 10 infos
 bun run typecheck      # 14/14
-bun run coverage:check # 96.95% (159/164) — threshold 80%
+bun run coverage:check # 99.37% (791/796) — threshold 80%
 ```
 
 Scaffold Gate, both variants: green (see the phase boundary notes above).

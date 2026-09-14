@@ -88,10 +88,10 @@ not an npm package — the npm package is `packages/native/npm/native`.
 
 | Metric | Value |
 | :--- | :--- |
-| Tests | 179 pass / 0 fail (16 turbo tasks) |
+| Tests | 190 pass / 0 fail (17 turbo tasks) |
 | Typecheck | 14/14 |
 | Build | 19/19 |
-| Coverage | 96.95% lines (159/164) — gate 80% |
+| Coverage | 99.37% lines (791/796) over apps+packages+configs — gate 80% |
 | Biome | 0 errors; 14 warnings + 10 infos over 142 files |
 | Workflows | 6 generated, all parse |
 | Scaffolds | `native=none` and `native=publish` variants: install + check + typecheck + test all clean |
