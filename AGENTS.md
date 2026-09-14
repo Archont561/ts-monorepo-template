@@ -189,8 +189,8 @@ Enforced by Biome `noRestrictedImports` and the dependency graph:
 ## Before marking any task done
 
 - [ ] `bun install` — lockfile unchanged (`--frozen-lockfile` in CI)
-- [ ] `bun run check` — 0 errors (14 warnings / 14 infos is the baseline)
-- [ ] `bun run test` — 14/14 turbo tasks, 157 pass / 0 fail
+- [ ] `bun run check` — 0 errors (14 warnings / 10 infos is the baseline)
+- [ ] `bun run test` — 16/16 turbo tasks, 167 pass / 0 fail
 - [ ] `bun run typecheck` — 14/14
 - [ ] `bun run build` — 19/19
 - [ ] `bun run coverage` — line coverage ≥ 80% (currently 96.95%)

@@ -21,6 +21,6 @@
 
 ## Before marking a task done
 
-- [ ] `bun run check` exits 0 (baseline: 14 warnings + 14 infos over 138 files — warnings are not errors)
+- [ ] `bun run check` exits 0 (baseline: 14 warnings + 10 infos over 142 files — warnings are not errors)
 - [ ] No new `// biome-ignore` comments without a reason
 - [ ] Any new override restates the rules it needs
