@@ -361,6 +361,7 @@
         "citty": "^0.2.2",
       },
       "devDependencies": {
+        "@myorg/citty": "workspace:*",
         "turbo": "^2.10.12",
       },
     },
