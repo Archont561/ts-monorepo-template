@@ -947,6 +947,38 @@ describe("MonorepoScaffolder (unit)", () => {
       expect(stripMarkerBlocks(once, disabled)).toEqual({ content: once, changed: false });
     });
   });
+  // ── Workspace reconciliation ─────────────────────
+
+  describe("reconcileWorkspaces", () => {
+    test("drops globs and workspace deps that no longer resolve, and reports them", async () => {
+      await write(
+        `${workDir}/package.json`,
+        `${JSON.stringify(
+          {
+            workspaces: ["packages/*", "packages/native/npm/*"],
+            devDependencies: { "@myorg/native": "workspace:*", citty: "^0.2.2" },
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      await mkdir(`${workDir}/packages/internal`, { recursive: true });
+      await write(
+        `${workDir}/packages/internal/package.json`,
+        `${JSON.stringify({ name: "@myorg/internal" })}\n`,
+      );
+
+      const s = new MonorepoScaffolder({ targetDir: workDir, scope: "@myorg" });
+      const manifest = await file(`${workDir}/package.json`).json();
+      const result = await callReconcile(s, manifest);
+
+      expect(result.droppedWorkspaces).toEqual(["packages/native/npm/*"]);
+      expect(result.droppedDependencies).toEqual(["@myorg/native"]);
+      expect(result.manifest.workspaces).toEqual(["packages/*"]);
+      expect(result.manifest.devDependencies).toEqual({ citty: "^0.2.2" });
+    });
+  });
+
   // ── Scope target discovery ───────────────────────
 
   describe("collectScopeTargets", () => {
@@ -989,6 +1021,22 @@ describe("MonorepoScaffolder (unit)", () => {
     });
   });
 });
+
+interface ReconcileOutcome {
+  manifest: {
+    workspaces?: string[];
+    devDependencies?: Record<string, string>;
+    dependencies?: Record<string, string>;
+  };
+  droppedWorkspaces: string[];
+  droppedDependencies: string[];
+}
+
+/** `reconcileWorkspaces` is an implementation detail; the unit tests drive it directly. */
+async function callReconcile(s: MonorepoScaffolder, manifest: unknown): Promise<ReconcileOutcome> {
+  const target = s as unknown as { reconcileWorkspaces(m: unknown): Promise<ReconcileOutcome> };
+  return target.reconcileWorkspaces(manifest);
+}
 
 function setDisabledScopes(s: MonorepoScaffolder, scopes: string[]): void {
   (s as unknown as { disabledScopes: Set<string> }).disabledScopes = new Set(scopes);

@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { $, file, Glob, spawnSync, write } from "bun";
 import { aggregateWorkflow } from "./aggregate";
-import type { ScaffoldMeta, ScaffoldRemovals } from "./configs";
+import type { DiscoveredConfig, ScaffoldMeta, ScaffoldRemovals } from "./configs";
 import { discoverConfigs } from "./configs";
 
 export interface ScaffolderOptions {
@@ -314,6 +314,22 @@ export async function collectScopeTargets(targetDir: string): Promise<string[]> 
   for (const relativePath of agents) targets.add(relativePath);
 
   return [...targets];
+}
+
+/** The parts of the root manifest the removal pass reads and edits. */
+interface RootManifest {
+  workspaces?: string[];
+  scripts?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  dependencies?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+/** The reconciled manifest plus what had to go, for callers and tests. */
+interface ReconcileResult {
+  manifest: RootManifest;
+  droppedWorkspaces: string[];
+  droppedDependencies: string[];
 }
 
 export class MonorepoScaffolder {
@@ -648,89 +664,90 @@ export class MonorepoScaffolder {
    * Always-on configs survive unless they `selfDestruct` (the template);
    * opt-in configs are removed when their selection evaluates to disabled.
    */
+  /**
+   * True when a config survives the removal pass: always-on configs stay
+   * unless they are template-only, opt-in configs stay when selected.
+   */
+  private isStaying(meta: ScaffoldMeta): boolean {
+    if (meta.default === "always" && !meta.selfDestruct) return true;
+
+    const selected = this.selectedFor(meta);
+    return !(meta.selfDestruct || this.isDisabled(meta, selected));
+  }
+
+  /** Every removal one disabled config asks for, in the order it was written. */
+  private async applyRemovals(config: DiscoveredConfig, rootPkg: RootManifest): Promise<void> {
+    const { meta } = config;
+    const removals = this.removalsFor(meta, this.selectedFor(meta));
+
+    // 1. Remove the config package directory
+    await $`rm -rf ${this.targetDir}/configs/${config.dir}`.quiet();
+
+    // 2. Remove the workspace dependency from root
+    delete rootPkg.devDependencies?.[config.name];
+
+    // 3. Extra removals (exact paths, backward compat)
+    for (const relativePath of removals.extraRemovals ?? []) {
+      await $`rm -rf ${this.targetDir}/${relativePath}`.quiet();
+    }
+
+    // 3b. File patterns (glob) — data-driven
+    if (removals.filePatternsToRemove) {
+      await this.removeByGlobPatterns(removals.filePatternsToRemove);
+    }
+
+    // 3c. File regexes — data-driven
+    if (removals.fileRegexesToRemove) {
+      await this.removeByRegexPatterns(removals.fileRegexesToRemove);
+    }
+
+    // 4. Root scripts
+    for (const script of removals.scriptsToRemove ?? []) {
+      delete rootPkg.scripts?.[script];
+    }
+
+    // 5. Turbo tasks — text surgery so the committed formatting survives.
+    if (removals.turboTasksToRemove) {
+      const turboPath = `${this.targetDir}/configs/turbo/turbo.base.json`;
+      if (await file(turboPath).exists()) {
+        let turbo = await file(turboPath).text();
+        for (const task of removals.turboTasksToRemove) {
+          turbo = removeJsonObjectEntry(turbo, task);
+        }
+        await write(turboPath, turbo);
+      }
+    }
+
+    // 6. App deps
+    if (removals.appDepsToRemove) {
+      const appPkgPath = `${this.targetDir}/apps/example/package.json`;
+      if (await file(appPkgPath).exists()) {
+        const appPkg = await file(appPkgPath).json();
+        for (const dep of removals.appDepsToRemove) {
+          delete appPkg.devDependencies?.[dep];
+        }
+        await write(appPkgPath, `${JSON.stringify(appPkg, null, 2)}\n`);
+      }
+    }
+  }
+
   async handleConfig(): Promise<void> {
     const configs = await discoverConfigs(this.targetDir);
     const rootPkgPath = `${this.targetDir}/package.json`;
     if (!(await file(rootPkgPath).exists())) return;
-    const rootPkg = await file(rootPkgPath).json();
+    const rootPkg = (await file(rootPkgPath).json()) as RootManifest;
 
     for (const config of configs) {
-      const meta = config.meta;
-
-      // Always-on configs are kept unless they are template-only.
-      if (meta.default === "always" && !meta.selfDestruct) continue;
-
-      const selected = this.selectedFor(meta);
-      const disabled = meta.selfDestruct || this.isDisabled(meta, selected);
-      if (!disabled) continue;
-
-      const removals = this.removalsFor(meta, selected);
-
-      // 1. Remove the config package directory
-      await $`rm -rf ${this.targetDir}/configs/${config.dir}`.quiet();
-
-      // 2. Remove the workspace dependency from root
-      delete rootPkg.devDependencies?.[config.name];
-
-      // 3. Extra removals (exact paths, backward compat)
-      for (const relativePath of removals.extraRemovals ?? []) {
-        await $`rm -rf ${this.targetDir}/${relativePath}`.quiet();
-      }
-
-      // 3b. File patterns (glob) — data-driven
-      if (removals.filePatternsToRemove) {
-        await this.removeByGlobPatterns(removals.filePatternsToRemove);
-      }
-
-      // 3c. File regexes — data-driven
-      if (removals.fileRegexesToRemove) {
-        await this.removeByRegexPatterns(removals.fileRegexesToRemove);
-      }
-
-      // 4. Root scripts
-      for (const script of removals.scriptsToRemove ?? []) {
-        delete rootPkg.scripts?.[script];
-      }
-
-      // 5. Turbo tasks — text surgery so the committed formatting survives.
-      if (removals.turboTasksToRemove) {
-        const turboPath = `${this.targetDir}/configs/turbo/turbo.base.json`;
-        if (await file(turboPath).exists()) {
-          let turbo = await file(turboPath).text();
-          for (const task of removals.turboTasksToRemove) {
-            turbo = removeJsonObjectEntry(turbo, task);
-          }
-          await write(turboPath, turbo);
-        }
-      }
-
-      // 6. App deps
-      if (removals.appDepsToRemove) {
-        const appPkgPath = `${this.targetDir}/apps/example/package.json`;
-        if (await file(appPkgPath).exists()) {
-          const appPkg = await file(appPkgPath).json();
-          for (const dep of removals.appDepsToRemove) {
-            delete appPkg.devDependencies?.[dep];
-          }
-          await write(appPkgPath, `${JSON.stringify(appPkg, null, 2)}\n`);
-        }
-      }
+      if (this.isStaying(config.meta)) continue;
+      await this.applyRemovals(config, rootPkg);
     }
 
     // A config removal can take a whole workspace with it (native=none deletes
     // packages/native, the npm packages under npm/* included). A root
     // dependency or workspace glob left pointing at the missing directory makes
     // `bun install` fail outright, so both are reconciled with what survived.
-    const reconciled = await this.reconcileWorkspaces(
-      rootPkg.workspaces ?? [],
-      rootPkg.devDependencies ?? {},
-      rootPkg.dependencies ?? {},
-    );
-    rootPkg.workspaces = reconciled.workspaces;
-    rootPkg.devDependencies = reconciled.devDependencies;
-    rootPkg.dependencies = reconciled.dependencies;
-
-    await write(rootPkgPath, `${JSON.stringify(rootPkg, null, 2)}\n`);
+    const { manifest } = await this.reconcileWorkspaces(rootPkg);
+    await write(rootPkgPath, `${JSON.stringify(manifest, null, 2)}\n`);
   }
 
   /**
@@ -740,20 +757,17 @@ export class MonorepoScaffolder {
    * Only entries with a `workspace:` specifier can be checked this way — a
    * regular npm dependency is left alone, even when its name matches nothing
    * locally.
+   *
+   * Mutates the manifest in place so the field order of the committed file
+   * survives, and reports what it dropped.
    */
-  private async reconcileWorkspaces(
-    workspaces: string[],
-    devDependencies: Record<string, string>,
-    dependencies: Record<string, string>,
-  ): Promise<{
-    workspaces: string[];
-    devDependencies: Record<string, string>;
-    dependencies: Record<string, string>;
-  }> {
+  private async reconcileWorkspaces(manifest: RootManifest): Promise<ReconcileResult> {
+    const droppedWorkspaces: string[] = [];
     const surviving: string[] = [];
-    for (const pattern of workspaces) {
+    for (const pattern of manifest.workspaces ?? []) {
       const manifests = [...new Glob(`${pattern}/package.json`).scanSync({ cwd: this.targetDir })];
       if (manifests.length > 0) surviving.push(pattern);
+      else droppedWorkspaces.push(pattern);
     }
 
     // Package names come from the whole tree rather than only the surviving
@@ -765,28 +779,31 @@ export class MonorepoScaffolder {
       cwd: this.targetDir,
       onlyFiles: true,
     });
-    for (const manifest of manifests) {
-      if (/(^|\/)(node_modules|dist|target|\.git|\.turbo)\//.test(manifest)) continue;
+    for (const manifestPath of manifests) {
+      if (/(^|\/)(node_modules|dist|target|\.git|\.turbo)\//.test(manifestPath)) continue;
       try {
-        const name = (await file(`${this.targetDir}/${manifest}`).json()).name;
+        const name = (await file(`${this.targetDir}/${manifestPath}`).json()).name;
         if (typeof name === "string") names.add(name);
       } catch {
         // Unreadable manifest — treat the package as absent.
       }
     }
 
+    const droppedDependencies: string[] = [];
     const keepResolvable = (deps: Record<string, string>): Record<string, string> =>
       Object.fromEntries(
-        Object.entries(deps).filter(
-          ([name, spec]) => !spec.startsWith("workspace:") || names.has(name),
-        ),
+        Object.entries(deps).filter(([name, spec]) => {
+          const keep = !spec.startsWith("workspace:") || names.has(name);
+          if (!keep) droppedDependencies.push(name);
+          return keep;
+        }),
       );
 
-    return {
-      workspaces: surviving,
-      devDependencies: keepResolvable(devDependencies),
-      dependencies: keepResolvable(dependencies),
-    };
+    manifest.workspaces = surviving;
+    manifest.devDependencies = keepResolvable(manifest.devDependencies ?? {});
+    manifest.dependencies = keepResolvable(manifest.dependencies ?? {});
+
+    return { manifest, droppedWorkspaces, droppedDependencies };
   }
 
   /**
