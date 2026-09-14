@@ -75,6 +75,7 @@
       },
       "devDependencies": {
         "@biomejs/biome": "^2.5.13",
+        "@myorg/citty": "workspace:*",
       },
     },
     "configs/bun-config": {

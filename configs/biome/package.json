@@ -19,7 +19,8 @@
     ".": "./biome.json"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.13"
+    "@biomejs/biome": "^2.5.13",
+    "@myorg/citty": "workspace:*"
   },
   "dependencies": {
     "citty": "^0.2.2"

@@ -28,6 +28,12 @@ export interface WrapperOptions {
   argsName?: string;
   /** Description of that positional argument; each wrapper words its own. */
   argsDescription?: string;
+  /**
+   * Where the baked flags sit relative to the caller's arguments. Most tools
+   * want them first; biome only accepts `--config-path` once its subcommand and
+   * paths are in place, so it appends them.
+   */
+  configArgsPlacement?: "prepend" | "append";
 }
 
 export function defineWrapperCommand(opts: WrapperOptions) {
@@ -46,9 +52,12 @@ export function defineWrapperCommand(opts: WrapperOptions) {
     },
     run() {
       const raw = process.argv.slice(2);
+      const config = opts.configArgs ?? [];
       const cmd = opts.passthrough
         ? [opts.binPath, ...raw]
-        : [opts.binPath, ...(opts.configArgs ?? []), ...raw];
+        : opts.configArgsPlacement === "append"
+          ? [opts.binPath, ...raw, ...config]
+          : [opts.binPath, ...config, ...raw];
 
       const result = spawnSync({
         cmd,
