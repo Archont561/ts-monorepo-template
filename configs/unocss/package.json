@@ -48,7 +48,8 @@
   },
   "scripts": {
     "build": "mbunup",
-    "dev": "mbunup --watch"
+    "dev": "mbunup --watch",
+    "test": "mbun test"
   },
   "dependencies": {
     "citty": "^0.2.2"
