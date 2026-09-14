@@ -3,6 +3,8 @@ coverage = true
 coverageReporter = ["text", "lcov"]
 coverageDir = "./coverage"
 coverageSkipTestFiles = true
+# Mirrors COVERAGE_THRESHOLD (80%) in configs/coverage/index.ts, which
+# mcoverage check enforces in CI — expressed as a fraction here.
 coverageThreshold = { lines = 0.80, functions = 0.80 }
 coveragePathIgnorePatterns = [
   "**/*.test.ts",

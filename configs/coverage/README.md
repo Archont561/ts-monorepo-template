@@ -6,7 +6,7 @@
 
 - Always-on config (`default: always`) — no opt-in needed
 - `mcoverage` CLI (`configs/coverage/src/cli.ts`) owns every step: `setup` (installs lcov), `collect` (Bun + Rust), `html` (genhtml), `check` (threshold, parses LF/LH — no lcov binary needed), `pages`, `merge`, `summary`
-- `ci.steps.yml` fragment: `mcoverage setup` → `mcoverage html` → upload artifact `coverage-report` (14 days) → `mcoverage check --threshold 80` → PR comment via `romeovs/lcov-reporter-action`
+- `ci.steps.yml` fragment: `mcoverage setup` → `mcoverage html` → upload artifact `coverage-report` (14 days) → `mcoverage check` → PR comment via `romeovs/lcov-reporter-action`
 - `pages.steps.yml` fragment: when Pages is enabled, `mcoverage pages` generates coverage HTML into `apps/example/public/coverage/` so coverage is served at `https://user.github.io/repo/coverage/` alongside example app
 - `mcoverage pages` renders the report into `coverage/html`; `mpages build` then folds it into the Pages artifact as `/coverage/`. Doing it in that order means the two steps can appear in any order in the workflow
 - In the template repo, coverage is published with the docs site instead: `mdocs site` runs `mcoverage html --out docs/public/coverage`, served at `https://archont561.github.io/ts-monorepo-template/coverage/`. Generated monorepos use `mcoverage pages`
@@ -28,7 +28,7 @@ graph TD
     D --> F["pages?<br/>public/coverage/"]
     F -->|pages enabled| G["pages.yml<br/>example + coverage at /coverage/"]
     F -->|pages disabled| H["coverage.yml<br/>standalone Pages deploy"]
-    C --> I["mcoverage check --threshold 80<br/>fail CI if below"]
+    C --> I["mcoverage check<br/>fail CI if below threshold"]
     C --> J["lcov-reporter-action<br/>PR comment"]
 
     style C fill:#0969DA,color:#fff
@@ -145,7 +145,7 @@ So coverage available at `https://user.github.io/repo/coverage/`.
 ## Threshold enforcement (implemented)
 
 ```bash
-mcoverage check --threshold 80
+mcoverage check            # threshold: COVERAGE_THRESHOLD (80)
 ```
 
 Reads `LF:`/`LH:` straight out of `coverage/lcov.info` — no `lcov` or `bc` binary required — prints the percentage and exits 1 with an `::error::` annotation if coverage drops below 80% (matches `bunfig.toml`).
@@ -214,7 +214,7 @@ open coverage/html/index.html
 - ✅ Use `actions/upload-artifact@v4` for per-PR downloadable reports (retention 14d)
 - ✅ Gate `upload-pages-artifact` + `deploy-pages` on `main` only
 - ✅ Use `lcov --add-tracefile` to merge multiple LCOV in monorepos (or `lcov-result-merger`)
-- ✅ Add threshold check with `mcoverage check --threshold 80` to fail CI on regression
+- ✅ Add threshold check with `mcoverage check            # threshold: COVERAGE_THRESHOLD (80)` to fail CI on regression
 - ✅ Use `romeovs/lcov-reporter-action` for PR comments
 - ✅ When Pages app enabled, include coverage at `/coverage/` to avoid Pages conflict; when disabled, deploy standalone coverage site
 - ✅ Handle Rust coverage via `cargo-llvm-cov` when native enabled

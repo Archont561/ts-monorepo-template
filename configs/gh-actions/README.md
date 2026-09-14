@@ -63,6 +63,23 @@ sequenceDiagram
 
 Fragments are concatenated in discovery order and injected into `{{STEPS}}` or `{{UPDATES}}`.
 
+### Value placeholders
+
+Fragments are plain YAML, so anything with a single source of truth in
+TypeScript is interpolated instead of repeated:
+
+| Placeholder | Value |
+| :--- | :--- |
+| `{{BUN_VERSION}}` | Bun version installed by the workflow |
+| `{{NATIVE_DIR}}` | `packages/native` |
+| `{{NATIVE_CARGO}}` | `packages/native/Cargo.toml` |
+| `{{NATIVE_MANIFEST}}` | `packages/native/package.json` |
+| `{{APP_DIR}}` | `apps/example` |
+| `{{APP_DOCKERFILE}}` | `apps/example/Dockerfile` |
+
+They are defined in `configs/template/src/vars.ts` and substituted after the
+step fragments are spliced in.
+
 </details>
 
 ## Commands

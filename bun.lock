@@ -317,6 +317,7 @@
       },
       "devDependencies": {
         "@clack/prompts": "^1.8.0",
+        "@myorg/pages": "workspace:*",
         "@myorg/ts": "workspace:*",
       },
     },

@@ -10,6 +10,9 @@ export const PAGES_STAGING_DIR = ".pages";
 
 export const PAGES_CONCURRENCY_GROUP = "pages";
 
+/** Subdir of the staging dir that the coverage report is published under. */
+export const PAGES_COVERAGE_SUBDIR = "coverage";
+
 /** Default directory inside a package when `pages` is `true`. */
 export const PAGES_DEFAULT_DIR = "public";
 
@@ -69,7 +72,7 @@ export function discoverPages(root: string = process.cwd()): PagesTarget[] {
   const found: Array<{ name: string; dir: string; outDir: string }> = [];
 
   for (const glob of PAGES_WORKSPACE_GLOBS) {
-    const [base] = glob.split("*");
+    const base = glob.split("*")[0] ?? "";
     const baseDir = join(root, base);
     if (!existsSync(baseDir)) continue;
     for (const entry of readdirSync(baseDir, { withFileTypes: true })) {

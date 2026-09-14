@@ -1,24 +1,24 @@
       # TEMPLATE-ONLY:START(native)
       - name: Setup Rust toolchain (release)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
           targets: wasm32-wasip1-threads
 
       - name: Rust cache (release)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "packages/native"
+          workspaces: "{{NATIVE_DIR}}"
 
       - name: Cargo build release (mnative)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
         run: mnative build:release
         shell: bash
 
       - name: Build native bindings for release (napi via mnative)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
         run: mnative napi:build
         shell: bash
       # TEMPLATE-ONLY:END(native)

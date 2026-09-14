@@ -16,11 +16,11 @@
           sarif_file: trivy-fs-results.sarif
 
       - name: Build image for Trivy scan (if Dockerfile exists)
-        if: hashFiles('apps/example/Dockerfile') != ''
+        if: hashFiles('{{APP_DOCKERFILE}}') != ''
         run: mtrivy build
 
       - name: Trivy image scan (if Dockerfile)
-        if: hashFiles('apps/example/Dockerfile') != ''
+        if: hashFiles('{{APP_DOCKERFILE}}') != ''
         uses: aquasecurity/trivy-action@0.24.0
         with:
           image-ref: app:trivy-scan
@@ -29,7 +29,7 @@
           output: trivy-image-results.sarif
 
       - name: Upload Trivy image SARIF to GitHub Security
-        if: always() && hashFiles('apps/example/Dockerfile') != ''
+        if: always() && hashFiles('{{APP_DOCKERFILE}}') != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-image-results.sarif

@@ -4,14 +4,10 @@ import { dirname } from "node:path";
 import { cp } from "node:fs/promises";
 import { spawnSync, which } from "bun";
 import { defineCommand, runMain } from "citty";
+import { COVERAGE_HTML, COVERAGE_LCOV, COVERAGE_RUST_LCOV, COVERAGE_THRESHOLD } from "../index.ts";
 
-const LCOV = "coverage/lcov.info";
-const RUST_LCOV = "coverage/rust-lcov.info";
-const HTML_DIR = "coverage/html";
-// mpages build assembles the artifact at .pages/ — coverage rides along there.
-const PAGES_DIR = ".pages/coverage";
-// Rendered here; `mpages build` copies it into the artifact (see pages command).
-const COVERAGE_HTML_INDEX = `${HTML_DIR}/index.html`;
+// Rendered here; `mpages build` folds it into the Pages artifact (see pages command).
+const COVERAGE_HTML_INDEX = `${COVERAGE_HTML}/index.html`;
 
 function run(cmd: string[], opts: { cwd?: string } = {}): number {
   const result = spawnSync({
@@ -31,11 +27,11 @@ function has(tool: string): boolean {
 type Totals = { hit: number; found: number; percent: number };
 
 /**
- * Reads LF/LH records straight out of the LCOV file. The previous shell
+ * Reads LF/LH records straight out of the COVERAGE_LCOV file. The previous shell
  * version shelled out to `lcov --summary | awk | bc`, which made the check
  * fail outright whenever lcov was not installed.
  */
-function totals(path: string = LCOV): Totals | null {
+function totals(path: string = COVERAGE_LCOV): Totals | null {
   if (!existsSync(path)) return null;
   let hit = 0;
   let found = 0;
@@ -67,9 +63,9 @@ function installTools(): void {
   }
 }
 
-function generateHtml(outDir: string = HTML_DIR): void {
-  if (!existsSync(LCOV)) {
-    console.warn(`⚠️ ${LCOV} not found — skipping HTML report`);
+function generateHtml(outDir: string = COVERAGE_HTML): void {
+  if (!existsSync(COVERAGE_LCOV)) {
+    console.warn(`⚠️ ${COVERAGE_LCOV} not found — skipping HTML report`);
     return;
   }
   if (!has("genhtml")) {
@@ -79,7 +75,7 @@ function generateHtml(outDir: string = HTML_DIR): void {
   mkdirSync(outDir, { recursive: true });
   const code = run([
     "genhtml",
-    LCOV,
+    COVERAGE_LCOV,
     "--output-directory",
     outDir,
     "--title",
@@ -110,12 +106,12 @@ const htmlCommand = defineCommand({
   args: {
     out: {
       type: "string",
-      description: `Output directory (default: ${HTML_DIR})`,
-      default: HTML_DIR,
+      description: `Output directory (default: ${COVERAGE_HTML})`,
+      default: COVERAGE_HTML,
     },
   },
   run({ args }) {
-    generateHtml((args.out as string) || HTML_DIR);
+    generateHtml((args.out as string) || COVERAGE_HTML);
     process.exit(0);
   },
 });
@@ -128,10 +124,10 @@ const checkCommand = defineCommand({
   run({ args }) {
     const result = totals();
     if (!result) {
-      console.warn(`⚠️ ${LCOV} not found or has no line data — skipping threshold check`);
+      console.warn(`⚠️ ${COVERAGE_LCOV} not found or has no line data — skipping threshold check`);
       return;
     }
-    const threshold = Number((args.threshold as string) ?? "80");
+    const threshold = Number((args.threshold as string) ?? COVERAGE_THRESHOLD);
     const percent = Number(result.percent.toFixed(2));
     console.log(`Line coverage: ${percent}% (${result.hit}/${result.found} lines) — threshold ${threshold}%`);
     if (percent < threshold) {
@@ -158,13 +154,13 @@ const collectCommand = defineCommand({
     }
 
     console.log("🦀 Collecting Rust coverage via mnative llvm-cov");
-    run(["mnative", "llvm-cov", "--lcov", "--output-path", `../../${RUST_LCOV}`]);
-    if (!existsSync(RUST_LCOV)) {
+    run(["mnative", "llvm-cov", "--lcov", "--output-path", `../../${COVERAGE_RUST_LCOV}`]);
+    if (!existsSync(COVERAGE_RUST_LCOV)) {
       process.exit(0);
     }
 
-    if (!existsSync(LCOV)) {
-      renameSync(RUST_LCOV, LCOV);
+    if (!existsSync(COVERAGE_LCOV)) {
+      renameSync(COVERAGE_RUST_LCOV, COVERAGE_LCOV);
       process.exit(0);
     }
     if (has("lcov")) {
@@ -172,19 +168,19 @@ const collectCommand = defineCommand({
       const code = run([
         "lcov",
         "--add-tracefile",
-        LCOV,
+        COVERAGE_LCOV,
         "--add-tracefile",
-        RUST_LCOV,
+        COVERAGE_RUST_LCOV,
         "--output-file",
         merged,
       ]);
       if (code === 0) {
-        renameSync(merged, LCOV);
+        renameSync(merged, COVERAGE_LCOV);
         console.log("✅ Merged Rust + JS coverage");
         process.exit(0);
       }
     }
-    console.warn(`⚠️ lcov not available — Rust coverage kept at ${RUST_LCOV}`);
+    console.warn(`⚠️ lcov not available — Rust coverage kept at ${COVERAGE_RUST_LCOV}`);
   },
 });
 
@@ -194,11 +190,11 @@ const pagesCommand = defineCommand({
     description: "Publish the HTML report into the Pages artifact dir (served at /coverage/)",
   },
   async run() {
-    if (!existsSync(LCOV)) {
+    if (!existsSync(COVERAGE_LCOV)) {
       console.log("ℹ️ No coverage data — collecting first");
       run(["bun", "run", "coverage"]);
     }
-    if (!existsSync(LCOV)) {
+    if (!existsSync(COVERAGE_LCOV)) {
       console.warn("⚠️ Still no coverage/lcov.info — skipping Pages coverage");
       process.exit(0);
     }
@@ -206,12 +202,12 @@ const pagesCommand = defineCommand({
     installTools();
     generateHtml();
     if (!existsSync(COVERAGE_HTML_INDEX)) {
-      console.warn(`⚠️ No HTML report at ${HTML_DIR} — skipping Pages coverage`);
+      console.warn(`⚠️ No HTML report at ${COVERAGE_HTML} — skipping Pages coverage`);
       process.exit(0);
     }
 
     console.log(
-      `✅ Coverage HTML ready at ${HTML_DIR}/ — \`mpages build\` publishes it to ${PAGES_DIR} (served at /coverage/)`,
+      `✅ Coverage HTML ready at ${COVERAGE_HTML}/ — \`mpages build\` folds it into the Pages artifact (served at /coverage/)`,
     );
     process.exit(0);
   },
@@ -226,7 +222,7 @@ const mergeCommand = defineCommand({
     output: {
       type: "string",
       description: "Merged output file (default: coverage/lcov.info)",
-      default: LCOV,
+      default: COVERAGE_LCOV,
     },
   },
   run({ args }) {
@@ -237,7 +233,7 @@ const mergeCommand = defineCommand({
       process.exit(0);
     }
 
-    const output = (args.output as string) || LCOV;
+    const output = (args.output as string) || COVERAGE_LCOV;
     mkdirSync(dirname(output), { recursive: true });
     console.log(`Merging ${files.length} report(s) → ${output}`);
 
@@ -282,11 +278,11 @@ const summaryCommand = defineCommand({
   run({ args }) {
     const result = totals();
     if (args.json) {
-      // Always parse the LCOV ourselves: --json is consumed by scripts and the
+      // Always parse the COVERAGE_LCOV ourselves: --json is consumed by scripts and the
       // docs data loader, so it must not depend on lcov being installed.
       console.log(
         JSON.stringify({
-          source: LCOV,
+          source: COVERAGE_LCOV,
           available: Boolean(result),
           lines: {
             hit: result?.hit ?? 0,
@@ -297,11 +293,11 @@ const summaryCommand = defineCommand({
       );
       process.exit(0);
     }
-    if (has("lcov") && existsSync(LCOV)) {
-      process.exit(run(["lcov", "--summary", LCOV]));
+    if (has("lcov") && existsSync(COVERAGE_LCOV)) {
+      process.exit(run(["lcov", "--summary", COVERAGE_LCOV]));
     }
     if (!result) {
-      console.warn(`⚠️ ${LCOV} not found`);
+      console.warn(`⚠️ ${COVERAGE_LCOV} not found`);
       process.exit(0);
     }
     console.log(`lines: ${result.percent.toFixed(1)}% (${result.hit}/${result.found})`);
@@ -326,7 +322,7 @@ const main = defineCommand({
   },
   run() {
     console.log(`
-mcoverage — LCOV coverage reporting
+mcoverage — COVERAGE_LCOV coverage reporting
 
 Usage:
   mcoverage <command>

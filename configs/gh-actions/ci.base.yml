@@ -19,7 +19,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: {{BUN_VERSION}}
 
       # Restored before install; saved automatically at the end of the job.
       - name: Cache Bun + Turbo

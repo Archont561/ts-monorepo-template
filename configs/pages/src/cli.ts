@@ -4,7 +4,13 @@ import { cp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { Glob, spawnSync } from "bun";
 import { defineCommand, runMain } from "citty";
-import { discoverPages, PAGES_STAGING_DIR, type PagesTarget, pagesUrlPath } from "../index.ts";
+import {
+  discoverPages,
+  PAGES_COVERAGE_SUBDIR,
+  PAGES_STAGING_DIR,
+  type PagesTarget,
+  pagesUrlPath,
+} from "../index.ts";
 
 function run(cmd: string[]): number {
   const result = spawnSync({ cmd, stdout: "inherit", stderr: "inherit", stdin: "inherit" });
@@ -62,12 +68,19 @@ async function stage(root: string, targets: PagesTarget[]): Promise<void> {
     );
   }
 
+  // Mirrors @myorg/coverage's COVERAGE_HTML. Kept as a literal on purpose:
+  // Pages is usable without the coverage config, so it cannot depend on it.
+  const COVERAGE_HTML_DIR = "coverage/html";
   // Coverage is rendered by `mcoverage pages` into coverage/html; folding it in
   // here keeps the step order in the workflow irrelevant.
-  const coverageHtml = join(root, "coverage", "html");
+  const coverageHtml = join(root, COVERAGE_HTML_DIR);
   if (existsSync(join(coverageHtml, "index.html"))) {
-    await cp(coverageHtml, join(root, PAGES_STAGING_DIR, "coverage"), { recursive: true });
-    console.log(`📊 coverage/html → ${PAGES_STAGING_DIR}/coverage (served at /coverage/)`);
+    await cp(coverageHtml, join(root, PAGES_STAGING_DIR, PAGES_COVERAGE_SUBDIR), {
+      recursive: true,
+    });
+    console.log(
+      `📊 ${COVERAGE_HTML_DIR} → ${PAGES_STAGING_DIR}/${PAGES_COVERAGE_SUBDIR} (served at /coverage/)`,
+    );
   }
 
   const index = join(root, PAGES_STAGING_DIR, "index.html");

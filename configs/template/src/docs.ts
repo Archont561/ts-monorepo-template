@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { existsSync } from "node:fs";
 import { cp } from "node:fs/promises";
+import { PAGES_STAGING_DIR } from "@myorg/pages";
 import { spawnSync } from "bun";
 import { defineCommand, runMain } from "citty";
 import { regenerateAll } from "./aggregate";
@@ -10,7 +11,6 @@ const SITE_OUT = "docs/.vitepress/dist";
 /** Coverage HTML copied into the site by VitePress (docs/public/** → dist root). */
 const COVERAGE_OUT = "docs/public/coverage";
 /** Pages staging dir assembled by `mpages build`, nested at /example/. */
-const PAGES_STAGING = ".pages";
 
 function run(cmd: string[]): number {
   console.log(`\n▸ ${cmd.join(" ")}`);
@@ -80,11 +80,11 @@ const main = defineCommand({
             console.error(`::error::mpages build failed (exit ${app})`);
             process.exit(app);
           }
-          if (existsSync(PAGES_STAGING)) {
-            await cp(PAGES_STAGING, `${SITE_OUT}/example`, { recursive: true });
+          if (existsSync(PAGES_STAGING_DIR)) {
+            await cp(PAGES_STAGING_DIR, `${SITE_OUT}/example`, { recursive: true });
             console.log(`✅ Pages artifact copied to ${SITE_OUT}/example`);
           } else {
-            console.warn(`⚠️ ${PAGES_STAGING}/ not found — skipping /example/`);
+            console.warn(`⚠️ ${PAGES_STAGING_DIR}/ not found — skipping /example/`);
           }
         }
 

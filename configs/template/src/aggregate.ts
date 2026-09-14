@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { mkdir } from "node:fs/promises";
 import { $, file, write } from "bun";
+import { WORKFLOW_VARS } from "./vars";
 
 /**
  * Regenerates CI workflows from the config packages.
@@ -21,6 +22,9 @@ import { $, file, write } from "bun";
  * - `.github/dependabot.yml` is `configs/gh-actions/dependabot.base.yml`
  *   with `{{UPDATES}}` filled from every `configs/<dir>/dependabot.yml`
  *   (sorted, concatenated) — Dependabot version updates.
+ * Step fragments may use `{{NAME}}` placeholders (`{{BUN_VERSION}}`,
+ *   `{{NATIVE_DIR}}`, `{{APP_DOCKERFILE}}`, ...) that are filled from
+ *   `configs/template/src/vars.ts`, so paths and versions have one source.
  * - `.github/workflows/dependabot-auto-merge.yml` is
  *   `configs/gh-actions/dependabot-auto-merge.base.yml` with `{{STEPS}}`
  *   filled from `dependabot-auto-merge.steps.yml`.
@@ -115,10 +119,16 @@ export async function aggregateWorkflow(
   }
 
   // Support both {{STEPS}} and {{UPDATES}} placeholders
-  const rendered = base
-    .replace("{{STEPS}}", `${steps}\n`)
-    .replace("{{UPDATES}}", `${steps}\n`)
-    .replace(/\n{3,}/g, "\n\n");
+  const withSteps = base.replace("{{STEPS}}", `${steps}\n`).replace("{{UPDATES}}", `${steps}\n`);
+
+  // {{BUN_VERSION}}, {{NATIVE_DIR}}, {{APP_DOCKERFILE}}, ... — fragments are
+  // static YAML, so anything that has a single source of truth in TypeScript
+  // is interpolated here instead of being repeated in every step file.
+  let rendered = withSteps;
+  for (const [name, value] of Object.entries(WORKFLOW_VARS)) {
+    rendered = rendered.replaceAll(`{{${name}}}`, value);
+  }
+  rendered = rendered.replace(/\n{3,}/g, "\n\n");
 
   // Determine output path based on base file name
   let outputPath: string;

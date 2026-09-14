@@ -1,44 +1,44 @@
       # TEMPLATE-ONLY:START(native)
       - name: Setup Rust toolchain
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
           targets: wasm32-wasip1-threads
 
       - name: Rust cache
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "packages/native"
+          workspaces: "{{NATIVE_DIR}}"
 
       - name: Cargo fmt check (mnative)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
         run: mnative fmt:check
         shell: bash
 
       - name: Cargo clippy (deny warnings, mnative)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
         run: mnative clippy
         shell: bash
 
       - name: Cargo check (fast, mnative)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
         run: mnative check
         shell: bash
 
       - name: Cargo test (mnative)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
         run: mnative test
         shell: bash
 
       - name: Build native bindings (host, mnative)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
         run: mnative napi:build
         shell: bash
 
       - name: Check native package types
-        if: hashFiles('packages/native/package.json') != ''
+        if: hashFiles('{{NATIVE_MANIFEST}}') != ''
         run: mnative typecheck
         shell: bash
       # TEMPLATE-ONLY:END(native)

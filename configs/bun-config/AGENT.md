@@ -7,7 +7,7 @@
 - `mbun coverage` runs `mturbo coverage` (per-package); `bun run coverage` follows it with `mcoverage merge`, which writes the merged root `coverage/lcov.info` (lcov-result-merger, no lcov binary needed)
 - Config (`bunfig.toml`): LCOV + text reporters, 80% line/function threshold, ignores `*.test.ts`, `dist`, `node_modules`, `configs/*`, `cli.ts`, `e2e`, `aggregate.ts`, `*.node`, `target`, `apps/example/src/index.ts`, `pages/index.ts`
 - No per-package `bunfig.toml` — always passed explicitly for deterministic output
-- Reporting (HTML, artifact, Pages, threshold, PR comment) is in `@myorg/coverage` — see `configs/coverage/AGENT.md`: `mcoverage setup` installs lcov, `mcoverage html` renders `coverage/html/`, `upload-artifact@v4` retention 14d, `mcoverage check --threshold 80` gates the build, PR comment via `lcov-reporter-action`, Pages inclusion at `/coverage/` (via `mcoverage pages`) when pages enabled else standalone `coverage.yml` Pages deploy
+- Reporting (HTML, artifact, Pages, threshold, PR comment) is in `@myorg/coverage` — see `configs/coverage/AGENT.md`: `mcoverage setup` installs lcov, `mcoverage html` renders `coverage/html/`, `upload-artifact@v4` retention 14d, `mcoverage check` gates the build (threshold: `COVERAGE_THRESHOLD`), PR comment via `lcov-reporter-action`, Pages inclusion at `/coverage/` (via `mcoverage pages`) when pages enabled else standalone `coverage.yml` Pages deploy
 
 | Command | Description |
 | :--- | :--- |

@@ -19,8 +19,9 @@
           path: coverage/html/
           retention-days: 14
 
-      - name: Check coverage threshold (80% via mcoverage)
-        run: mcoverage check --threshold 80
+      # Threshold comes from COVERAGE_THRESHOLD in configs/coverage/index.ts.
+      - name: Check coverage threshold (mcoverage)
+        run: mcoverage check
         shell: bash
 
       - name: Report coverage to PR

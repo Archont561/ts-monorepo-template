@@ -184,7 +184,7 @@ const typecheckCommand = defineCommand({
     description: "Type-check packages/native (skips when the package is absent)",
   },
   run() {
-    if (!existsSync("packages/native/package.json")) {
+    if (!existsSync(`${NATIVE_DIR}/package.json`)) {
       console.warn("⚠️ packages/native not present, skipping typecheck");
       process.exit(0);
     }
@@ -192,7 +192,7 @@ const typecheckCommand = defineCommand({
     // @scope/native name to rewrite when the template is scaffolded.
     const result = spawnSync({
       cmd: ["bun", "run", "typecheck"],
-      cwd: "packages/native",
+      cwd: NATIVE_DIR,
       stdout: "inherit",
       stderr: "inherit",
       stdin: "inherit",
