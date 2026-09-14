@@ -39,6 +39,7 @@
   "devDependencies": {
     "@myorg/bunup": "workspace:*",
     "@myorg/citty": "workspace:*",
+    "@myorg/manifest": "workspace:*",
     "@myorg/ts": "workspace:*",
     "@unocss/cli": "^66.10.2",
     "unocss": "^66.10.2"

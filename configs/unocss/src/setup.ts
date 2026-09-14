@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { join } from "node:path";
+import { readJson, removeJsonEntry, setJsonValue, updateManifestFile } from "@myorg/manifest";
 import { $, file } from "bun";
 
 /**
@@ -82,50 +83,52 @@ async function swapIndexHtml(): Promise<void> {
   }
 }
 
+interface AppManifest {
+  devDependencies?: Record<string, string>;
+  scripts?: Record<string, string>;
+}
+
 /** Gives the example app the unocss dependency and the per-app CSS scripts. */
 async function wireExampleApp(): Promise<void> {
   const appPkgPath = join(TARGET_DIR, "apps/example/package.json");
-  if (!(await file(appPkgPath).exists())) return;
 
-  const pkg = await file(appPkgPath).json();
-  pkg.devDependencies = pkg.devDependencies ?? {};
-  pkg.scripts = pkg.scripts ?? {};
+  await updateManifestFile(appPkgPath, (source) => {
+    const pkg = readJson<AppManifest>(source);
+    let next = source;
 
-  if (!pkg.devDependencies[`${SCOPE}/unocss`]) {
-    pkg.devDependencies[`${SCOPE}/unocss`] = "workspace:*";
-    console.log(`  ✓ Added ${SCOPE}/unocss to apps/example`);
-  }
+    if (!pkg.devDependencies?.[`${SCOPE}/unocss`]) {
+      console.log(`  ✓ Added ${SCOPE}/unocss to apps/example`);
+    }
+    next = setJsonValue(next, `devDependencies.${SCOPE}/unocss`, "workspace:*");
 
-  // munocss owns the shared config path, so scripts stay one-liners and
-  // degrade to a no-op in monorepos scaffolded without UnoCSS.
-  if (pkg.scripts["build:css"] !== BUILD_CSS_SCRIPT) {
-    pkg.scripts["build:css"] = BUILD_CSS_SCRIPT;
-    console.log(`  ✓ Updated build:css to use munocss`);
-  }
+    // munocss owns the shared config path, so scripts stay one-liners and
+    // degrade to a no-op in monorepos scaffolded without UnoCSS.
+    if (pkg.scripts?.["build:css"] !== BUILD_CSS_SCRIPT) {
+      console.log(`  ✓ Updated build:css to use munocss`);
+    }
+    next = setJsonValue(next, "scripts.build:css", BUILD_CSS_SCRIPT);
 
-  if (pkg.scripts.build !== BUILD_CSS_SCRIPT) {
-    pkg.scripts.build = BUILD_CSS_SCRIPT;
-    console.log(`  ✓ Added build script to apps/example (per-app CSS build)`);
-  }
+    if (pkg.scripts?.build !== BUILD_CSS_SCRIPT) {
+      console.log(`  ✓ Added build script to apps/example (per-app CSS build)`);
+    }
+    next = setJsonValue(next, "scripts.build", BUILD_CSS_SCRIPT);
 
-  if (pkg.scripts["build:css:watch"] !== WATCH_CSS_SCRIPT) {
-    pkg.scripts["build:css:watch"] = WATCH_CSS_SCRIPT;
-  }
+    next = setJsonValue(next, "scripts.build:css:watch", WATCH_CSS_SCRIPT);
 
-  await Bun.write(appPkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+    return next;
+  });
 }
 
 /** CSS is built per app/package, never globally — drop a stale root script. */
 async function dropRootCssScript(): Promise<void> {
   const rootPkgPath = join(TARGET_DIR, "package.json");
-  if (!(await file(rootPkgPath).exists())) return;
 
-  const pkg = await file(rootPkgPath).json();
-  if (!pkg.scripts?.["build:css"]) return;
+  await updateManifestFile(rootPkgPath, (source) => {
+    if (!readJson<AppManifest>(source).scripts?.["build:css"]) return source;
 
-  delete pkg.scripts["build:css"];
-  await Bun.write(rootPkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
-  console.log(`  ✓ Removed root build:css (CSS is built by the app that owns it)`);
+    console.log(`  ✓ Removed root build:css (CSS is built by the app that owns it)`);
+    return removeJsonEntry(source, "scripts.build:css");
+  });
 }
 
 /** Config lives in `configs/unocss/` — an older setup may have left one at the root. */

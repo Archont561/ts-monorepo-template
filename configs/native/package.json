@@ -80,6 +80,7 @@
   "devDependencies": {
     "@myorg/bunup": "workspace:*",
     "@myorg/citty": "workspace:*",
+    "@myorg/manifest": "workspace:*",
     "@myorg/ts": "workspace:*",
     "@napi-rs/cli": "^3.9.1"
   }

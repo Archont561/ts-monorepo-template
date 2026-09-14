@@ -1,6 +1,14 @@
 #!/usr/bin/env bun
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import {
+  addJsonArrayValue,
+  readJson,
+  removeJsonEntry,
+  setJsonBlock,
+  setJsonValue,
+  updateManifestFile,
+} from "@myorg/manifest";
 import { $, file, spawnSync } from "bun";
 import {
   DEFAULT_NATIVE_CRATES,
@@ -70,17 +78,21 @@ const ROOT_SCRIPTS: Record<string, string> = {
 };
 
 /** Turbo tasks for the native builds — cargo stays uncached. */
-const TURBO_TASKS = {
-  "build:native": {
-    dependsOn: ["^build"],
-    outputs: ["*.node", "index.js", "index.d.ts"],
-    cache: false,
-  },
-  "build:wasm": {
-    dependsOn: ["build:native"],
-    outputs: ["*.wasi.cjs", "*.wasi-browser.js", "*.wasm"],
-    cache: false,
-  },
+/**
+ * The two tasks as JSON text in the style of `turbo.base.json` — short arrays
+ * stay inline there, which is exactly what a re-serialized object would lose.
+ */
+const TURBO_TASKS: Record<string, string> = {
+  "build:native": `{
+  "dependsOn": ["^build"],
+  "outputs": ["*.node", "index.js", "index.d.ts"],
+  "cache": false
+}`,
+  "build:wasm": `{
+  "dependsOn": ["build:native"],
+  "outputs": ["*.wasi.cjs", "*.wasi-browser.js", "*.wasm"],
+  "cache": false
+}`,
 };
 
 /** The example routes, written verbatim — they talk to @scope/native via external. */
@@ -282,58 +294,53 @@ async function ensureNativeGitignore(): Promise<void> {
   console.log("  ✓ packages/native/.gitignore (target/, generated loaders, npm/*-*/)");
 }
 
+interface RootManifest {
+  scripts?: Record<string, string>;
+  workspaces?: string[];
+}
+
 /** Root package.json — link the npm packages into the Bun workspace. */
 async function linkNpmPackages(): Promise<void> {
-  if (!(await file(ROOT_PACKAGE_JSON).exists())) return;
+  await updateManifestFile(ROOT_PACKAGE_JSON, (source) => {
+    const pkg = readJson<RootManifest>(source);
+    let next = source;
 
-  const pkg = await file(ROOT_PACKAGE_JSON).json();
-  let updated = false;
+    if (!(pkg.workspaces ?? []).includes(NATIVE_WORKSPACE_GLOB)) {
+      console.log(`  ✓ Added workspace glob ${NATIVE_WORKSPACE_GLOB}`);
+      next = addJsonArrayValue(next, "workspaces", NATIVE_WORKSPACE_GLOB);
+    }
 
-  pkg.workspaces = Array.isArray(pkg.workspaces) ? pkg.workspaces : [];
-  if (!pkg.workspaces.includes(NATIVE_WORKSPACE_GLOB)) {
-    pkg.workspaces = [...pkg.workspaces, NATIVE_WORKSPACE_GLOB];
-    console.log(`  ✓ Added workspace glob ${NATIVE_WORKSPACE_GLOB}`);
-    updated = true;
-  }
-
-  pkg.scripts = pkg.scripts ?? {};
-  for (const [name, command] of Object.entries(ROOT_SCRIPTS)) {
-    if (pkg.scripts[name] !== command) {
-      pkg.scripts[name] = command;
+    for (const [name, command] of Object.entries(ROOT_SCRIPTS)) {
+      if (pkg.scripts?.[name] === command) continue;
       console.log(`  ✓ Set root script ${name} → ${command}`);
-      updated = true;
+      next = setJsonValue(next, `scripts.${name}`, command);
     }
-  }
-  for (const name of Object.keys(pkg.scripts)) {
-    if (name.startsWith("cargo:") && pkg.scripts[name].includes("bun --filter")) {
-      delete pkg.scripts[name];
-      console.log(`  🗑️ Removed root script ${name} (cargo goes through mnative)`);
-      updated = true;
-    }
-  }
 
-  if (updated) {
-    await Bun.write(ROOT_PACKAGE_JSON, `${JSON.stringify(pkg, null, 2)}\n`);
-  }
+    for (const name of Object.keys(pkg.scripts ?? {})) {
+      const command = pkg.scripts?.[name] ?? "";
+      if (!name.startsWith("cargo:") || !command.includes("bun --filter")) continue;
+      console.log(`  🗑️ Removed root script ${name} (cargo goes through mnative)`);
+      next = removeJsonEntry(next, `scripts.${name}`);
+    }
+
+    return next;
+  });
 }
 
 /** Turbo tasks — one build per npm package, cargo stays uncached. */
 async function ensureTurboTasks(): Promise<void> {
-  if (!(await file(TURBO_BASE).exists())) return;
+  await updateManifestFile(TURBO_BASE, (source) => {
+    const turbo = readJson<{ tasks?: Record<string, unknown> }>(source);
+    let next = source;
 
-  const turbo = await file(TURBO_BASE).json();
-  turbo.tasks = turbo.tasks ?? {};
-  let changed = false;
-  for (const [name, task] of Object.entries(TURBO_TASKS)) {
-    if (turbo.tasks[name]) continue;
-    turbo.tasks[name] = task;
-    console.log(`  ✓ Added turbo task ${name}`);
-    changed = true;
-  }
+    for (const [name, task] of Object.entries(TURBO_TASKS)) {
+      if (turbo.tasks?.[name]) continue;
+      console.log(`  ✓ Added turbo task ${name}`);
+      next = setJsonBlock(next, `tasks.${name}`, task);
+    }
 
-  if (changed) {
-    await Bun.write(TURBO_BASE, `${JSON.stringify(turbo, null, 2)}\n`);
-  }
+    return next;
+  });
 }
 
 /** Example routes — unchanged, they talk to @scope/native through external. */
