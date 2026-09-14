@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { mkdir } from "node:fs/promises";
-import { file, spawnSync, write } from "bun";
-import { defineCommand, runMain } from "citty";
+import { defineCommand, runMain, spawnTool } from "@myorg/citty";
+import { file, write } from "bun";
 
 export async function minit(target = "changeset"): Promise<void> {
   if (target !== "changeset") {
@@ -37,13 +37,7 @@ if (
   !isVersion
 ) {
   const changeset = Bun.fileURLToPath(import.meta.resolve("@changesets/cli/bin.js"));
-  const result = spawnSync({
-    cmd: ["bun", changeset, ...rawArgs],
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  process.exit(result.exitCode);
+  process.exit(spawnTool(["bun", changeset, ...rawArgs]));
 }
 
 const initCommand = defineCommand({
@@ -75,14 +69,7 @@ const main = defineCommand({
     const raw = process.argv.slice(2);
     const changeset = Bun.fileURLToPath(import.meta.resolve("@changesets/cli/bin.js"));
 
-    const result = spawnSync({
-      cmd: ["bun", changeset, ...raw],
-      stdout: "inherit",
-      stderr: "inherit",
-      stdin: "inherit",
-    });
-
-    process.exit(result.exitCode);
+    process.exit(spawnTool(["bun", changeset, ...raw]));
   },
 });
 
