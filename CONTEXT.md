@@ -70,7 +70,7 @@ not an npm package — the npm package is `packages/native/npm/native`.
 
 - `bun run check` / `typecheck` / `test` / `build` / `coverage` all exit 0
 - `bun run docs:sync` regenerates six workflows; all parse as YAML
-- Template suite: 89 tests over every opt-in combination, 0 fail
+- Template suite: 99 tests over every opt-in combination, 0 fail
 - `mnative list`, `mnative matrix --gha`, `mnative add <name>` (crate + npm package + sorted `members`)
 - `bun install` links `node_modules/@myorg/native` → `packages/native/npm/native`
 - Demo app served with `bun src/index.ts` and probed over HTTP: `/health`, `/`, `/api`, `/uno.css` (6068 B built bundle, not the fallback), `/api/native/*` — all 200 with the expected payloads
@@ -88,11 +88,11 @@ not an npm package — the npm package is `packages/native/npm/native`.
 
 | Metric | Value |
 | :--- | :--- |
-| Tests | 147 pass / 0 fail (14 turbo tasks) |
+| Tests | 157 pass / 0 fail (14 turbo tasks) |
 | Typecheck | 14/14 |
 | Build | 19/19 |
 | Coverage | 96.95% lines (159/164) — gate 80% |
-| Biome | 0 errors; 19 warnings + 14 infos over 140 files |
+| Biome | 0 errors; 14 warnings + 14 infos over 140 files |
 | Workflows | 6 generated, all parse |
 | Scaffolds | `native=none` and `native=publish` variants: install + check + typecheck + test all clean |
 | E2E | skipped — browsers not installed |
