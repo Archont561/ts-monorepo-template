@@ -18,9 +18,16 @@ export interface WrapperOptions {
   name: string;
   version?: string;
   description: string;
+  /** Executable to spawn — `bun` when the tool's own entry needs a runtime. */
   binPath: string;
+  /** Flags baked in front of the caller's arguments (config paths, subcommands). */
   configArgs?: string[];
+  /** Spawn exactly what was asked for, without the baked flags. */
   passthrough?: boolean;
+  /** Name of the positional argument in `--help` (default: `args`). */
+  argsName?: string;
+  /** Description of that positional argument; each wrapper words its own. */
+  argsDescription?: string;
 }
 
 export function defineWrapperCommand(opts: WrapperOptions) {
@@ -31,9 +38,9 @@ export function defineWrapperCommand(opts: WrapperOptions) {
       description: opts.description,
     },
     args: {
-      args: {
+      [opts.argsName ?? "args"]: {
         type: "positional",
-        description: "Extra args passed to underlying tool",
+        description: opts.argsDescription ?? "Extra args passed to underlying tool",
         required: false,
       },
     },
