@@ -70,19 +70,35 @@ export function defineWrapperCommand(opts: WrapperOptions) {
   });
 }
 
+export interface SpawnSubcommandOptions {
+  name: string;
+  description: string;
+  /** Description of the positional in `--help` (default: the generic wording). */
+  argsDescription?: string;
+  /**
+   * Runs the tool with the arguments that follow the subcommand and returns its
+   * exit code, which the helper applies — the subcommand does not have to call
+   * `process.exit()` itself.
+   */
+  spawn: (rawArgs: string[]) => number;
+}
+
 /**
- * Helper to define a subcommand that spawns a tool.
+ * Helper to define a subcommand that spawns a tool. The arguments are sliced
+ * from argv after the subcommand name, so the parent's own flags stay intact.
  */
-export function defineSpawnSubcommand(
-  name: string,
-  description: string,
-  spawnFn: (rawArgs: string[]) => void,
-) {
+export function defineSpawnSubcommand(opts: SpawnSubcommandOptions) {
   return defineCommand({
-    meta: { name, description },
+    meta: { name: opts.name, description: opts.description },
+    args: {
+      args: {
+        type: "positional",
+        description: opts.argsDescription ?? "Extra args passed to underlying tool",
+        required: false,
+      },
+    },
     run() {
-      const raw = process.argv.slice(3);
-      spawnFn(raw);
+      process.exit(opts.spawn(process.argv.slice(3)));
     },
   });
 }
