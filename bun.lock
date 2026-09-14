@@ -249,6 +249,10 @@
         "lefthook": "^2.1.12",
       },
     },
+    "configs/manifest": {
+      "name": "@myorg/manifest",
+      "version": "0.0.0",
+    },
     "configs/native": {
       "name": "@myorg/native-config",
       "version": "0.0.0",
@@ -729,6 +733,8 @@
     "@myorg/internal": ["@myorg/internal@workspace:packages/internal"],
 
     "@myorg/lefthook": ["@myorg/lefthook@workspace:configs/lefthook"],
+
+    "@myorg/manifest": ["@myorg/manifest@workspace:configs/manifest"],
 
     "@myorg/native": ["@myorg/native@workspace:packages/native/npm/native"],
 
