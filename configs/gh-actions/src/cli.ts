@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
-import { defineCommand, defineSpawnSubcommand, runMain } from "@myorg/citty";
-import { spawnSync } from "bun";
+import { defineCommand, defineSpawnSubcommand, runMain, spawnTool } from "@myorg/citty";
 
 const ACT_FLAGS = [
   "-P",
@@ -13,13 +12,12 @@ function runActionlint(args: string[]) {
   const actionlint = Bun.fileURLToPath(
     import.meta.resolve("github-actionlint/dist/bin/actionlint.js"),
   );
-  const result = spawnSync({
-    cmd: ["bun", actionlint, `-config-file=${import.meta.dir}/../actionlint.yaml`, ...args],
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  return result.exitCode;
+  return spawnTool([
+    "bun",
+    actionlint,
+    `-config-file=${import.meta.dir}/../actionlint.yaml`,
+    ...args,
+  ]);
 }
 
 function runAct(args: string[]) {
@@ -41,13 +39,7 @@ Then ensure Docker is running and try again.
     return 1;
   }
 
-  const result = spawnSync({
-    cmd: [actPath, ...ACT_FLAGS, ...args],
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  return result.exitCode;
+  return spawnTool([actPath, ...ACT_FLAGS, ...args]);
 }
 
 const lintCommand = defineSpawnSubcommand({
