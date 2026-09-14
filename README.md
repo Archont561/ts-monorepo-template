@@ -26,7 +26,7 @@ bun install
 bun run dev
 ```
 
-The example server starts at [http://localhost:3000](http://localhost:3000).
+The example server starts at [http://localhost:3000](http://localhost:3000) (override with the `PORT` env var).
 
 During scaffolding you will be prompted for:
 
@@ -118,7 +118,7 @@ bun install
 bun run dev
 ```
 
-The example server starts at [http://localhost:3000](http://localhost:3000).
+The example server starts at [http://localhost:3000](http://localhost:3000) (override with the `PORT` env var).
 
 ## Architecture
 

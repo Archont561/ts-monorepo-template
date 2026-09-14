@@ -5,7 +5,7 @@
 
 - `@myorg/playwright` (`configs/playwright`) provides `@playwright/test`, `playwright.config.ts`, and `me2e` bin
 - `me2e` (from `@myorg/playwright`) wraps `playwright test` — detects if browsers installed, auto-skips gracefully if missing (so `bun run test:e2e` doesn't fail in envs without browsers)
-- Config (`playwright.config.ts` in `apps/example`): `testDir: e2e/`, `baseURL: http://localhost:3000`, projects Chromium/Firefox/WebKit
+- Config (`playwright.config.ts` in `apps/example`): `testDir: e2e/`, `baseURL: http://localhost:${PORT}` (3000 by default, from `apps/example/src/port.ts`), projects Chromium/Firefox/WebKit
 - E2E specs live in `apps/example/e2e/`, not in `tests/` — unit tests use `bun:test`, e2e uses `@playwright/test`, never mix imports
 - `bun run test:e2e` → `me2e` → `playwright test`
 

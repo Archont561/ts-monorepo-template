@@ -1,4 +1,5 @@
 import { FileSystemRouter, file, serve } from "bun";
+import { PORT } from "./port";
 
 // Detect opt-in features via file existence / env
 // Unocss detection now via file existence only (handled via scaffold file deletion)
@@ -22,7 +23,7 @@ const router = new FileSystemRouter({
 });
 
 const server = serve({
-  port: 3000,
+  port: PORT,
 
   routes: {
     "/health": () => new Response("OK", { status: 200 }),

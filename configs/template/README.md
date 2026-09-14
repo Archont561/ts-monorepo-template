@@ -30,6 +30,25 @@ graph TD
     style E fill:#f6f8fa,stroke:#0969DA
 ```
 
+## Workflow placeholders
+
+`regenerateCI` splices step fragments into a skeleton, then interpolates values
+that have a single source of truth in TypeScript (`src/vars.ts`):
+
+| Placeholder | Value |
+| :--- | :--- |
+| `{{STEPS}}` / `{{UPDATES}}` | concatenated `configs/*/<fragment>` files |
+| `{{BUN_VERSION}}` | Bun version installed by the workflow |
+| `{{NATIVE_DIR}}` | `packages/native` |
+| `{{NATIVE_CARGO}}` | `packages/native/Cargo.toml` |
+| `{{NATIVE_MANIFEST}}` | `packages/native/package.json` |
+| `{{APP_DIR}}` | `apps/example` |
+| `{{APP_DOCKERFILE}}` | `apps/example/Dockerfile` |
+
+Fragments are plain YAML, so this is how `hashFiles('…')` guards and
+`directory:` entries stay in sync with the packages they point at. GitHub's own
+`${{ … }}` expressions are untouched.
+
 ## Scaffold Metadata (Data-Driven)
 
 > [!TIP]

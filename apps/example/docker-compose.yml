@@ -9,9 +9,8 @@ services:
     build:
       context: ../..  # monorepo root as context (for workspace deps)
       dockerfile: apps/example/Dockerfile
-      args:
-        BUN_VERSION: 1.4.2
-        RUST_VERSION: 1.84
+      # BUN_VERSION / RUST_VERSION default in the Dockerfile — only override
+      # them here when pinning to something else.
       # BuildKit cache for bun
       cache_from:
         - type=gha
@@ -20,13 +19,13 @@ services:
     image: example:latest
     container_name: example-app
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
     environment:
       NODE_ENV: production
-      PORT: 3000
+      PORT: ${PORT:-3000}
       HOST: 0.0.0.0
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:${PORT:-3000}/health"]
       interval: 30s
       timeout: 5s
       retries: 3

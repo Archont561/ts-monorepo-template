@@ -4,7 +4,7 @@
 > Workflows in `.github/workflows/` + `.github/dependabot.yml` are generated — don't edit directly.
 
 - Skeletons: `configs/gh-actions/*.base.yml` contain `{{STEPS}}` or `{{UPDATES}}` placeholder (ci, release, pages, coverage, dependabot, dependabot-auto-merge)
-- Path/version placeholders: fragments may use `{{BUN_VERSION}}`, `{{NATIVE_DIR}}`, `{{NATIVE_CARGO}}`, `{{NATIVE_MANIFEST}}`, `{{APP_DIR}}`, `{{APP_DOCKERFILE}}` — substituted from `configs/template/src/vars.ts`
+- Path/version placeholders: fragments may use `{{BUN_VERSION}}`, `{{NATIVE_DIR}}`, `{{NATIVE_CARGO}}`, `{{NATIVE_MANIFEST}}`, `{{APP_DIR}}`, `{{APP_DOCKERFILE}}` — substituted by the workflow generator (`mdocs`)
 - Fragments: `configs/*/ci.steps.yml`, `*/release.steps.yml`, `*/pages.steps.yml`, `*/coverage.steps.yml`, `*/dependabot.yml`, `*/dependabot-auto-merge.steps.yml`
 - Aggregation: `bun run docs:sync` (`mdocs` from `@myorg/template`) runs `discoverConfigs()` to collect fragments and generates `ci.yml` + `release.yml` + `pages.yml` (if pages enabled) + `coverage.yml` (if pages disabled, standalone coverage Pages) + `dependabot.yml` + `dependabot-auto-merge.yml`
 - Validation: `mci lint` (`actionlint`) + `mci act` (`act`) for local runs

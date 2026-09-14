@@ -52,7 +52,7 @@ docker build -t example:latest .
 
 # Run
 docker run -p 3000:3000 example:latest
-# → http://localhost:3000/health
+# → http://localhost:3000/health   (PORT=4000 bun run dev moves it)
 # → http://localhost:3000/api
 
 # With native bindings (when Cargo.toml present, auto-detected)

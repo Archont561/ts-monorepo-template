@@ -77,8 +77,8 @@ TypeScript is interpolated instead of repeated:
 | `{{APP_DIR}}` | `apps/example` |
 | `{{APP_DOCKERFILE}}` | `apps/example/Dockerfile` |
 
-They are defined in `configs/template/src/vars.ts` and substituted after the
-step fragments are spliced in.
+They are defined in the workflow generator's variable map and substituted
+after the step fragments are spliced in.
 
 </details>
 
