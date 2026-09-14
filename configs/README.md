@@ -1,80 +1,62 @@
 # Configs
 
-Shared tooling configurations for the monorepo. Each sub-directory is a private workspace that owns one tool's config and exposes a single `m`-prefixed CLI bin.
+Every tool in this monorepo is configured here. One directory per tool, one `m`-prefixed command per tool, and **no configuration files at the repo root** — `turbo.json`, `biome.json`, `bunfig.toml`, `commitlint.config.js` and the rest all live in `configs/<name>/` and are reached through their CLI.
 
-> [!NOTE]
-> Root `README.md` and `AGENTS.md` reference these files via links instead of concatenating them. Workflows are generated via `bun run docs:sync`.
+Keeping them here means a tool can be dropped by deleting one directory: the scaffolder prunes the package, its scripts, its turbo tasks and its CI steps from metadata alone.
 
-## Packages
+## The packages
 
-| Package | Bin | Status | Description |
-| :--- | :--- | :---: | :--- |
-| [Biome](biome/README.md) | `mbiome` | ✅ Always | Lint and format |
-| [Bun Config](bun-config/README.md) | `mbun` | ✅ Always | Bun runtime, test, coverage |
-| [Bunup](bunup/README.md) | `mbunup` | ✅ Always | Bundling presets |
-| [Changeset](changeset/README.md) | `mchangeset` | ✅ Always | Versioning and releases |
-| [Citty](citty/README.md) | `mcitty` | ✅ Always | Elegant CLI builder |
-| [Commitlint](commitlint/README.md) | — | ✅ Always | Conventional Commits |
-| [GitHub Actions](gh-actions/README.md) | `mci` | ✅ Always | CI workflows, `mci lint` / `mci act` |
-| [Lefthook](lefthook/README.md) | `msetup` | ✅ Always | Git hooks |
-| [TypeScript](ts/README.md) | `mtsc` | ✅ Always | Shared tsconfigs |
-| [Turbo](turbo/README.md) | `mturbo` | ✅ Always | Task orchestration |
-| [Native](native/README.md) | — | 🔲 Opt-in | NAPI-RS bindings |
-| [Pages](pages/README.md) | — | 🔲 Opt-in | GitHub Pages deployment |
-| [Playwright](playwright/README.md) | `me2e` | 🔲 Opt-in | E2E testing |
-| [Skills](skills/README.md) | `mskills` | 🔲 Opt-in | AI agent skills |
-| [Template](template/README.md) | `mdocs` | 🗑️ Template-only | Scaffolder |
-| [UnoCSS](unocss/README.md) | — | 🔲 Opt-in | Atomic CSS |
+| Package | Command | Scaffold default | Flag |
+| :--- | :--- | :--- | :--- |
+| [badges](badges/README.md) | `mbadges` | always | `badges` |
+| [biome](biome/README.md) | `mbiome` | always | `biome` |
+| [bun-config](bun-config/README.md) | `mbun` | always | `bun-config` |
+| [bunup](bunup/README.md) | `mbunup` | always | `bunup` |
+| [changeset](changeset/README.md) | `mchangeset` | always | `changeset` |
+| [citty](citty/README.md) | `mcitty` | always | `citty` |
+| [codeql](codeql/README.md) | `mcodeql` | true | `codeql` |
+| [commitlint](commitlint/README.md) | — | always | `commitlint` |
+| [community](community/README.md) | — | always | `community` |
+| [coverage](coverage/README.md) | `mcoverage` | always | `coverage` |
+| [dependabot](dependabot/README.md) | — | always | `dependabot` |
+| [devcontainer](devcontainer/README.md) | — | false | `devcontainer` |
+| [editorconfig](editorconfig/README.md) | — | always | `editorconfig` |
+| [gh-actions](gh-actions/README.md) | `mci` | always | `gh-actions` |
+| [gitattributes](gitattributes/README.md) | — | always | `gitattributes` |
+| [gitleaks](gitleaks/README.md) | `mgitleaks` | always | `gitleaks` |
+| [lefthook](lefthook/README.md) | `msetup` | always | `lefthook` |
+| [native-config](native/README.md) | `mnative` | none | `native` |
+| [pages](pages/README.md) | `mpages` | false | `pages` |
+| [playwright](playwright/README.md) | `me2e` | true | `playwright` |
+| [skills](skills/README.md) | `mskills` | false | `skills` |
+| [stale](stale/README.md) | — | false | `stale` |
+| [template](template/README.md) | `mdocs` | always | — |
+| [trivy](trivy/README.md) | `mtrivy` | false | `trivy` |
+| [ts](ts/README.md) | `mtsc` | always | `ts` |
+| [turbo](turbo/README.md) | `mturbo` | always | `turbo` |
+| [unocss](unocss/README.md) | `munocss` | false | `unocss` |
 
-All bins are linked into `node_modules/.bin` on `bun install`.
+`always` means every generated project gets it; `true`/`false`/`none` are the defaults for the opt-in prompts, overridable with the flag at scaffold time.
 
-## Architecture
+## How a config is built
 
-```mermaid
-graph TD
-    A["configs/*/package.json"] -->|"bin: m*"| B[msetup]
-    B --> C["node_modules/.bin"]
-    C --> D["Root scripts<br/>bun run dev/build/test"]
-    D --> E["mturbo / mbiome / mbun"]
-    E --> F["Tool configs"]
-
-    style B fill:#0969DA,color:#fff
-    style C fill:#f6f8fa,stroke:#0969DA
+```
+configs/<name>/
+├── package.json     # name, bin, exports, and the `scaffold` metadata
+├── README.md        # what it is, how to use it
+├── AGENTS.md        # the rules that hold in this area
+├── CONTEXT.md       # what is true here right now
+├── src/cli.ts       # the `m…` command (citty)
+├── <tool>.config.*  # the tool's own config, referenced by CLI flag
+└── *.steps.yml      # optional CI fragment, spliced into a generated workflow
 ```
 
-<details>
-<summary>How bins work</summary>
+Adding a config takes four steps:
 
-- Each `configs/*` package declares `bin: { "m*": "./src/cli.ts" }`
-- `msetup` (from `configs/lefthook`) scans and symlinks them
-- Root `package.json` has zero `devDependencies`
-- Tools are invoked via `bun run <script>` which calls `m*` bins
+1. Create `configs/<name>/` as a workspace with a `package.json` exposing one `m…` bin.
+2. Put the tool's config file inside that directory and reference it by flag — never from the root.
+3. Add `README.md`, `AGENTS.md` and `CONTEXT.md`.
+4. If it needs CI, contribute a `*.steps.yml` fragment and run `bun run docs:sync`.
 
-</details>
-
-## Workflows
-
-> [!TIP]
-> Workflows in `.github/workflows/` are generated from `gh-actions/*.base.yml` skeletons with fragments from `*/ci.steps.yml` via `bun run docs:sync`.
-
-```mermaid
-sequenceDiagram
-    participant C as "configs/*"
-    participant G as "gh-actions/*.base.yml"
-    participant M as mdocs
-    participant W as ".github/workflows/*.yml"
-
-    C->>M: ci.steps.yml fragments
-    G->>M: base skeletons
-    M->>W: aggregate + replace {{STEPS}}
-```
-
-## Adding a new config
-
-- [ ] Create `configs/<name>/` workspace
-- [ ] Add `package.json` with `bin`, `scaffold` metadata
-- [ ] Add `README.md` + `AGENTS.md`
-- [ ] Optionally add `ci.steps.yml` for CI fragment
-- [ ] Run `bun install` to link bin
-
-See [AGENTS.md](./AGENTS.md) for agent-facing rules.
+> [!IMPORTANT]
+> Every config that touches CI declares its own `removals` in `scaffold` metadata, so pruning it leaves nothing behind.

@@ -21,4 +21,4 @@
 
 | Commit | What |
 | :--- | :--- |
-| `d869bc2` | app port and image versions made overridable (devcontainer forwards the same port) |
+| `d869bc2` | app port and image versions made overridable — the port the devcontainer forwards is the same `PORT` the app reads |

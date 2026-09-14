@@ -1,23 +1,15 @@
-# AGENTS.md - @myorg/codeql
+# AGENTS.md — @myorg/codeql
 
-> CodeQL SAST — security scanning for JS/TS.
+## Rules
 
-## What it provides
+- Never edit the generated `ci.yml`. CodeQL settings live in `configs/codeql/ci.steps.yml`; run `bun run docs:sync` after changing them.
+- CodeQL runs in GitHub Actions. There is no local gate, so a green local run says nothing about CodeQL.
+- Keep `queries: security-and-quality` unless there is a reason to narrow it.
+- Do not add Rust to `languages:` — CodeQL's Rust support is limited. Native code is covered by `mnative audit` / `mnative deny` instead.
+- Suppressions and path exclusions belong in `codeql-config.yml`, not by deleting steps from the workflow.
 
-- `ci.steps.yml` — adds CodeQL init/autobuild/analyze to `ci.yml`
-- `mcodeql` CLI — info/help only (CodeQL runs in GitHub Actions)
-- Optional `codeql-config.yml` for custom queries.
+## Before marking a task done
 
-## For agents
-
-- CodeQL is opt-in, default true (`default: true` in scaffold).
-- To add CodeQL to a repo, ensure `configs/codeql` is enabled, then `bun run docs:sync` to regenerate workflows.
-- Results appear in GitHub Security tab, not in PR comments.
-- No local binary required — runs in Actions. If you need local, install CodeQL CLI via brew.
-- If you add new languages (e.g. Rust), extend `languages:` list — but CodeQL Rust support is limited, use `cargo audit/deny` instead.
-
-## Files
-
-- `configs/codeql/ci.steps.yml` — CI fragment
-- `configs/codeql/src/cli.ts` — wrapper
-- `configs/codeql/package.json` — scaffold metadata
+- [ ] Fragment edited, then `bun run docs:sync` run and the generated workflow committed
+- [ ] `bun run ci:lint` clean
+- [ ] Findings triaged in Security → Code scanning, not ignored

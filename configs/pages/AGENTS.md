@@ -1,34 +1,16 @@
-## Pages (GitHub Pages)
+# AGENTS.md — @myorg/pages
 
-> Opt-in — confirm prompt `Set up GitHub Pages deployment?` during scaffolding. Data-driven via `package.json` `scaffold` metadata.
+## Rules
 
-- `configs/pages` (`@myorg/pages`) provides GitHub Pages deployment via Actions, opt-in confirm — **what is deployed is discovered from `package.json`**, not hardcoded: packages declare `"pages": { "dir": "public" }` (`"pages": "public"` / `true` also accepted), `mpages` scans `apps/*` + `packages/*` and stages each into `.pages/` (one package → site root, several → `/<name>/`)
-- In the template repo only, `docs:sync` skips `pages.yml`: `template-docs.yml` deploys the docs site (which nests the demo app at `/example/`), and one Pages site has one deployer
-- When `false` (default), `.github/workflows/pages.yml` + `pages.base.yml`/`pages.steps.yml` removed via `extraRemovals` + `filePatternsToRemove` (`**/pages.yml`) + `fileRegexesToRemove` (`pages\.yml`, `github-pages`)
-- When `true`, keeps `configs/gh-actions/pages.base.yml` skeleton + `configs/pages/pages.steps.yml` fragment → generates `.github/workflows/pages.yml` via `bun run docs:sync` (`mdocs`)
-- `pages.base.yml` skeleton: `name: Deploy to GitHub Pages`, `on: push main + workflow_dispatch`, `permissions: contents read, pages write, id-token write`, `concurrency: group pages, cancel-in-progress false`, jobs `build` (checkout, setup-bun, install, {{STEPS}}, configure-pages, upload-pages-artifact path `./apps/example/public`) + `deploy` (needs build, environment github-pages, if main, deploy-pages)
-- `pages.steps.yml` fragment: `mpages build` (runs `bun run build`, discovers declared packages, stages `.pages/`) + `mpages base` (repo name + Pages URL, `--inject` rewrites absolute `href`/`src` in staged HTML) — all logic lives in `configs/pages/src/cli.ts`; no UnoCSS step (CSS is built by the app that owns it). `mpages list` prints the discovered targets
-- Official actions: `configure-pages@v5`, `upload-pages-artifact@v3`, `deploy-pages@v4` — deploy targets `github-pages` environment
-- Other configs can contribute `pages.steps.yml` fragments (e.g. coverage publishes its HTML report into `apps/example/public/coverage`)
-- Repo settings one-time: Settings → Pages → Source → GitHub Actions, environment `github-pages` auto-created, add protection rule only main can deploy
-- URL patterns: user site `username.github.io` → `https://username.github.io`, other repo → `https://username.github.io/repo-name`, custom domain → `https://yourdomain.com` — set base path to `/repo-name` for non-root
+- Never hardcode a deploy target. Packages declare `pages` in their own `package.json`; `mpages` discovers them.
+- Never add a global CSS or build step to the Pages workflow — each app builds its own assets in its `build` script.
+- Only one workflow may deploy to a Pages site. Before adding another deploy step, check whether `pages.yml`, `coverage.yml` or `template-docs.yml` already owns it.
+- `mpages base --inject` rewrites absolute `href`/`src` in staged HTML; a non-root repo needs that base path or the site serves broken links.
+- Pages is opt-in — when it is disabled, the workflow, skeleton and fragment are pruned together.
 
-| Option | Result |
-| :--- | :--- |
-| `false` | No pages.yml (default) |
-| `true` | Keep pages workflow + fragments, generates pages.yml |
+## Before marking a task done
 
-```mermaid
-graph TD
-    A[bun create] --> B{pages?}
-    B -->|no| C["prune pages.yml<br/>glob+regex"]
-    B -->|yes| D["pages.base.yml + pages.steps.yml<br/>build public"]
-    D --> E["configure-pages + upload-artifact<br/>deploy-pages<br/>github-pages env"]
-    style B fill:#0969DA,color:#fff
-    style E fill:#0969DA,color:#fff
-```
-
-> [!IMPORTANT]
-> Always declare `pages: write` + `id-token: write`, use `concurrency` group pages + `cancel-in-progress false`, split build/deploy, gate deploy with `if: main`, include `workflow_dispatch`.
-
-See [README.md](./README.md) and [gh-actions README](../gh-actions/README.md) for full guide.
+- [ ] New deployable package declares `pages` in its manifest
+- [ ] `mpages list` shows it
+- [ ] `bun run docs:sync` run if workflow fragments changed
+- [ ] No second workflow deploys to the same site

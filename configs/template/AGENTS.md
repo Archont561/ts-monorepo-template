@@ -1,106 +1,37 @@
-## Scaffolding (Template Development Only)
+# AGENTS.md — @myorg/template
 
-> [!IMPORTANT]
-> `configs/template/` is template-only — removed from generated projects (`selfDestruct: true`).
+> The `bun create` scaffolder and the workflow aggregator. Template-development-only: this package is removed from generated projects.
+> Orientation in [README.md](./README.md), current state in [CONTEXT.md](./CONTEXT.md).
 
-- The `configs/template/` workspace turns this repo into a reusable monorepo template. `bun create Archont561/ts-monorepo-template my-app` runs `bun-create.preinstall` (`bun configs/template/dist/index.js` — the committed bundle), which scaffolds a project (replaces `@myorg` scope, strips `TEMPLATE-ONLY` blocks, removes template-only files, prunes opt-in configs, regenerates workflows from survivors, initializes Git) *before* `bun install`, so only what survives gets installed. Lefthook hooks are installed by the root `prepare` script during that `bun install`. Regular `bun install` in this repo does **not** trigger scaffolding.
+## Rules
 
-- The scaffolder is **fully data-driven**: `discoverConfigs()` (in `configs/template/src/configs.ts`) scans every `configs/*/package.json` for a `scaffold` metadata field (`default`, `flag`, `prompt`, `type: "confirm" | "select"`, `options`, `removals`, `extraRemovals`, `filePatternsToRemove`, `fileRegexesToRemove`, `scriptsToRemove`, `turboTasksToRemove`, `appDepsToRemove`, `setup`, `selfDestruct`). Configs with `"default": "always"` are always kept — except `selfDestruct` ones (the template itself), which are always removed. No config is hardcoded in the scaffolder.
+- Nothing about a config may be hardcoded in the scaffolder. Behaviour comes from the `scaffold` metadata in each `configs/*/package.json` — add a field there, not a special case here.
+- `dist/index.js` is committed and is what `bun create` actually runs. Rebuild it (`bun run --filter @myorg/template build`) after every source change, or the template ships stale behaviour.
+- Never edit generated `.github/workflows/*`. Change the skeleton or the fragment, then run `bun run docs:sync`.
+- A new step-fragment filename must be registered in the aggregator's allow-list, or discovery will ignore it.
+- Fragments are spliced under `steps:`, so every line must be indented.
+- Only one workflow may deploy to Pages. `docs:sync` skips `pages.yml` and `coverage.yml` while `docs/` exists because `template-docs.yml` owns the site here.
+- Any prose that must not survive into a generated project goes inside `TEMPLATE-ONLY:START(...)` / `END(...)` markers — the scaffolder strips those blocks.
+- The bundle must stay free of runtime dependencies: Bun-native APIs only, plus `--packages bundle`.
+- The scaffolder scaffolds **in place**. Never run it against this repository — use the test harness (`BUN_CREATE_DIR`), which copies to a temp directory.
+- Root `README.md`, `AGENTS.md`, `CONTEXT.md` and `LICENSE.md` are static reference files, not concatenated. Do not add a generator for them.
 
-  - `extraRemovals`: exact paths (`rm -rf`)
-  - `filePatternsToRemove`: glob patterns via `Bun.Glob` (e.g. `**/e2e/**`, `**/*.e2e.ts`, `**/playwright.config.ts`) — data-driven file removal
-  - `fileRegexesToRemove`: regex strings matched against relative paths (e.g. `playwright`, `.*\.spec\.e2e\..*`) — data-driven regex removal
-  - `scriptsToRemove`, `turboTasksToRemove`, `appDepsToRemove`: root scripts, turbo tasks, app deps
+## Commands
 
-  Example:
-
-  ```json
-  {
-    "scaffold": {
-      "default": true,
-      "flag": "playwright",
-      "removals": {
-        "false": {
-          "extraRemovals": ["apps/example/e2e"],
-          "filePatternsToRemove": ["**/e2e/**", "**/*.e2e.ts"],
-          "fileRegexesToRemove": ["playwright"],
-          "scriptsToRemove": ["test:e2e"],
-          "turboTasksToRemove": ["test:e2e"],
-          "appDepsToRemove": ["@myorg/playwright"]
-        }
-      }
-    }
-  }
-  ```
-
-- After pruning, the scaffolder calls `regenerateCI()` (`.github/workflows/*.yml`) by re-running the discovery-driven aggregation, so a generated project only contains CI steps for the configs that survived. Root `README.md` and `AGENTS.md` are now static reference files (not concatenated) with `TEMPLATE-ONLY` blocks for template vs monorepo descriptions — they are NOT regenerated.
-
-- `configs/template/` is a first-class Bun workspace (`@myorg/template`). `@clack/prompts` is a real devDependency there. Its `build` script (`mbun build ./src/index.ts --outdir ./dist --target bun --packages bundle --minify`) produces the **committed** `configs/template/dist/index.js` bundle. Regenerate with `bun run --filter @myorg/template build` whenever the scaffolder sources change.
-
-```mermaid
-sequenceDiagram
-    participant User as bun create
-    participant Pre as preinstall<br/>dist/index.js
-    participant Coll as OptionsCollector
-    participant Disc as discoverConfigs
-    participant Scaff as MonorepoScaffolder
-    participant FS as File system
-
-    User->>Pre: run bundle
-    Pre->>Coll: Clack prompts
-    Coll->>Disc: scan configs/*/package.json
-    Disc-->>Scaff: config list
-    Scaff->>FS: replace @myorg scope
-    Scaff->>FS: strip TEMPLATE-ONLY
-    Scaff->>FS: prune disabled (exact + glob + regex)
-    Scaff->>FS: regenerateCI
-    Scaff->>FS: setupGitHooks
-    FS-->>User: ready for bun install
-```
-
-- Sources: `src/index.ts` (CLI entry), `src/collector.ts` (`OptionsCollector` — Clack prompts, marker-based repo-root discovery), `src/scaffolder.ts` (`MonorepoScaffolder` — engine + glob/regex removal), `src/configs.ts` (`discoverConfigs`), `src/harness.ts` (`TemplateHarness` — full-pipeline integration helper using `BUN_CREATE_DIR`), `src/aggregate.ts` (`bun run docs:sync` — regenerates workflows from `configs/*`), `src/docs.ts` (`mdocs` bin — single bin for this package). All tests live in `tests/`: unit suites per source file plus the full-pipeline integration suite in `tests/index.test.ts`.
-
-- Root `prepare` links the m-command bins and regenerates `lefthook.yml` (`msetup lefthook`) and `.changeset/config.json` (`mchangeset init`) instead of committing generated state.
-
-- The scaffolder uses only Bun-native APIs in the bundle (`Bun.file`, `Bun.write`, `Bun.$`, `Bun.Glob`) — no external runtime deps (they are bundled with `--packages bundle`).
-
-- Run `bun run docs:sync` after editing workflow skeletons, and `bun run ci:lint` after regenerating workflows.
-- `docs:sync` skips `pages.yml` and `coverage.yml` while `docs/` exists — only one workflow may deploy to Pages, and here `template-docs.yml` (via `mdocs site`) is it. Scaffolded monorepos keep `docs/` out of the picture, so they get both back.
-
-| File | Role |
+| Command | Purpose |
 | :--- | :--- |
-| `src/index.ts` | CLI entry |
-| `src/collector.ts` | Prompts + root discovery |
-| `src/scaffolder.ts` | Pipeline engine + glob/regex |
-| `src/configs.ts` | `discoverConfigs` + `ScaffoldRemovals` |
-| `src/harness.ts` | Integration helper |
-| `src/aggregate.ts` | Workflow aggregator |
-| `src/docs.ts` | `mdocs` bin — workflow regeneration + `site` (docs artifact) |
+| `bun run test:template` | unit + integration + combination cases |
+| `bun run test:template:cases` | combination cases only |
+| `bun run --filter @myorg/template build` | rebuild the committed bundle |
+| `bun run docs:sync` | regenerate workflows and dependabot config |
+| `bun run docs:site` | build the docs artifact |
+| `bun run ci:lint` | validate the regenerated workflows |
 
-> [!TIP]
-> After editing sources, run `bun run --filter @myorg/template build` to regenerate committed bundle.
+## Before marking a task done
 
-<details>
-<summary>Pipeline steps</summary>
-
-1. `computeDisabledScopes` — from `configs` overrides
-2. `sanitizePackageJson` — remove `bun-create`, `devDeps`, scripts, workspaces
-3. `sanitizeTemplateRefs` — remove template files
-4. `replaceScopePlaceholders` — `@myorg` → custom scope
-5. `stripTemplateMarkers` — remove `TEMPLATE-ONLY` blocks
-6. `removeTemplateFiles` — delete pruned configs + removals
-7. `handleConfig` — self-destruct + data-driven removals (exact + glob + regex)
-8. `regenerateCI` — aggregate workflows from survivors
-9. `setupGitHooks` — `git init` if needed
-
-</details>
-
-<details>
-<summary>Glob vs Regex removal</summary>
-
-- **Glob** (`filePatternsToRemove`): Uses `Bun.Glob` with `dot:true`, `onlyFiles:false`. Supports `**/e2e/**`, `**/*.e2e.ts`, `**/playwright.config.ts`. Skips `node_modules/.git/dist/.turbo` for safety.
-- **Regex** (`fileRegexesToRemove`): Compiles to `RegExp`, scans all files via `find -type f` (excluding `node_modules/.git/dist/.turbo`), matches against relative path. Supports `playwright`, `.*\.spec\.e2e\..*`, `uno\.config\.ts$`.
-
-Both are evaluated only when config is disabled (or `selfDestruct`).
-
-</details>
+- [ ] `bun run --filter @myorg/template build` run and `dist/index.js` committed
+- [ ] `cd configs/template && bun test` passes (84 tests, including the leak scanner)
+- [ ] `bun run docs:sync` run and generated workflows committed
+- [ ] `bun run ci:lint` clean
+- [ ] New opt-in config declares `removals` for its disabled state
+- [ ] Template-only prose wrapped in `TEMPLATE-ONLY` markers

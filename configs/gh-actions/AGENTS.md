@@ -1,38 +1,18 @@
-## GitHub Actions + Dependabot + Coverage
+# AGENTS.md — @myorg/gh-actions
 
-> [!IMPORTANT]
-> Workflows in `.github/workflows/` + `.github/dependabot.yml` are generated — don't edit directly.
+## Rules
 
-- Skeletons: `configs/gh-actions/*.base.yml` contain `{{STEPS}}` or `{{UPDATES}}` placeholder (ci, release, pages, coverage, dependabot, dependabot-auto-merge)
-- Path/version placeholders: fragments may use `{{BUN_VERSION}}`, `{{NATIVE_DIR}}`, `{{NATIVE_CARGO}}`, `{{NATIVE_NPM}}`, `{{NATIVE_WASI_SDK_VERSION}}`, `{{APP_DIR}}`, `{{APP_DOCKERFILE}}` — substituted by the workflow generator (`mdocs`)
-- Fragments: `configs/*/ci.steps.yml`, `*/release.steps.yml`, `*/pages.steps.yml`, `*/coverage.steps.yml`, `*/dependabot.yml`, `*/dependabot-auto-merge.steps.yml`
-- Aggregation: `bun run docs:sync` (`mdocs` from `@myorg/template`) runs `discoverConfigs()` to collect fragments and generates `ci.yml` + `release.yml` + `pages.yml` (if pages enabled) + `coverage.yml` (if pages disabled, standalone coverage Pages) + `dependabot.yml` + `dependabot-auto-merge.yml`
-- Validation: `mci lint` (`actionlint`) + `mci act` (`act`) for local runs
-- `mci` bin from `@myorg/gh-actions` wraps `actionlint` + `act` with config
-- Dependabot: always config `configs/dependabot` provides 4 ecosystems (npm/cargo/github-actions/docker) with grouping, ignore major, labels, limits, commit-message chore+scope — see `configs/dependabot/README.md`
-- Coverage: always config `configs/coverage` provides LCOV reporting — `ci.steps.yml` is `mcoverage setup` → `mcoverage html` → upload-artifact coverage-report (14d) → `mcoverage check`, PR comment via lcov-reporter-action; `pages.steps.yml` includes coverage at /coverage/ when pages enabled; `coverage.base.yml` + `coverage.steps.yml` → coverage.yml standalone Pages when pages disabled — see `configs/coverage/README.md`
+> [!CAUTION]
+> Never edit `.github/workflows/*.yml` or `.github/dependabot.yml` by hand. Edit the skeleton or the fragment and run `bun run docs:sync`.
 
-| Command | Description |
-| :--- | :--- |
-| `bun run docs:sync` | Regenerate workflows + dependabot.yml |
-| `bun run ci:lint` | `mci lint` — validate |
-| `bun run ci:list` | `mci act -l` — list jobs |
-| `bun run ci:dry` | `mci act push -n` — dry-run |
-| `bun run ci:local` | `mci act push` — Docker |
+- A new workflow means a `*.base.yml` skeleton in the config that owns it **and** a `*.steps.yml` fragment; the fragment filename must be added to the aggregator's allow-list or it will not be collected.
+- Step fragments are spliced under a job's `steps:` key, so every line must be indented — a fragment line at column 0 silently produces an unparseable workflow.
+- Keep fragments to one-liners that call an `m`-bin. Logic belongs in the config's CLI, not in YAML shell blocks.
+- Use `{{PLACEHOLDER}}` for any path or version that has a source of truth in TypeScript; add the value to `WORKFLOW_VARS` in the template config.
+- Two workflows must never deploy to the same Pages site — `docs:sync` enforces that by skipping `pages.yml` and `coverage.yml` while the template's `docs/` exists.
 
-```mermaid
-graph TD
-    A[*.base.yml] --> C[mdocs]
-    B[*/ci.steps.yml + */dependabot.yml] --> C
-    C --> D[ci.yml + release.yml + pages.yml + dependabot.yml + auto-merge]
-    D --> E[mci lint]
+## Before marking a task done
 
-    style C fill:#0969DA,color:#fff
-```
-
-> [!TIP]
-> After editing skeletons or fragments, run `docs:sync` then `ci:lint`.
-
-- Adding a config with CI steps: create `configs/<name>/ci.steps.yml`
-- Adding dependabot entries: create `configs/<name>/dependabot.yml` fragment (list item starting with `- package-ecosystem:`)
-- No root `.actrc` — config lives in `configs/gh-actions`
+- [ ] `bun run docs:sync` run and the generated files committed
+- [ ] `bun run ci:lint` clean (actionlint over every workflow)
+- [ ] New fragment filenames registered in the aggregator

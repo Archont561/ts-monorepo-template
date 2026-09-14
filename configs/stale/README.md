@@ -1,46 +1,29 @@
 # @myorg/stale
 
-> Auto-close inactive issues and PRs via `actions/stale`.
+A scheduled workflow that labels inactive issues and PRs, then closes them — with a comment that says why and a grace period to answer.
 
 ## What it provides
 
-- **Workflow** — `.github/workflows/stale.yml` (generated from `stale.base.yml` + fragments, or as standalone)
-- **Config** — days-before-stale, days-before-close, messages
+`stale.base.yml` — the whole workflow, since nothing else contributes steps to it:
 
-## Why stale?
+| Setting | Value |
+| :--- | :--- |
+| Schedule | Mondays, 06:00 UTC (`0 6 * * 1`) |
+| Issues stale after | 60 days, closed 14 days later |
+| PRs stale after | 30 days, closed 14 days later |
+| Labels | `stale` added, and removed when the item wakes up |
+| Exempt | `pinned`, `security`, `enhancement` (issues), `pinned`, `security` (PRs) |
+| Permissions | `issues: write`, `pull-requests: write` |
 
-- Keeps backlog clean
-- Nudges inactive issues/PRs
-- Configurable per repo
+`workflow_dispatch` is enabled, so the sweep can be triggered by hand.
 
 ## Usage
 
-Workflow (when enabled):
-
-```yaml
-name: Stale
-on:
-  schedule:
-    - cron: "0 6 * * 1" # weekly Monday 6am
-
-jobs:
-  stale:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/stale@v9
-        with:
-          stale-issue-message: "This issue is stale — please comment if still relevant."
-          stale-pr-message: "This PR is stale — please update if still relevant."
-          days-before-stale: 60
-          days-before-close: 14
-          days-before-pr-stale: 30
-          days-before-pr-close: 14
+```bash
+bun run docs:sync   # regenerates .github/workflows/stale.yml
 ```
 
-Customize via `configs/stale/stale.base.yml` or `stale.yml` fragment.
+Tune the messages, days and exempt labels in `configs/stale/stale.base.yml`, then re-run `docs:sync` — never edit the generated workflow.
 
-## Scaffold
-
-Opt-in, default false. Enable with `--stale` during `bun create`.
-
-See [AGENTS.md](./AGENTS.md).
+> [!NOTE]
+> Opt-in, **off by default**. When it is disabled, the config and the generated workflow are pruned together.

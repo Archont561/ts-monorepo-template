@@ -1,25 +1,16 @@
-# AGENTS.md - @myorg/trivy
+# AGENTS.md — @myorg/trivy
 
-> Trivy — container + filesystem vulnerability scanning.
+## Rules
 
-## What it provides
+- Never edit the generated `.github/workflows/ci.yml`. Scan settings live in `configs/trivy/ci.steps.yml`.
+- Report `HIGH` and `CRITICAL` only. Lowering the severity threshold turns CI into a wall of noise that nobody reads.
+- Reviewed false positives go in `.trivyignore` with the CVE id — never by widening the severity or disabling the scan.
+- Keep the image scan conditional on a Dockerfile existing; a repo without one must not fail.
+- `mtrivy` must stay non-fatal when the binary is missing. A developer without Trivy can still commit; CI is the enforcement point.
+- Keep SARIF output and upload — findings belong in the Security tab, not in a build log someone has to open.
 
-- `mtrivy` CLI wrapper — defensive, warns if binary missing, exits 0 locally; `fs` + `image` scans and `build` (docker build of the scan image)
-- `ci.steps.yml` — FS scan (always) + image scan (if Dockerfile)
-- SARIF upload to GitHub Security tab
-- `.trivyignore` optional for false positives.
+## Before marking a task done
 
-## For agents
-
-- Opt-in, default false (`default: false` in scaffold). Enable with `--trivy` or during prompts.
-- When enabled, `bun run docs:sync` adds Trivy steps to `ci.yml`.
-- If you add a Dockerfile, Trivy image scan will run (builds `app:trivy-scan`).
-- If you have a CVE false positive, add it to `.trivyignore`.
-- No local binary required for CI — uses `aquasecurity/trivy-action`.
-- For local scanning, install via `brew install trivy`.
-
-## Files
-
-- `configs/trivy/src/cli.ts` — wrapper
-- `configs/trivy/ci.steps.yml` — CI fragment
-- `.trivyignore` (optional)
+- [ ] Scan settings changed in `ci.steps.yml`, then `bun run docs:sync` run
+- [ ] New CVE suppressions recorded in `.trivyignore`
+- [ ] `bun run ci:lint` clean

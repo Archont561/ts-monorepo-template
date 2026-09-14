@@ -1,32 +1,20 @@
-## Turbo
+# AGENTS.md — @myorg/turbo
 
-> [!NOTE]
-> Task orchestration — no root `turbo.json`, only `turbo.base.json` in `configs/turbo`.
+> Task orchestration. `turbo.base.json` in this config is the task graph; there is no root `turbo.json`.
+> Orientation in [README.md](./README.md), current state in [CONTEXT.md](./CONTEXT.md).
 
-- `mturbo` (from `@myorg/turbo`) wraps `turbo` with `--root-turbo-json=<configs/turbo/turbo.base.json>`
-- Root scripts (`dev`, `build`, `typecheck`, `test`, `coverage`) delegate to `mturbo` — Turbo infers inter-package dependency order (`^build`) and caches (`.turbo/`)
-- Tasks: `build` (depends `^build`, outputs `dist/`), `typecheck` (depends `^build`), `test` (depends `^build`, outputs `coverage/`), `dev` (persistent, no cache), `coverage` (merges LCOV)
-- No root `turbo.json` — only `configs/turbo/turbo.base.json` (exported as `@myorg/turbo/turbo.json`)
+## Rules
 
-| Task | Deps | Cache |
-| :--- | :--- | :---: |
-| `build` | `^build` | ✅ |
-| `typecheck` | `^build` | ✅ |
-| `test` | `^build` | ✅ |
-| `dev` | — | ❌ |
-| `coverage` | `^build` | ✅ |
+- Never create a root `turbo.json`. Edit `configs/turbo/turbo.base.json`, which `mturbo` passes as `--root-turbo-json`.
+- Add a new monorepo-wide task to the task graph, then let packages implement it — do not add a root script that loops over packages.
+- A task that produces files must declare `outputs`, or Turbo will not restore them from cache.
+- `dev` is persistent and must never be cached; a watcher in the cache key is a broken watcher.
+- Cached tasks must be deterministic. A task reading the network or the clock belongs outside the graph, or with caching disabled.
+- Monorepo-wide concerns that are not per-package (git hooks, coverage merging) stay at the root or as `mturbo coverage && mcoverage merge` — do not fake a package for them.
+- Do not run `turbo` directly; use `mturbo` so the root config path is applied.
 
-```mermaid
-graph LR
-    A[internal:build] --> B[external:build]
-    B --> C[example:build]
-    A --> D[typecheck]
-    B --> D
-    B --> E[test]
-    A --> E
+## Before marking a task done
 
-    style B fill:#0969DA,color:#fff
-```
-
-> [!TIP]
-> `bun run dev` starts all packages in watch mode — persistent tasks.
+- [ ] New task declared in `turbo.base.json` with `dependsOn` and `outputs`
+- [ ] Persistent tasks not cached
+- [ ] `bun run build` and `bun run test` both green through Turbo

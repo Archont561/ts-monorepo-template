@@ -1,29 +1,27 @@
 # @myorg/editorconfig
 
-> Consistent editor settings via `.editorconfig`.
+One file that makes every editor agree on whitespace and line endings — no plugin required in most editors, no CLI, no build step.
 
 ## What it provides
 
-- `.editorconfig` at repo root — tells VS Code, JetBrains, Vim, etc. to use consistent indent, line endings, charset.
-- No plugin required in most editors.
-- Config: `root = true`, `lf` endings, `utf-8`, `2-space` indent (4 for Rust), `trim_trailing_whitespace`.
-
-## Usage
-
-File is read automatically by editors. No CLI needed.
+`.editorconfig` at the repo root:
 
 ```ini
-# .editorconfig
 root = true
+
 [*]
 charset = utf-8
 end_of_line = lf
 indent_style = space
 indent_size = 2
+trim_trailing_whitespace = true
 ```
+
+- `root = true` — editors stop looking further up the tree
+- LF endings and UTF-8 everywhere
+- 2-space indentation, with Rust files at 4
+- Trailing whitespace trimmed on save
 
 ## Scaffold
 
-Always included. No opt-out — it's a repo health baseline.
-
-See [AGENTS.md](./AGENTS.md) for agent reference.
+Always included. It is a repo-health baseline with no opt-out.

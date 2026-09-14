@@ -1,24 +1,24 @@
 # @myorg/ts
 
-> Shared TypeScript presets.
+The TypeScript setup, in one place: the compiler, Bun's types, and the two presets every package extends.
 
 ## What it provides
 
-- `typescript` + `@types/bun` as shared devDependencies
-- `typeRoots` in `base.json` pointing at `configs/ts/node_modules/@types` (isolated linker) and the repo root (hoisted linker), so `types: ["bun"]` resolves from every package
-- `library.json` — base for library packages (`external`, `internal`)
-- `app.json` — base for apps (`example`)
-- `mtsc` — CLI alias for `tsc` with shared config resolution
+- `typescript` and `@types/bun` as shared workspace dependencies
+- `base.json` — shared compiler options plus the `typeRoots` that make `types: ["bun"]` resolve from every package
+- `library.json` — preset for `packages/*`
+- `app.json` — preset for `apps/*`
+- `mtsc` — `tsc` with shared config resolution
 
 > [!CAUTION]
-> Never add `typescript`, `bunup`, or `@types/bun` to individual package devDependencies. They are owned here and hoisted.
+> Never add `typescript`, `bunup` or `@types/bun` to an individual package's devDependencies. They are owned here and hoisted.
 
 ### Presets
 
-| Preset | Extends | Use |
-| :--- | :--- | :--- |
-| `library.json` | — | `packages/*` — `rootDir:.`, `outDir:dist`, `types:[bun]` |
-| `app.json` | `library.json` | `apps/*` — `noEmit`, `types:[bun]` |
+| Preset | Extends | For | Notable options |
+| :--- | :--- | :--- | :--- |
+| `library.json` | `base.json` | `packages/*` | `rootDir: .`, `outDir: dist`, `types: [bun]` |
+| `app.json` | `library.json` | `apps/*` | `noEmit`, `types: [bun]` |
 
 ## Usage
 
@@ -39,20 +39,8 @@
 ```
 
 ```bash
-bun run typecheck   # mturbo typecheck → per-package mtsc
-mtsc --noEmit       # Direct
-```
-
-```mermaid
-graph TD
-    A[@myorg/ts<br/>library.json + app.json] --> B[packages/external<br/>extends library]
-    A --> C[packages/internal<br/>extends library]
-    A --> D[apps/example<br/>extends app]
-    B --> E[mtsc --noEmit]
-    C --> E
-    D --> E
-
-    style A fill:#0969DA,color:#fff
+bun run typecheck   # mturbo typecheck → mtsc --noEmit per package
+mtsc --noEmit       # one package
 ```
 
 <details>
@@ -60,15 +48,6 @@ graph TD
 
 - `@src/*` → `./src/*`
 - `@tests/*` → `./tests/*`
-- No `baseUrl` — removed in TS 7.0 (TS5102), use `paths` only
+- No `baseUrl` — it was removed in TS 7.0 (TS5102); use `paths` only.
 
 </details>
-
-## Rules
-
-- [ ] No `baseUrl` in any `tsconfig.json`
-- [ ] `rootDir: "."`, `outDir: "./dist"` for libraries
-- [ ] `noEmit` for apps
-- [ ] `types: ["bun"]` everywhere
-
-See [AGENTS.md](./AGENTS.md) for the agent-facing reference.

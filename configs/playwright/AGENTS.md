@@ -1,29 +1,15 @@
-## E2E Testing
+# AGENTS.md — @myorg/playwright
 
-> [!NOTE]
-> Opt-in — `me2e` wraps Playwright with browser detection.
+## Rules
 
-- `@myorg/playwright` (`configs/playwright`) provides `@playwright/test`, `playwright.config.ts`, and `me2e` bin
-- `me2e` (from `@myorg/playwright`) wraps `playwright test` — detects if browsers installed, auto-skips gracefully if missing (so `bun run test:e2e` doesn't fail in envs without browsers)
-- Config (`playwright.config.ts` in `apps/example`): `testDir: e2e/`, `baseURL: http://localhost:${PORT}` (3000 by default, from `apps/example/src/port.ts`), projects Chromium/Firefox/WebKit
-- E2E specs live in `apps/example/e2e/`, not in `tests/` — unit tests use `bun:test`, e2e uses `@playwright/test`, never mix imports
-- `bun run test:e2e` → `me2e` → `playwright test`
+- Never import `bun:test` in an E2E spec, and never import `@playwright/test` in a unit test.
+- E2E specs live in `apps/example/e2e/`; unit tests live in `tests/` directories. Turbo runs the second, `me2e` runs the first.
+- Missing browsers mean **skip**, not fail — CI installs them, local machines may not have them, and `bun run test:e2e` must stay green either way.
+- Keep E2E tests on user-visible behaviour through the running server; do not reach into internals.
+- Do not add an E2E step to the unit-test workflow — they are separate tasks with separate browser requirements.
 
-| Command | Description |
-| :--- | :--- |
-| `bun run test:e2e` | E2E with auto-skip |
-| `me2e` | Direct |
-| `me2e --ui` | UI mode |
+## Before marking a task done
 
-```mermaid
-graph LR
-    A[test:e2e] --> B[me2e]
-    B --> C{ browsers? }
-    C -->|yes| D[playwright]
-    C -->|no| E[skip]
-
-    style B fill:#0969DA,color:#fff
-```
-
-> [!WARNING]
-> Don't import `bun:test` in Playwright specs, and don't import `@playwright/test` in unit tests.
+- [ ] New specs under `e2e/`, not `tests/`
+- [ ] `bun run test:e2e` exits 0 (skipping counts as passing)
+- [ ] No cross-imports between the two test runners

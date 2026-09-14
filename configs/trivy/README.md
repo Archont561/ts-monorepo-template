@@ -1,80 +1,30 @@
 # @myorg/trivy
 
-> Vulnerability scanner for container images, filesystems, and repos.
+Vulnerability scanning for the filesystem and container images, with results uploaded to the GitHub Security tab.
 
 ## What it provides
 
-- **CI steps** — `ci.steps.yml` fragment that runs Trivy FS scan + Docker image scan (if Dockerfile present)
-- **CLI** — `mtrivy` wrapper that runs Trivy if installed, otherwise warns and skips
-- **Config** — `.trivyignore` (optional) for false positives
+- `ci.steps.yml` — a filesystem scan on every CI run, plus an image scan when a Dockerfile exists
+- `mtrivy` — a local wrapper: `fs`, `image` and `build`, which skips cleanly when Trivy is not installed
+- `.trivyignore` for reviewed false positives
 
-## Why Trivy?
-
-- Open-source, fast, maintained by Aqua Security
-- Scans container images, filesystems, lock files (npm, Cargo, etc.)
-- Complements Dependabot (SCA) + CodeQL (SAST) + gitleaks (secrets)
-- Can output SARIF for GitHub Security tab
+Trivy is open-source and fast, scans lock files as well as images, and complements the other security layers — Dependabot for dependency updates, CodeQL for static analysis, gitleaks for secrets.
 
 ## Usage
 
 ```bash
-# Install
-brew install trivy
-# or
-sudo apt-get install trivy
-
-# Scan filesystem (HIGH, CRITICAL only)
-mtrivy fs . --severity HIGH,CRITICAL
-trivy fs . --severity HIGH,CRITICAL
-
-# Scan Docker image (after build)
-mtrivy image my-app:latest --severity HIGH,CRITICAL
-mtrivy build           # docker build -t app:trivy-scan -f apps/example/Dockerfile .
-
-trivy image my-app:latest
-
-# With SARIF for GitHub Security
-trivy fs . --format sarif --output trivy-results.sarif --severity HIGH,CRITICAL
-
-# Ignore file
-echo "CVE-2023-12345" >> .trivyignore
+# install:  brew install trivy   |   apt-get install trivy
+mtrivy fs . --severity HIGH,CRITICAL          # filesystem
+mtrivy build                                  # build the scan image
+mtrivy image app:trivy-scan --severity HIGH,CRITICAL
+bun run security:trivy                        # the same scan via the root script
 ```
 
-### CI integration (auto-added when enabled)
+Only `HIGH` and `CRITICAL` are reported — lower severities would be noise on every run.
 
-```yaml
-- name: Run Trivy FS scan (HIGH, CRITICAL)
-  uses: aquasecurity/trivy-action@0.24.0
-  with:
-    scan-type: fs
-    scan-ref: .
-    severity: HIGH,CRITICAL
-    format: sarif
-    output: trivy-results.sarif
+### In CI
 
-- name: Upload Trivy SARIF to GitHub Security
-  uses: github/codeql-action/upload-sarif@v3
-  with:
-    sarif_file: trivy-results.sarif
-```
+The fragment runs `aquasecurity/trivy-action` in SARIF format and uploads the result with `github/codeql-action/upload-sarif`, so findings appear under Security → Code scanning rather than in a log. When `apps/example/Dockerfile` exists, an image is built as `app:trivy-scan` and scanned the same way.
 
-### Docker image scanning (if Dockerfile present)
-
-```yaml
-- name: Build image for Trivy scan
-  run: docker build -t app:trivy-scan -f apps/example/Dockerfile .
-
-- name: Trivy image scan
-  uses: aquasecurity/trivy-action@0.24.0
-  with:
-    image-ref: app:trivy-scan
-    severity: HIGH,CRITICAL
-    format: sarif
-    output: trivy-image-results.sarif
-```
-
-## Scaffold
-
-Opt-in, default false. Enable with `--trivy` during `bun create` or when prompted.
-
-See [AGENTS.md](./AGENTS.md).
+> [!NOTE]
+> Opt-in, `false` by default. No local binary is required — CI uses the action.

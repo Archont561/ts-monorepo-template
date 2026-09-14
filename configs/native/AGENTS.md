@@ -1,43 +1,51 @@
-## Native (Cargo + NAPI-RS) — virtual workspace in packages/native
+# AGENTS.md — @myorg/native-config
 
-> Opt-in — select prompt `none` / `publish` / `docker` during scaffolding. Data-driven via `package.json` `scaffold` metadata. Cargo-first, `mnative` CLI. **No root `Cargo.toml`**: `packages/native/Cargo.toml` is the workspace root.
+> Cargo + NAPI-RS native bindings. Opt-in (`none` / `publish` / `docker`).
+> Orientation and CI layout are in [README.md](./README.md); current state in [CONTEXT.md](./CONTEXT.md).
 
-- `configs/native` (`@myorg/native-config`) provides the scaffold prompt, `@napi-rs/cli` + the `mnative` CLI (`src/cli.ts`), and the file templates in `src/templates.ts`
-- `setup: configs/native/src/setup.ts` scaffolds `packages/native/` as a virtual workspace — `crates/native` (cdylib) + `npm/native` — and migrates the old single-crate layout (`src/`, `build.rs`, `package.json` at the workspace root) into it
-- Layout: `packages/native/Cargo.toml` (virtual, `resolver = "3"`, `members = ["crates/native"]`) → `crates/<name>/` (one crate per Rust unit) → `npm/<name>/` (one npm package per binding crate). Per-platform packages (`npm/*-<platform>/`) are generated in CI by `napi create-npm-dirs` and gitignored
-- Discovery, not configuration: `src/discover.ts` reads the crates and packages from disk, so `mnative` needs no manifest of its own. `mnative list` prints the mapping; `mnative add <name>` creates a binding crate **and** its npm package (or `--pure` for a Rust-only crate), syncs `members`, and wires turbo
-- Cargo runs workspace-wide (`mnative check|clippy|fmt:check|test|build|build:release|build:ci`); napi runs once per package with explicit `--manifest-path` / `--package-json-path` / `--output-dir`, so each package builds only its own crate (`--only <pkg>`, `--target <triple>`, `--cross`)
-- Lints live in `[workspace.lints]` (`unsafe_code = "forbid"`, `clippy.all`) and are inherited by every crate with `[lints] workspace = true`; `clippy -D warnings` is a CI flag only — never `#![deny(warnings)]` in source
-- CLI surface: `list`, `matrix [--gha]`, `add <name> [--pure] [--uses …] [--scope …]`, `typecheck`, the cargo set, `napi:build[:debug|:wasm]`, `create-npm-dirs`, `artifacts`, `napi` passthrough; unknown subcommands fall through to cargo
-- Root scripts: `build:native` → `mnative napi:build`, `build:wasm` → `mnative napi:build:wasm`, `test:native` → `mnative test`. `mnative` no-ops when `packages/native` is absent, so the root needs no `test -f` guards
-- CI: `ci.steps.yml` (rust-toolchain + rust-cache + fmt/clippy/check/test/napi:build/typecheck) and `native.steps.yml` + `native.base.yml` — a `matrix` job fed by `mnative matrix --gha`, one `build` job per target (containers for Linux, WASI SDK 24 for wasm32-wasip1-threads), and an `assemble` job that runs `create-npm-dirs` + `artifacts`. The workflow is generated with this config and deleted with it
-- WASM fallback portable but with a Bun caveat (napi-rs#2965). Native code runs server-side in this template, so browser WASM (and COOP/COEP) does not apply
-- External wrapper `packages/external/src/native.ts` provides a JS fallback + dynamic import of `@myorg/native`
+## Layout rules
 
-| Option | Result |
+- The repo root never gets a `Cargo.toml`. `packages/native/` is the virtual workspace root; `crates/*` are its members and `npm/*` the packages that wrap them.
+- One npm package per binding crate. A pure-Rust crate (`mnative add shared --pure`) gets no npm package.
+- Never hand-edit `members`. `mnative add <name>` creates the crate and its package, re-syncs and sorts `members`, and wires turbo.
+- Every new crate declares `[lints] workspace = true` so `unsafe_code = "forbid"` is inherited.
+- `crate-type = ["cdylib"]` goes on binding crates only; pure crates stay ordinary `rlib`s.
+- New crates inherit version, edition, license and repository from `[workspace.package]` — do not restate them.
+
+## Generated files
+
+- Per-platform npm packages (`npm/*-linux-x64-gnu/` and friends), `*.node` binaries and `Cargo.lock` are generated and gitignored. Never commit or hand-edit them.
+- `npm/*/` bundling is produced in CI by `mnative create-npm-dirs` + `mnative artifacts`. Never build a "cross-platform" package on a dev machine and publish it.
+- `packages/native/npm/*` must be in the root `workspaces` field — `mnative add` does this; verify after adding a package by hand.
+
+## Command conventions
+
+| Do | Don't |
 | :--- | :--- |
-| `none` | No native dir (default) — `packages/native` removed wholesale |
-| `publish` | Workspace + npm packages + prebuilds + setup.ts scaffold + mnative CLI |
-| `docker` | Native + Docker cross-compilation |
+| `mnative check` / `clippy` / `test` / `fmt:check` | `cd packages/native && cargo check` |
+| `mnative add parser` | editing `Cargo.toml` by hand |
+| `mnative napi:build --only <pkg>` | `napi build` from inside a crate |
+| `mnative napi <args>` for anything unlisted | installing `@napi-rs/cli` into a package |
 
-```mermaid
-graph TD
-    A[bun create] --> B{native?}
-    B -->|none| C["prune native<br/>packages/native + glob+regex"]
-    B -->|publish| D["setup.ts → virtual workspace<br/>crates/native + npm/native"]
-    B -->|docker| E["setup + Docker + cargo-zigbuild"]
-    D --> F["mnative add &lt;name&gt;<br/>crates/&lt;name&gt; + npm/&lt;name&gt;"]
-    F --> G["mnative check → mnative napi:build<br/>*.node"]
-    G --> H["@myorg/external/native.ts<br/>fallback"]
-    G --> I["native.yml matrix<br/>→ npm/&lt;name&gt;-&lt;platform&gt;/"]
-    style B fill:#0969DA,color:#fff
-    style F fill:#dea584,color:#000
-```
+- Cargo runs workspace-wide; napi runs once per package with explicit `--manifest-path` / `--package-json-path` / `--output-dir`.
+- Unknown `mnative` subcommands fall through to cargo — prefer an explicit command when one exists.
+- All `mnative` commands no-op when `packages/native` is absent, so root scripts need no `test -f` guards.
+- Use `mnative check` for the fast inner loop; `napi:build` is for producing artifacts.
 
-> [!WARNING]
-> Native bindings require a Rust toolchain + `@napi-rs/cli` + Cargo. Never call `.node` from the browser. Use `mnative check` for the fast inner loop. Adding a crate means `mnative add` — never hand-edit `members`.
+## Forbidden
 
-> [!IMPORTANT]
-> Scaffold metadata includes the `setup` field — `scaffolder.ts` runs it only when enabled. Disabled configs are pruned via `extraRemovals` + `filePatternsToRemove` (`Bun.Glob`) + `fileRegexesToRemove`. `Cargo.lock` is gitignored (cdylib libraries). `mnative` runs from `src/cli.ts` (Bun executes TypeScript directly).
+- Never call `.node` from the browser. Native code runs server-side here.
+- Never `#![deny(warnings)]` in Rust source — `-D warnings` is a CI flag only.
+- Never commit `Cargo.lock` (these are cdylib libraries, not binaries).
+- Never add `typescript` or `bunup` to a native npm package — `@myorg/ts` owns those.
 
-See [README.md](./README.md) for the full integration plan and the Cargo guide.
+## Before marking a task done
+
+- [ ] `mnative fmt:check`
+- [ ] `mnative clippy`
+- [ ] `mnative check`
+- [ ] `mnative test`
+- [ ] `mnative napi:build`
+- [ ] `mnative typecheck`
+- [ ] New crate has `[lints] workspace = true`
+- [ ] No `*.node`, `Cargo.lock` or `npm/*-<platform>/` in the diff
