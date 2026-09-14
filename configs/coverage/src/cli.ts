@@ -1,9 +1,8 @@
 #!/usr/bin/env bun
 import { existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
 import { dirname } from "node:path";
-import { cp } from "node:fs/promises";
-import { which } from "bun";
 import { defineCommand, runMain, spawnTool } from "@myorg/citty";
+import { which } from "bun";
 import { COVERAGE_HTML, COVERAGE_LCOV, COVERAGE_RUST_LCOV, COVERAGE_THRESHOLD } from "../index.ts";
 
 // Rendered here; `mpages build` folds it into the Pages artifact (see pages command).
@@ -78,6 +77,15 @@ export function meetsThreshold(percent: number, threshold: number): boolean {
   return percent >= threshold;
 }
 
+/**
+ * Formats a delta with an explicit sign: `+2.05`, `-10.00`. A hardcoded `+`
+ * prefix rendered a drop as `+-10.00` — and the report-only dry run exists to
+ * show drops, so the sign has to be computed, not assumed.
+ */
+export function formatSigned(value: number, digits: number): string {
+  return `${value < 0 ? "-" : "+"}${Math.abs(value).toFixed(digits)}`;
+}
+
 /** Installs lcov (which ships genhtml) if it is missing. Never fails the job. */
 function installTools(): void {
   if (has("lcov") && has("genhtml")) {
@@ -94,7 +102,9 @@ function installTools(): void {
   if (code === 0) {
     console.log("✅ lcov installed");
   } else {
-    console.warn("⚠️ lcov install failed — HTML reports will be skipped (threshold check still runs)");
+    console.warn(
+      "⚠️ lcov install failed — HTML reports will be skipped (threshold check still runs)",
+    );
   }
 }
 
@@ -126,7 +136,10 @@ function generateHtml(outDir: string = COVERAGE_HTML): void {
 }
 
 const setupCommand = defineCommand({
-  meta: { name: "setup", description: "Install lcov/genhtml if missing (apt-get on Linux, brew on macOS)" },
+  meta: {
+    name: "setup",
+    description: "Install lcov/genhtml if missing (apt-get on Linux, brew on macOS)",
+  },
   run() {
     installTools();
     process.exit(0);
@@ -173,7 +186,9 @@ const checkCommand = defineCommand({
     }
     const threshold = Number((args.threshold as string) ?? COVERAGE_THRESHOLD);
     const percent = result.percent;
-    console.log(`Line coverage: ${percent.toFixed(2)}% (${result.hit}/${result.found} lines) — threshold ${threshold}%`);
+    console.log(
+      `Line coverage: ${percent.toFixed(2)}% (${result.hit}/${result.found} lines) — threshold ${threshold}%`,
+    );
     if (!meetsThreshold(percent, threshold)) {
       console.error(`::error::Coverage ${percent.toFixed(2)}% is below ${threshold}% threshold`);
       process.exit(1);
@@ -186,7 +201,8 @@ const checkCommand = defineCommand({
 const collectCommand = defineCommand({
   meta: {
     name: "collect",
-    description: "Collect JS coverage (bun run coverage) + Rust coverage (mnative llvm-cov), then merge",
+    description:
+      "Collect JS coverage (bun run coverage) + Rust coverage (mnative llvm-cov), then merge",
   },
   run() {
     spawnTool(["bun", "run", "coverage"]);
@@ -292,7 +308,10 @@ const mergeCommand = defineCommand({
     if (args.reportOnly) {
       // Rollout aid: widening the gate must be shown to raise the number, never
       // to hide a drop, so the dry run prints both sides before anything moves.
-      const wide = { paths: coverageReports(".", true), totals: sumTotals(coverageReports(".", true)) };
+      const wide = {
+        paths: coverageReports(".", true),
+        totals: sumTotals(coverageReports(".", true)),
+      };
       const narrow = {
         paths: coverageReports(".", false),
         totals: sumTotals(coverageReports(".", false)),
@@ -309,10 +328,10 @@ const mergeCommand = defineCommand({
       line("with configs", wide);
       line("without configs", narrow);
       if (wide.totals && narrow.totals) {
+        const points = wide.totals.percent - narrow.totals.percent;
+        const lines = wide.totals.found - narrow.totals.found;
         console.log(
-          `  delta            +${(wide.totals.percent - narrow.totals.percent).toFixed(2)} points, +${
-            wide.totals.found - narrow.totals.found
-          } lines`,
+          `  delta            ${formatSigned(points, 2)} points, ${formatSigned(lines, 0)} lines`,
         );
       }
       process.exit(0);
@@ -325,7 +344,9 @@ const mergeCommand = defineCommand({
     // `bun install` with no lcov binary (CI installs one, laptops often do not).
     let merger: string | null = null;
     try {
-      merger = Bun.fileURLToPath(import.meta.resolve("lcov-result-merger/bin/lcov-result-merger.js"));
+      merger = Bun.fileURLToPath(
+        import.meta.resolve("lcov-result-merger/bin/lcov-result-merger.js"),
+      );
     } catch {
       merger = null;
     }
@@ -361,7 +382,10 @@ const mergeCommand = defineCommand({
 });
 
 const summaryCommand = defineCommand({
-  meta: { name: "summary", description: "Show coverage summary (--json for machine-readable output)" },
+  meta: {
+    name: "summary",
+    description: "Show coverage summary (--json for machine-readable output)",
+  },
   args: {
     json: { type: "boolean", description: "Print JSON instead of a human-readable line" },
   },

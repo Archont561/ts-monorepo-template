@@ -20,6 +20,16 @@ Linting and formatting for the whole monorepo, from a single shared config.
 | Assist | Import organizing on |
 | Ignores | `node_modules`, `dist`, `.turbo`, `coverage`, `test-results`, `.pages`, `uno.css` |
 
+> [!NOTE]
+> The `coverage` ignore excludes generated output dirs — but it also matches the
+> **tracked** `configs/coverage` source package. Biome's scanner prunes a directory
+> the moment it matches, and file-level re-includes cannot un-prune it, so the
+> config re-includes `configs/coverage` (plus its files) *after* the exclusion and
+> re-excludes the package's own generated dirs (`node_modules`, `dist`, `.turbo`,
+> `coverage`). This mirrors the `!configs/coverage/**` negation in `.gitignore`.
+> Without it, `mbiome check <file>` fails on every `configs/coverage` file and the
+> pre-commit hook rejects any commit that touches the package.
+
 ## Usage
 
 ```bash

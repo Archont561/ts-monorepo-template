@@ -58,6 +58,9 @@ not an npm package — the npm package is `packages/native/npm/native`.
 
 ### In-flight
 
+- Branch `arena/01a0a048-ts-monorepo-template`. Coverage suite loaded and run end to end (test → coverage → merge → summary → check → html edge cases). Two bugs surfaced and were fixed:
+  1. `mcoverage merge --report-only` hardcoded a `+` prefix on the delta, so a coverage *drop* from widening the gate printed as `+-15.00 points` — the dry run exists to show drops, so the sign is now computed via the exported `formatSigned` helper (`configs/coverage/src/cli.ts`), pinned by three regression tests in `tests/merge.test.ts`. Positive-delta output (`+2.05 points, +844 lines`) is byte-identical to before.
+  2. `configs/biome/biome.json`'s `!**/coverage` ignore (for generated output dirs) also pruned the **tracked** `configs/coverage` source package — Biome prunes a directory the moment it matches and file-level re-includes cannot un-prune it. Result: the package was silently excluded from every `bun run check`/CI lint pass, and the pre-commit hook (`mbiome check --write {staged_files}`) rejected any commit touching `configs/coverage` with "No files were processed". The config now re-includes `configs/coverage` after the exclusion and re-excludes the package's own generated dirs (mirrors the `.gitignore` negation; rationale in `configs/biome/README.md`). Linting the package for the first time exposed three latent errors in `src/cli.ts` (dead `cp` import, unsorted imports, a 100+col line) — all fixed.
 - Branch `arena/01a09f8a-ts-monorepo-template`. Toolchain installed (Bun 1.4.2 from npm — `bun.sh` is unreachable here), full suite run, then a bug pass over the paths that no test covered.
 - Bugs fixed: the demo app resolved `public/` one level too high (`apps/public/...`), so `/uno.css` always served the "not built" fallback and the feature log read `unocss=no`; `/api` looked for the UnoCSS config one level short and listed only half the native routes; `mnative add` could only ever use `@myorg` (dead `? undefined : undefined`); `mcoverage check` hardcoded `80` instead of `COVERAGE_THRESHOLD`; `mbadges check` / `mchangeset init` ran twice because citty falls through to the parent command.
 - New `apps/example/src/features.ts` owns the app's `public/` paths and feature detection — one source instead of a relative path per call site — with `tests/features.test.ts` (12 tests) covering it.
@@ -88,11 +91,11 @@ not an npm package — the npm package is `packages/native/npm/native`.
 
 | Metric | Value |
 | :--- | :--- |
-| Tests | 230 pass / 0 fail (19 turbo tasks) |
+| Tests | 233 pass / 0 fail (19 turbo tasks) |
 | Typecheck | 14/14 |
 | Build | 19/19 |
 | Coverage | 99.52% lines (1037/1042) over apps+packages+configs — gate 80% |
-| Biome | 0 errors; 14 warnings + 10 infos over 152 files |
+| Biome | 0 errors; 14 warnings + 10 infos over 158 files (incl. `configs/coverage`, previously pruned) |
 | Workflows | 6 generated, all parse |
 | Scaffolds | `native=none` and `native=publish` variants: install + check + typecheck + test all clean |
 | E2E | skipped — browsers not installed |
