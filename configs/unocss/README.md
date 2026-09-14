@@ -139,4 +139,4 @@ There is no root-level `build:css` script: a global CSS build would run for
 monorepos that never opted into UnoCSS. The Pages workflow likewise calls
 `mpages build`, which delegates to each package's own build.
 
-See [AGENT.md](./AGENT.md) for agent reference.
+See [AGENTS.md](./AGENTS.md) for agent reference.

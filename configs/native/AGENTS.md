@@ -40,4 +40,4 @@ graph TD
 > [!IMPORTANT]
 > Scaffold metadata includes the `setup` field — `scaffolder.ts` runs it only when enabled. Disabled configs are pruned via `extraRemovals` + `filePatternsToRemove` (`Bun.Glob`) + `fileRegexesToRemove`. `Cargo.lock` is gitignored (cdylib libraries). `mnative` runs from `src/cli.ts` (Bun executes TypeScript directly).
 
-See [README.md](./README.md) and [PLAN.md](./PLAN.md) for the full integration plan; the Cargo guide is in README.md.
+See [README.md](./README.md) for the full integration plan and the Cargo guide.

@@ -63,4 +63,4 @@ bun run coverage:check    # mcoverage check (80% threshold)
 bun run coverage:summary  # mcoverage summary
 ```
 
-See [AGENT.md](./AGENT.md).
+See [AGENTS.md](./AGENTS.md).

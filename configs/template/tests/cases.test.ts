@@ -81,7 +81,7 @@ const COMMON_CASES: TemplateCase[] = [
         ".gitattributes",
         ".github/CODEOWNERS",
         ".github/PULL_REQUEST_TEMPLATE.md",
-        "SECURITY.md",
+        ".github/ISSUE_TEMPLATE/bug_report.yml",
       ],
       ciContains: ["bun run check", "bun run test", "bun run coverage", "Gitleaks"],
       ciNotContains: ["codeql", "trivy"],
@@ -217,7 +217,7 @@ const COMMON_CASES: TemplateCase[] = [
         "configs/trivy",
         "configs/community",
         ".github/CODEOWNERS",
-        "SECURITY.md",
+        ".github/ISSUE_TEMPLATE/bug_report.yml",
       ],
       ciContains: ["Gitleaks", "CodeQL", "Trivy"],
       hasWorkflows: ["ci.yml"],
@@ -634,13 +634,9 @@ async function scanForLeaks(cwd: string): Promise<string[]> {
       leaks.push(`${path}: TEMPLATE-ONLY marker`);
     }
     if (content.includes("configs/template")) {
-      // Allow in AGENT.md reference table? Actually should be removed.
-      // But CONTRIBUTING.md sanitization replaces it, so any remaining is leak
-      // Except for docs that mention it as example? We treat as leak if in non-template docs after scaffolding
-      // The harness already filters, so we check
+      // configs/template is removed by the scaffolder, so a surviving reference
+      // is a leak — with two deliberate exceptions below.
       if (!path.includes("configs/template")) {
-        // If file is not inside configs/template (which is removed), then presence is leak
-        // But allow in README that might mention template name? Check actual content
         if (content.includes("configs/template/dist") || content.includes("!configs/template")) {
           leaks.push(`${path}: configs/template`);
         }

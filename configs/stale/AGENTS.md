@@ -1,4 +1,4 @@
-# AGENT.md - @myorg/stale
+# AGENTS.md - @myorg/stale
 
 > Stale action — auto-close inactive issues/PRs.
 

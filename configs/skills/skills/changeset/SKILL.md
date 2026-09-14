@@ -54,4 +54,4 @@ sequenceDiagram
 ## References
 
 - [Changeset README](../../changeset/README.md)
-- [Changeset AGENT](../../changeset/AGENT.md)
+- [Changeset AGENT](../../changeset/AGENTS.md)

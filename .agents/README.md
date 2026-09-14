@@ -102,4 +102,4 @@ for await (const path of glob.scan({ cwd: process.cwd() })) {
 - [skills.sh Docs](https://skills.sh)
 - [skills CLI](https://www.npmjs.com/package/skills)
 - [Curated Skills README](../configs/skills/README.md)
-- [Skills AGENT](../configs/skills/AGENT.md)
+- [Skills AGENT](../configs/skills/AGENTS.md)

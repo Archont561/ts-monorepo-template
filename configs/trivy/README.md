@@ -77,4 +77,4 @@ echo "CVE-2023-12345" >> .trivyignore
 
 Opt-in, default false. Enable with `--trivy` during `bun create` or when prompted.
 
-See [AGENT.md](./AGENT.md).
+See [AGENTS.md](./AGENTS.md).

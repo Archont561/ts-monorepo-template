@@ -42,4 +42,4 @@ The pre-commit hook runs `mbiome check --write {staged_files}` automatically via
 ## References
 
 - [Biome README](../../biome/README.md)
-- [Biome AGENT](../../biome/AGENT.md)
+- [Biome AGENT](../../biome/AGENTS.md)

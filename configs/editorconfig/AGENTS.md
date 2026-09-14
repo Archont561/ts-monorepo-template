@@ -1,4 +1,4 @@
-# AGENT.md - @myorg/editorconfig
+# AGENTS.md - @myorg/editorconfig
 
 > `.editorconfig` — consistent editor settings.
 

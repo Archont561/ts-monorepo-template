@@ -1,4 +1,4 @@
-# AGENT.md - @myorg/codeql
+# AGENTS.md - @myorg/codeql
 
 > CodeQL SAST — security scanning for JS/TS.
 

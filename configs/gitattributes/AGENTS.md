@@ -1,4 +1,4 @@
-# AGENT.md - @myorg/gitattributes
+# AGENTS.md - @myorg/gitattributes
 
 > `.gitattributes` — Git file handling.
 

@@ -68,4 +68,4 @@ This template ships without custom config — gitleaks default rules are used. A
 
 Always included (security baseline). Can be disabled via `--no-gitleaks` during `bun create`.
 
-See [AGENT.md](./AGENT.md).
+See [AGENTS.md](./AGENTS.md).

@@ -181,4 +181,4 @@ bun configs/bun-config/src/cli.citty.ts --help
 - [Citty npm](https://www.npmjs.com/package/citty) — 20M weekly downloads
 - [UnJS](https://github.com/unjs)
 
-See [AGENT.md](./AGENT.md) for agent-facing reference.
+See [AGENTS.md](./AGENTS.md) for agent-facing reference.

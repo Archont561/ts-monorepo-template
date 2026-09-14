@@ -223,6 +223,6 @@ open coverage/html/index.html
 
 - [LCOV](https://github.com/linux-test-project/lcov)
 - [cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov)
-- [AGENT.md](./AGENT.md)
+- [AGENTS.md](./AGENTS.md)
 - [bun-config README](../bun-config/README.md)
 - [gh-actions README](../gh-actions/README.md)

@@ -77,4 +77,4 @@ Or use `mcodeql` wrapper for info.
 
 Opt-in, enabled by default (`default: true`). Disable with `--no-codeql` during `bun create`.
 
-See [AGENT.md](./AGENT.md).
+See [AGENTS.md](./AGENTS.md).

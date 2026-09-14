@@ -135,4 +135,4 @@ Co-locate Dockerfile/scripts in same `.devcontainer/` subdirectory.
 - [containers.dev](https://containers.dev) — spec
 - [Features index](https://containers.dev/features)
 - [GitHub Codespaces docs](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/adding-a-dev-container-configuration/introduction-to-dev-containers)
-- [AGENT.md](./AGENT.md) — agent reference
+- [AGENTS.md](./AGENTS.md) — agent reference

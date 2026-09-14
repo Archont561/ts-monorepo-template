@@ -55,4 +55,4 @@ The pre-commit hook runs `mbiome check --write {staged_files}` automatically.
 | `mbiome check` | Direct bin, bakes config path |
 | `mbiome check --write` | Fix in place |
 
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+See [AGENTS.md](./AGENTS.md) for the agent-facing reference.

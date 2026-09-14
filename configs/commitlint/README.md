@@ -73,4 +73,4 @@ graph LR
 
 </details>
 
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+See [AGENTS.md](./AGENTS.md) for the agent-facing reference.

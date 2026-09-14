@@ -69,4 +69,4 @@ test(external): add greet tests
 ## References
 
 - [Commitlint README](../../commitlint/README.md)
-- [Commitlint AGENT](../../commitlint/AGENT.md)
+- [Commitlint AGENT](../../commitlint/AGENTS.md)

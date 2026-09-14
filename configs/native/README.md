@@ -368,7 +368,6 @@ cargo zigbuild --target aarch64-unknown-linux-gnu --release --manifest-path pack
 - [napi.rs — manual setup (workspace + npm packages)](https://napi.rs/docs/introduction/manual-setup)
 - [napi.rs — prepare for distribution](https://napi.rs/docs/introduction/manual-setup#prepare-for-distribution)
 - [Cargo Book — workspaces](https://doc.rust-lang.org/cargo/reference/workspaces.html)
-- [PLAN.md](./PLAN.md)
-- [AGENT.md](./AGENT.md)
+- [AGENTS.md](./AGENTS.md)
 - [packages/native/npm/native/README.md](../../packages/native/npm/native/README.md)
 - [Example README](../../apps/example/README.md)

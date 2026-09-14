@@ -19,4 +19,4 @@ bun.lock binary
 
 Always included. Baseline repo health.
 
-See [AGENT.md](./AGENT.md).
+See [AGENTS.md](./AGENTS.md).

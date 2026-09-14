@@ -240,5 +240,5 @@ After first push, go to `Settings → Code security and analysis` and enable Dep
 ## References
 
 - [Dependabot Docs](https://docs.github.com/en/code-security/dependabot)
-- [AGENT.md](./AGENT.md)
+- [AGENTS.md](./AGENTS.md)
 - [gh-actions README](../gh-actions/README.md)

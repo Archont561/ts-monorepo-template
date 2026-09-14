@@ -67,4 +67,4 @@ test("homepage", async ({ page }) => {
 | `me2e --ui` | UI mode |
 | `bunx playwright install` | Install browsers |
 
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+See [AGENTS.md](./AGENTS.md) for the agent-facing reference.

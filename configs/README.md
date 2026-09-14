@@ -73,8 +73,8 @@ sequenceDiagram
 
 - [ ] Create `configs/<name>/` workspace
 - [ ] Add `package.json` with `bin`, `scaffold` metadata
-- [ ] Add `README.md` + `AGENT.md`
+- [ ] Add `README.md` + `AGENTS.md`
 - [ ] Optionally add `ci.steps.yml` for CI fragment
 - [ ] Run `bun install` to link bin
 
-See [AGENT.md](./AGENT.md) for agent-facing rules.
+See [AGENTS.md](./AGENTS.md) for agent-facing rules.

@@ -1,4 +1,4 @@
-# AGENT.md - @myorg/community
+# AGENTS.md - @myorg/community
 
 > Community health files for GitHub.
 
@@ -8,9 +8,7 @@
 - `.github/PULL_REQUEST_TEMPLATE.md` — PR checklist (Biome, typecheck, test, coverage, docs:sync, conventional commits)
 - `.github/ISSUE_TEMPLATE/bug_report.yml` — bug report form
 - `.github/ISSUE_TEMPLATE/feature_request.yml` — feature request form
-- `SECURITY.md` — vulnerability reporting (private via Security tab, not public issues)
-- `CODE_OF_CONDUCT.md` — Contributor Covenant 2.0
-- `SUPPORT.md` — help, common issues, commands
+- Vulnerability reporting, support channels and the code of conduct are **sections of the root `README.md`**, not standalone files — this config owns no root Markdown of its own
 - `.github/FUNDING.yml` — sponsorship links (commented template)
 
 ## For agents

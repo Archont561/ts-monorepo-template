@@ -2,22 +2,20 @@
 # TypeScript Monorepo Template
 
 [![CI](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-4d8cf5?logo=github&logoColor=white)](https://archont561.github.io/ts-monorepo-template/)
 [![Coverage](https://img.shields.io/codecov/c/github/Archont561/ts-monorepo-template?logo=codecov&label=Coverage)](https://codecov.io/gh/Archont561/ts-monorepo-template)
-[![Coverage Graph](https://codecov.io/gh/Archont561/ts-monorepo-template/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/Archont561/ts-monorepo-template)
-[![Coverage HTML](https://img.shields.io/badge/Coverage-HTML-brightgreen?logo=github)](https://Archont561.github.io/ts-monorepo-template/coverage/)
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-4d8cf5?logo=github&logoColor=white)](https://archont561.github.io/ts-monorepo-template/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 [![Bun](https://img.shields.io/badge/Bun-1.4.2-black?logo=bun)](https://bun.sh)
-[![TypeScript](https://img.shields.io/badge/TypeScript-7.x-blue?logo=typescript)](https://www.typescriptlang.org/)
 
-> A reusable template for TypeScript monorepos built with Bun, Turborepo, and Bunup.
-
-This repository is a **template**, not a regular monorepo. Use it to scaffold a new monorepo with `bun create`.
+A reusable template for TypeScript monorepos. It makes the whole toolchain — runtime, bundler, linter, tests, task runner, CI — a single `bun create` away, with a scaffolder that rewrites the package scope so the result is yours immediately after cloning.
 
 > [!NOTE]
-> Template mode is active. This intro is stripped after scaffolding — the monorepo docs below remain.
+> Template mode is active. This intro is stripped after scaffolding — the monorepo documentation below is what remains.
 
 ## Using this template
+
+> [!IMPORTANT]
+> Requires [Bun](https://bun.sh) ≥ 1.4.2 — `curl -fsSL https://bun.sh/install | bash`. Nothing else is needed: there are no root `devDependencies`.
 
 ```bash
 bun create Archont561/ts-monorepo-template my-app
@@ -28,65 +26,25 @@ bun run dev
 
 The example server starts at [http://localhost:3000](http://localhost:3000) (override with the `PORT` env var).
 
-During scaffolding you will be prompted for:
+During scaffolding you are prompted for:
 
-- [ ] Organization scope (e.g. `@acme`) — replaces `@myorg`
-- [ ] Opt-in configs:
-  - [x] Playwright E2E (`me2e`) — enabled by default
-  - [ ] UnoCSS — atomic CSS
-  - [ ] NAPI-RS — native bindings
-  - [ ] AI skills (`mskills`)
-  - [ ] Devcontainer — Codespaces / Dev Containers
-  - [ ] GitHub Pages — static site deployment
+- Organization scope (e.g. `@acme`) — replaces `@myorg` everywhere
+- Opt-in configs: Playwright E2E (default on), UnoCSS, NAPI-RS native bindings, AI skills, Devcontainer, GitHub Pages, CodeQL (default on), Trivy, Stale
 
 > [!TIP]
-> Use `bun create Archont561/ts-monorepo-template my-app -- --scope @acme --no-interactive` for CI.
-
-📖 **Documentation**: <https://archont561.github.io/ts-monorepo-template/> — guide, config matrix, and a [Status page](https://archont561.github.io/ts-monorepo-template/status) with coverage, CI status and versions.
+> Non-interactive for CI: `bun create Archont561/ts-monorepo-template my-app -- --scope @acme --no-interactive`.
 
 <details>
-<summary>What the scaffolder does</summary>
+<summary>What the scaffolder changes</summary>
 
-- Replaces `@myorg` with your scope in `package.json`, `tsconfig.json`, `config.json`
-- Strips `TEMPLATE-ONLY` blocks (`<!-- TEMPLATE-ONLY:START(...) -->`)
-- Removes template-only files (`configs/template/`, `docs/`, `docs:sync` script, `template-docs.yml`)
-- Prunes disabled opt-in configs (`playwright`, `unocss`, `native`, `skills`, `devcontainer`, `pages`, `codeql`, `trivy`, `stale`)
-- Regenerates CI workflows from survivors (`configs/*/*.base.yml` + `*/*.steps.yml`)
+- Replaces `@myorg` with your scope across manifests, configs, sources and docs
+- Strips `TEMPLATE-ONLY` blocks and removes template-only files (`configs/template/`, `docs/`, `template-docs.yml`, the `docs:sync` script)
+- Prunes every opt-in config you declined, and regenerates the workflows from the survivors
+- Rewrites repository identity in badges and manifest URLs
 
 </details>
 
-After scaffolding, this README will describe your monorepo (see below).
-
-#### Template-only GitHub Pages docs
-
-This template ships a **template-only** docs site in `docs/`, deployed by `.github/workflows/template-docs.yml` to <https://archont561.github.io/ts-monorepo-template/>. It's **removed** during `bun create` via `configs/template` `extraRemovals: ["docs", ".github/workflows/template-docs.yml"]`, so generated monorepos use `configs/pages` → `pages.yml` for `apps/example` instead.
-
-| URL | What it serves |
-| :--- | :--- |
-| `/` | Landing page |
-| `/guide/` | Introduction + config matrix |
-| `/status` | Coverage %, CI status badges, package and toolchain versions |
-| `/coverage/` | HTML coverage report (`mcoverage html`) |
-| `/example/` | Demo app built from `apps/example` |
-
-One rule keeps this honest: **only one workflow may deploy to Pages**.
-`template-docs.yml` is that workflow here, so `bun run docs:sync` deliberately
-does not generate `pages.yml` or `coverage.yml` while `docs/` exists (see
-`configs/template/src/aggregate.ts`). Scaffolded monorepos have no `docs/`, so
-they get `pages.yml` — and `coverage.yml` when Pages is off — as usual.
-
-Everything the site ships is assembled by one command:
-
-```bash
-bun run docs:site   # mdocs site → coverage + demo app + VitePress build
-                    # (bun run docs:dev / docs:build / docs:preview also work)
-```
-
-To add your own template-only docs page:
-1. Put markdown files in `docs/` (VitePress) — `docs/public/**` is copied to the site root
-2. Keep workflow `template-docs.yml` template-only (wrapped in `# TEMPLATE-ONLY:START(template)` or removed via `extraRemovals`)
-3. Enable Pages once: Settings → Pages → Source: GitHub Actions
-4. Push to `main` — `mdocs site` builds the whole artifact and deploys it
+📖 **Documentation**: <https://archont561.github.io/ts-monorepo-template/> — guide, config matrix, and a [Status page](https://archont561.github.io/ts-monorepo-template/status) with coverage, CI state and versions.
 
 ---
 
@@ -95,135 +53,171 @@ To add your own template-only docs page:
 
 [![CI](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Archont561/ts-monorepo-template/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/Archont561/ts-monorepo-template?logo=codecov&label=Coverage)](https://codecov.io/gh/Archont561/ts-monorepo-template)
-[![Coverage Graph](https://codecov.io/gh/Archont561/ts-monorepo-template/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/Archont561/ts-monorepo-template)
 [![Coverage HTML](https://img.shields.io/badge/Coverage-HTML-brightgreen?logo=github)](./coverage/html/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 [![Bun](https://img.shields.io/badge/Bun-1.4.2-black?logo=bun)](https://bun.sh)
-[![TypeScript](https://img.shields.io/badge/TypeScript-7.x-blue?logo=typescript)](https://www.typescriptlang.org/)
 
-A TypeScript library monorepo built with Bun, Turborepo, and Bunup.
+A TypeScript library monorepo built with Bun workspaces, Turbo, and Bunup. One published package, one private implementation package it inlines, and twenty-seven tool configs that own every generated file in the repo.
 
 > [!TIP]
-> After scaffolding, update badges in this README and in `packages/*/README.md`, `apps/*/README.md` to point to your repo:
-> `Archont561/ts-monorepo-template` → `YOUR_ORG/YOUR_REPO`, `@myorg` → `YOUR_SCOPE`.
-> Coverage badge uses Codecov (requires `CODECOV_TOKEN` secret if private) + local HTML at `./coverage/html/` + Pages at `/coverage/` when Pages enabled.
+> After scaffolding, update the badge URLs (`Archont561/ts-monorepo-template` → `YOUR_ORG/YOUR_REPO`) in this README, `packages/*/README.md` and `apps/*/README.md`.
+
+## Quick start
 
 > [!IMPORTANT]
-> All tool configs live in `configs/*` and are reached via `m`-prefixed bins. No root `turbo.json`, `biome.json`, `bunfig.toml`.
-
-## Quick Start
+> Requires [Bun](https://bun.sh) ≥ 1.4.2. All tool configs live in `configs/*` and are reached through `m`-prefixed bins (`mbiome`, `mturbo`, `mbunup`, …) — there is no root `turbo.json`, `biome.json` or `bunfig.toml`.
 
 ```bash
 bun install
 bun run dev
 ```
 
-The example server starts at [http://localhost:3000](http://localhost:3000) (override with the `PORT` env var).
+## Structure
+
+```
+.
+├── apps/
+│   └── example/          Bun.serve HTTP server (private)
+├── packages/
+│   ├── external/         The published package — the installable artifact
+│   ├── internal/         Private implementation, inlined by Bunup
+│   └── native/           Optional Rust workspace (crates/* → npm/*)
+├── configs/              Every tool config; sources for all generated files
+├── .agents/              Vendored agent skills (SKILL.md per skill)
+├── AGENTS.md             Behavioral rules for AI coding agents
+├── CONTEXT.md            Current repo state — a snapshot, not rules
+└── LICENSE.md            MIT
+```
+
+> [!NOTE]
+> `.github/workflows/*`, `turbo.json`, `lefthook.yml` and `docs/`-adjacent config are generated. Edit their sources in `configs/*` and regenerate — never the output.
 
 ## Architecture
 
+| Concern | Choice | Why |
+| :--- | :--- | :--- |
+| Runtime + tests | Bun | Speed, built-in test runner, native TypeScript |
+| Lint + format | Biome | One tool, no config conflicts |
+| Bundling | Bunup | Bun-native, dual ESM output |
+| Tasks | Turbo | Incremental builds, correct dependency graph |
+| Git hooks | Lefthook | Fast, parallel, no Node required |
+| Type checking | `mtsc --noEmit` | Emit is Bunup's job, not tsc's |
+| Releases | Changesets | Version bumps per package from PR-time intent |
+
 ```mermaid
 graph TD
-    A["apps/example<br/>Bun.serve"] --> B["packages/external<br/>public API"]
-    B --> C["packages/internal<br/>private impl"]
-    B -.-> D["configs/*<br/>tooling"]
-    D --> E["mturbo / mbiome / mbun<br/>m-bins"]
-    E --> F[".github/workflows<br/>generated"]
+    A[apps/example<br/>Bun.serve] --> B[packages/external<br/>public API]
+    B --> C[packages/internal<br/>private impl]
+    D[configs/*<br/>tooling] -.-> B
+    D -.-> C
+    D -.-> A
 
     style B fill:#0969DA,stroke:#fff,color:#fff
     style C fill:#f6f8fa,stroke:#0969DA
-    style D fill:#f6f8fa,stroke:#0969DA
 ```
 
-### Dependency Rules
+### Dependency rules
 
-| Rule | Description |
+| Rule | Meaning |
 | :--- | :--- |
-| `external → internal` | Allowed, inlined by Bunup |
-| `internal → external` | :x: Forbidden (circular) |
-| `apps → external` | Only public import |
-| `workspace:*` | All inter-package deps |
+| `external → internal` | Allowed — `internal` is a devDependency, inlined at build time |
+| `internal → external` | Forbidden — circular |
+| `apps → external` | Apps import the public package only, never `internal` |
+| `workspace:*` | Every inter-package dependency uses the workspace protocol |
 
-## Project Structure
+## Commands
+
+### Development
+
+| Command | What it does |
+| :--- | :--- |
+| `bun install` | Install workspaces and link every `m`-bin |
+| `bun run dev` | Start all packages in watch mode (Turbo) |
+| `bun --filter @myorg/external run test:watch` | Re-run one package's tests on change |
+
+### Quality
+
+| Command | What it does |
+| :--- | :--- |
+| `bun run check` / `check:fix` | Biome lint + format (check / auto-fix) |
+| `bun run test` | Unit tests in every package (Turbo) |
+| `bun run test:template` | Scaffolder tests across all opt-in combinations |
+| `bun run test:e2e` | Playwright E2E (auto-skips when browsers are missing) |
+| `bun run typecheck` | `mtsc --noEmit` in every package |
+| `bun run coverage` | Per-package coverage, then merge → `coverage/lcov.info` |
+| `bun run coverage:html` | HTML report at `coverage/html/` |
+
+### Build and release
+
+| Command | What it does |
+| :--- | :--- |
+| `bun run build` | Build all packages in dependency order |
+| `bun run changeset` | Record release intent for changed packages |
+| `bun run ci:lint` / `ci:local` | Validate workflows / run CI locally with `act` |
+
+### Security and maintenance
+
+| Command | What it does |
+| :--- | :--- |
+| `bun run security:check` | gitleaks secrets + Trivy filesystem scan |
+| `bun run security:audit` | Rust audit (`cargo audit` via `mnative`) |
+| `bun run skills <cmd>` | Agent skills: `list`, `sync`, `add`, `update`, `validate`, `index` |
+
+## Tooling configs
+
+Every config lives in its own `configs/*` package, exposes at most one `m`-prefixed bin, and owns whatever it generates.
 
 <details>
-<summary>Core structure (always)</summary>
+<summary>Always-on (17)</summary>
 
-```
-apps/
-  example/          Bun.serve HTTP server + static public for Pages
-packages/
-  external/         Public library (published to npm)
-  internal/         Private implementation (inlined into external by Bunup)
-configs/
-  badges/           CI, coverage, license badges — always
-  biome/            Lint and format (mbiome) — always
-  bun-config/       Bun runtime, test, coverage (mbun) — always
-  bunup/            Bundling presets (mbunup) — always
-  changeset/        Versioning and releases (mchangeset) — always
-  citty/            CLI builder (mcitty) — always
-  commitlint/       Conventional Commits — always
-  community/        Community health (CODEOWNERS, templates, SECURITY) — always
-  coverage/         LCOV coverage reporting (HTML, artifact, Pages) — always
-  dependabot/       Automated dependency updates — always
-  editorconfig/     Editor consistency (.editorconfig) — always
-  gh-actions/       GitHub Actions skeletons (mci) — always
-  gitattributes/    Git file handling (.gitattributes) — always
-  gitleaks/         Secret scanning (mgitleaks) — always
-  lefthook/         Git hooks (msetup) — always
-  ts/               TypeScript presets (mtsc) — always
-  turbo/            Task orchestration (mturbo) — always
-```
+| Config | Bin | Purpose |
+| :--- | :--- | :--- |
+| [Badges](configs/badges/README.md) | — | CI, coverage and license badges |
+| [Biome](configs/biome/README.md) | `mbiome` | Lint and format |
+| [Bun Config](configs/bun-config/README.md) | `mbun` | Runtime, tests, coverage merge |
+| [Bunup](configs/bunup/README.md) | `mbunup` | Bundling presets |
+| [Changeset](configs/changeset/README.md) | `mchangeset` | Versioning and releases |
+| [Citty](configs/citty/README.md) | `mcitty` | CLI builder behind the `m`-bins |
+| [Commitlint](configs/commitlint/README.md) | — | Conventional Commits |
+| [Community](configs/community/README.md) | — | CODEOWNERS, issue/PR templates |
+| [Coverage](configs/coverage/README.md) | `mcoverage` | LCOV merge, HTML, threshold, PR comment |
+| [Dependabot](configs/dependabot/README.md) | — | Dependency updates |
+| [EditorConfig](configs/editorconfig/README.md) | — | `.editorconfig` |
+| [GitAttributes](configs/gitattributes/README.md) | — | `.gitattributes` |
+| [GitHub Actions](configs/gh-actions/README.md) | `mci` | Workflow skeletons, lint, `act` |
+| [Gitleaks](configs/gitleaks/README.md) | `mgitleaks` | Secret scanning |
+| [Lefthook](configs/lefthook/README.md) | `msetup` | Git hooks |
+| [TypeScript](configs/ts/README.md) | `mtsc` | Shared tsconfigs |
+| [Turbo](configs/turbo/README.md) | `mturbo` | Task orchestration |
 
 </details>
 
 <!-- TEMPLATE-ONLY:START(playwright,skills,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
 <details>
-<summary>Opt-in configs (present only when selected)</summary>
+<summary>Opt-in — pruned when declined</summary>
 
-```
-configs/
-  codeql/           SAST via CodeQL — opt-in default true
-  devcontainer/     Codespaces / Dev Containers — opt-in
-  native/           NAPI-RS bindings (mnative) — opt-in (publish/docker/none)
-  pages/            GitHub Pages deployment — opt-in
-  playwright/       E2E testing (me2e) — opt-in default true
-  skills/           AI agent skills (mskills) — opt-in
-  stale/            Auto-close inactive issues/PRs — opt-in
-  trivy/            Container + FS vuln scanning — opt-in
-  unocss/           Atomic CSS — opt-in
-```
+| Config | Bin | Default | Purpose |
+| :--- | :--- | :--- | :--- |
+| [CodeQL](configs/codeql/README.md) | `mcodeql` | on | SAST in CI |
+| [Playwright](configs/playwright/README.md) | `me2e` | on | E2E tests |
+| [Devcontainer](configs/devcontainer/README.md) | — | off | Codespaces / Dev Containers |
+| [Native](configs/native/README.md) | `mnative` | none | Rust + NAPI-RS bindings |
+| [Pages](configs/pages/README.md) | `mpages` | off | GitHub Pages deployment |
+| [Skills](configs/skills/README.md) | `mskills` | off | AI agent skills |
+| [Stale](configs/stale/README.md) | — | off | Auto-close inactive issues/PRs |
+| [Trivy](configs/trivy/README.md) | `mtrivy` | off | Container and filesystem scanning |
+| [UnoCSS](configs/unocss/README.md) | `munocss` | off | Atomic CSS |
 
 </details>
 <!-- TEMPLATE-ONLY:END(playwright,skills,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
 
-<!-- TEMPLATE-ONLY:START(template) -->
-<details>
-<summary>Template-only (removed after scaffolding)</summary>
+## Adding a package or app
 
-```
-configs/
-  template/         Scaffolder (mdocs) — self-destruct
-docs/               Template-only VitePress docs (GitHub Pages) — removed via extraRemovals
-.github/workflows/
-  template-docs.yml Template-only Pages workflow for docs/ — removed
-```
-
-</details>
-<!-- TEMPLATE-ONLY:END(template) -->
-
-> [!NOTE]
-> Every tool config lives in its own `configs/*` package and is reached through `m`-prefixed CLI bins that bake in config paths. There are no root tool-config files and the root ships zero `devDependencies`.
-
-## Adding a Package or an App
-
-### New library package
+1. **Create the directories and manifest.**
 
 ```bash
 mkdir -p packages/my-lib/src packages/my-lib/tests
 ```
-
-`packages/my-lib/package.json`:
 
 ```json
 {
@@ -249,193 +243,56 @@ mkdir -p packages/my-lib/src packages/my-lib/tests
 }
 ```
 
-Then add two files:
+2. **Add a `tsconfig.json`** extending `@myorg/ts/library.json`, with `rootDir`, `outDir` and the `@src/*` / `@tests/*` paths. Never add `baseUrl` — TypeScript 7.0 removed it.
 
-- `tsconfig.json` — extends `@myorg/ts/library.json`, sets `rootDir`, `outDir` and the
-  `@src/*` / `@tests/*` paths. Never add `baseUrl` (removed in TS 7.0).
-- `bunup.config.ts` — `defineConfig({ ...baseConfig, entry: ["src/index.ts"] })`,
-  or `...cliConfig` if the package ships a bin.
+3. **Add a `bunup.config.ts`** — `defineConfig({ ...baseConfig, entry: ["src/index.ts"] })`, or `...cliConfig` when the package ships a bin.
 
-Finish with `bun install`, then `bun run build`.
+4. **Depend on it** from another workspace package with `"@myorg/my-lib": "workspace:*"`, or `bun add @myorg/my-lib --filter @myorg/example`.
 
-> [!TIP]
-> Code that should never be published lives in a `private: true` package and is
-> inlined by Bunup at build time — see `packages/internal` for the pattern.
-
-### New app
-
-Apps extend `@myorg/ts/app.json` (no emit) and run unbundled (`mbun --hot src/index.ts`).
-They depend on packages, never the reverse — Biome enforces that boundary.
-
-### Depending on another workspace package
+5. **Link and verify.**
 
 ```bash
-bun add @myorg/external --filter @myorg/example
+bun install
+bun run build
 ```
 
-or add `"@myorg/external": "workspace:*"` to the consumer's `dependencies` and run
-`bun install`. Inter-package deps are always `workspace:*`.
-
-## Tooling
-
-Tool configs live in `configs/*` and are reached via `m`-prefixed bins. No root config files.
-
-#### Always-on
-
-| Config | Bin | Description |
-| :--- | :--- | :--- |
-| [Badges](configs/badges/README.md) | — | CI, coverage, license badges — always |
-| [Biome](configs/biome/README.md) | `mbiome` | Lint and format — always |
-| [Bun Config](configs/bun-config/README.md) | `mbun` | Bun runtime, test, coverage merge — always |
-| [Bunup](configs/bunup/README.md) | `mbunup` | Bundling presets — always |
-| [Changeset](configs/changeset/README.md) | `mchangeset` | Versioning and releases — always |
-| [Citty](configs/citty/README.md) | `mcitty` | CLI builder — always |
-| [Commitlint](configs/commitlint/README.md) | — | Conventional Commits — always |
-| [Community](configs/community/README.md) | — | CODEOWNERS, templates, SECURITY — always |
-| [Coverage](configs/coverage/README.md) | `mcoverage` | LCOV HTML, artifact, Pages, threshold, PR comment — always |
-| [Dependabot](configs/dependabot/README.md) | — | Dependency updates — always |
-| [EditorConfig](configs/editorconfig/README.md) | — | `.editorconfig` — always |
-| [GitAttributes](configs/gitattributes/README.md) | — | `.gitattributes` — always |
-| [GitHub Actions](configs/gh-actions/README.md) | `mci` | CI skeletons, `lint`/`act` — always |
-| [Gitleaks](configs/gitleaks/README.md) | `mgitleaks` | Secret scanning — always |
-| [Lefthook](configs/lefthook/README.md) | `msetup` | Git hooks — always |
-| [TypeScript](configs/ts/README.md) | `mtsc` | Shared tsconfigs — always |
-| [Turbo](configs/turbo/README.md) | `mturbo` | Task orchestration — always |
-
-<!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
-#### Opt-in (pruned when disabled)
-
-| Config | Bin | Default | Description |
-| :--- | :--- | :--- | :--- |
-<!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
-<!-- TEMPLATE-ONLY:START(codeql) -->
-| [CodeQL](configs/codeql/README.md) | `mcodeql` | true | SAST via CodeQL |
-<!-- TEMPLATE-ONLY:END(codeql) -->
-<!-- TEMPLATE-ONLY:START(devcontainer) -->
-| [Devcontainer](configs/devcontainer/README.md) | — | false | Codespaces / Dev Containers |
-<!-- TEMPLATE-ONLY:END(devcontainer) -->
-<!-- TEMPLATE-ONLY:START(native) -->
-| [Native](configs/native/README.md) | `mnative` | none | NAPI-RS bindings (publish/docker/none) |
-<!-- TEMPLATE-ONLY:END(native) -->
-<!-- TEMPLATE-ONLY:START(pages) -->
-| [Pages](configs/pages/README.md) | `mpages` | false | GitHub Pages deployment (`mpages build` + `mpages base`) |
-<!-- TEMPLATE-ONLY:END(pages) -->
-<!-- TEMPLATE-ONLY:START(playwright) -->
-| [Playwright](configs/playwright/README.md) | `me2e` | true | E2E testing |
-<!-- TEMPLATE-ONLY:END(playwright) -->
-<!-- TEMPLATE-ONLY:START(skills) -->
-| [Skills](configs/skills/README.md) | `mskills` | false | AI agent skills |
-<!-- TEMPLATE-ONLY:END(skills) -->
-<!-- TEMPLATE-ONLY:START(stale) -->
-| [Stale](configs/stale/README.md) | — | false | Auto-close inactive issues/PRs |
-<!-- TEMPLATE-ONLY:END(stale) -->
-<!-- TEMPLATE-ONLY:START(trivy) -->
-| [Trivy](configs/trivy/README.md) | `mtrivy` | false | Container + FS vuln scanning |
-<!-- TEMPLATE-ONLY:END(trivy) -->
-<!-- TEMPLATE-ONLY:START(unocss) -->
-| [UnoCSS](configs/unocss/README.md) | `munocss` | false | Atomic CSS — `munocss build`/`watch` |
-<!-- TEMPLATE-ONLY:END(unocss) -->
-
-<!-- TEMPLATE-ONLY:START(template) -->
-#### Template-only (removed after scaffolding)
-
-| Config | Bin | Description |
-| :--- | :--- | :--- |
-| [Template](configs/template/README.md) | `mdocs` | Scaffolder, data-driven engine |
-
-<!-- TEMPLATE-ONLY:END(template) -->
-
-See [AGENTS.md](AGENTS.md) for agent-facing documentation and [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow.
-
-## Commands
-
-| Command | Description |
-| :--- | :--- |
-| `bun run dev` | Start all packages in watch mode (Turbo) |
-| `bun run build` | Build all packages (Turbo orchestrated) |
-| `bun run test` | Run all unit tests (Turbo orchestrates per-package `mbun test`) |
-| `bun --filter @myorg/external run test:watch` | Re-run one package's tests on change |
-| `bun run test:template` | Run template scaffolding tests (all opt-in combinations) |
-| `bun run test:template:cases` | Run only template combination cases (`cases.test.ts`) |
-| `bun run test:e2e` | Run Playwright E2E tests (auto-skips if browsers missing) |
-| `bun run coverage` | Per-package coverage via Turbo, then `mcoverage merge` → `coverage/lcov.info` |
-| `bun run coverage:html` | Generate HTML report (`mcoverage html`) |
-| `bun run typecheck` | Type-check all packages |
-| `bun run check` | Lint and format check (Biome) |
-| `bun run check:fix` | Auto-fix lint and format issues |
-| `bun run ci:lint` | Validate GitHub Actions workflows (`mci lint`) |
-| `bun run ci:list` | List `act` jobs (`mci act -l`) |
-| `bun run ci:dry` | Dry-run CI locally (`mci act push -n`) |
-| `bun run ci:local` | Run CI locally in Docker (`mci act push`) |
-| `bun run security:gitleaks` | Scan repo for secrets (gitleaks) |
-| `bun run security:trivy` | FS vuln scan (Trivy HIGH,CRITICAL) |
-| `bun run security:audit` | Rust audit (cargo audit via mnative) |
-| `bun run security:check` | Run gitleaks + trivy (if installed) |
-| `bun run skills <cmd>` | One command for agent skills — `list`, `sync`, `add <pkg>`, `update`, `validate`, `index` |
-<!-- TEMPLATE-ONLY:START(template) -->
-| `bun run docs:sync` | Regenerate workflows from `configs/*` (`mdocs`) — template-only |
-<!-- TEMPLATE-ONLY:END(template) -->
-
-### Agent Skills (skills.sh)
-
-We use the [skills.sh](https://skills.sh) ecosystem to vendor skills into this repo.
-
-- Install: `bun run skills add vercel-labs/agent-skills`
-- Update: `bun run skills update`
-- Sync: `bun run skills sync`
-
-Skills live in: `.agents/skills/` — each is a folder containing `SKILL.md` with YAML frontmatter (`name`, `description`). See [.agents/README.md](.agents/README.md).
-
-> [!CAUTION]
-> Review skill content before use; skills.sh cannot guarantee every skill is safe.
-
-## Workflows
+> [!NOTE]
+> An app follows the same steps but extends `@myorg/ts/app.json`, runs unbundled (`mbun --hot src/index.ts`), and has no `bunup.config.ts` — apps are not published.
 
 > [!TIP]
-> Workflows in `.github/workflows/` are generated from skeletons in `configs/*/*.base.yml` with fragments from `configs/*/*.steps.yml`. Edit the skeletons and fragments, then run `bun run docs:sync` (template repo) to regenerate.
-
-```mermaid
-sequenceDiagram
-    participant Dev as Developer
-    participant Config as "configs/*/*.steps.yml"
-    participant Base as "configs/*/*.base.yml"
-    participant Mdocs as "mdocs (aggregate.ts)"
-    participant GH as ".github/workflows/*.yml"
-
-    Dev->>Config: Edit fragment
-    Dev->>Base: Edit skeleton
-    Dev->>Mdocs: bun run docs:sync
-    Mdocs->>Base: Read skeletons
-    Mdocs->>Config: Collect fragments
-    Mdocs->>GH: Generate ci.yml + release.yml + pages.yml + ...
-    GH-->>Dev: Ready for CI
-```
-
-<details>
-<summary>Workflow files</summary>
-
-- `ci.yml` — generated from `ci.base.yml` + all `ci.steps.yml` (includes coverage: LCOV + HTML + artifact + threshold + PR comment)
-- `release.yml` — generated from `release.base.yml` + all `release.steps.yml`
-- `pages.yml` — generated from `pages.base.yml` + all `pages.steps.yml` (GitHub Pages, opt-in) — when enabled, includes coverage at `/coverage/` via coverage config
-- `coverage.yml` — generated from `coverage.base.yml` + all `coverage.steps.yml` (standalone coverage Pages site) — only when Pages **disabled**, otherwise coverage is in `pages.yml`
-- `dependabot.yml` — generated from `dependabot.base.yml` + all `dependabot.yml` fragments (npm, cargo, actions, docker)
-- `dependabot-auto-merge.yml` — generated from `dependabot-auto-merge.base.yml` + `dependabot-auto-merge.steps.yml` (auto-merge patch/minor)
-- `stale.yml` — generated from `stale.base.yml` + `stale.steps.yml` (opt-in)
-<!-- TEMPLATE-ONLY:START(template) -->
-- `template-docs.yml` — **template-only**, static (not generated), deploys `docs/` to Pages, removed on scaffold
-<!-- TEMPLATE-ONLY:END(template) -->
-- Fragments are discovered via `discoverConfigs()` scanning `configs/*/package.json` `scaffold` metadata
-
-</details>
+> Code that must never be published belongs in a `private: true` package and is inlined by Bunup at build time — see `packages/internal`.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow.
+PRs target `main`. Before opening one:
 
-- [ ] `bun install` — install deps + link m-bins
-- [ ] `bun run dev` — start watch mode
-- [ ] `bun run check:fix` — fix lint before commit
-- [ ] `bun run test` — run unit tests
+> [!IMPORTANT]
+> All checks must pass locally before pushing — CI is not a linter.
+> Run `bun run check`, `bun run test`, `bun run typecheck`, `bun run build` in that order, and `bun run docs:sync` if anything under `configs/` changed.
+
+The workflow in full:
+
+- **Branch** from `main`; keep the change to one concern.
+- **Commit** with [Conventional Commits](https://www.conventionalcommits.org/) — scopes are derived from the workspace names, so `feat(native): …`, `fix(template): …` are valid; run `bun run commitlint`-style subject checks or let the Lefthook hook reject bad subjects.
+- **Record release intent** with `bun run changeset` for any change to a published package. Patch for fixes, minor for features, major for breaking changes.
+- **Open the PR.** CI runs lint, typecheck, tests, coverage (80% line threshold), package health (`publint` + `arethetypeswrong`) and the scaffolder matrix across opt-in combinations. A changeset bot comment tracks release intent.
+- **Review.** CODEOWNERS requests review from the maintainers; squash-merge keeps history linear.
+
+## Security
+
+Report vulnerabilities privately through [GitHub Security Advisories](https://github.com/Archont561/ts-monorepo-template/security/advisories/new) — not through public issues. Expect an acknowledgement within a few days and a fix or a documented decision within two weeks for confirmed issues.
+
+Supported: the latest released version of the template, and the most recent release line of any published package. Automated scanning runs in CI (Gitleaks on every push, CodeQL and Trivy when enabled); `bun run security:check` runs the same checks locally.
+
+## Support
+
+- **Questions and ideas** — GitHub Discussions
+- **Bugs** — GitHub Issues with the bug report template
+- **This template's own docs** — <https://archont561.github.io/ts-monorepo-template/>
+
+## Conduct
+
+Participation is governed by the [Contributor Covenant](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). Report unacceptable behaviour to the maintainers listed in `.github/CODEOWNERS`.
 
 ## License
 

@@ -1,4 +1,4 @@
-# AGENT.md - @myorg/trivy
+# AGENTS.md - @myorg/trivy
 
 > Trivy — container + filesystem vulnerability scanning.
 

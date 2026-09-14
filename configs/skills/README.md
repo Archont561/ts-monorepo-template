@@ -161,4 +161,4 @@ Skills live in: `.agents/skills/`
 Each skill is a folder containing `SKILL.md` (YAML frontmatter with `name` and `description`).
 ```
 
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+See [AGENTS.md](./AGENTS.md) for the agent-facing reference.

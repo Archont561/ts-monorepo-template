@@ -136,4 +136,4 @@ bun run ci:lint                            # after regenerating workflows
 - [ ] `bun run docs:sync` after editing workflow skeletons
 - [ ] `bun run ci:lint` after regenerating workflows
 
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+See [AGENTS.md](./AGENTS.md) for the agent-facing reference.

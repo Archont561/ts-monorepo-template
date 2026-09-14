@@ -71,4 +71,4 @@ graph TD
 - [ ] `noEmit` for apps
 - [ ] `types: ["bun"]` everywhere
 
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+See [AGENTS.md](./AGENTS.md) for the agent-facing reference.

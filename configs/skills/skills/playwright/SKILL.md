@@ -49,4 +49,4 @@ test("homepage", async ({ page }) => {
 ## References
 
 - [Playwright README](../../playwright/README.md)
-- [Playwright AGENT](../../playwright/AGENT.md)
+- [Playwright AGENT](../../playwright/AGENTS.md)

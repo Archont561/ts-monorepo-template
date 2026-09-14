@@ -51,4 +51,4 @@ bun --hot src/index.ts   # hot reload
 ## References
 
 - [Bun Config README](../../bun-config/README.md)
-- [Bun Config AGENT](../../bun-config/AGENT.md)
+- [Bun Config AGENT](../../bun-config/AGENTS.md)

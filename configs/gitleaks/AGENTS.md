@@ -1,4 +1,4 @@
-# AGENT.md - @myorg/gitleaks
+# AGENTS.md - @myorg/gitleaks
 
 > Secret scanning via gitleaks — Lefthook pre-commit + CI.
 

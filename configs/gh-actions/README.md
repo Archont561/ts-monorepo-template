@@ -93,4 +93,4 @@ after the step fragments are spliced in.
 | `bun run ci:dry` | Dry-run locally |
 | `bun run ci:local` | Run in Docker |
 
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+See [AGENTS.md](./AGENTS.md) for the agent-facing reference.

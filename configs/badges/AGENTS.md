@@ -1,4 +1,4 @@
-# AGENT.md - @myorg/badges
+# AGENTS.md - @myorg/badges
 
 > Badges for CI, coverage, license across all READMEs.
 
@@ -26,7 +26,7 @@
 - `packages/internal/README.md` — badges row
 - `packages/native/README.md` — badges row
 - `apps/example/README.md` — badges row
-- `configs/badges/README.md` + `AGENT.md` — docs
+- `configs/badges/README.md` + `AGENTS.md` — docs
 - `configs/badges/package.json` — scaffold metadata (always)
 
 ## Badge URLs (template repo)

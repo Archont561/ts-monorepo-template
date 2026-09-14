@@ -59,4 +59,4 @@ graph TD
 ## References
 
 - [Turbo README](../../turbo/README.md)
-- [Turbo AGENT](../../turbo/AGENT.md)
+- [Turbo AGENT](../../turbo/AGENTS.md)

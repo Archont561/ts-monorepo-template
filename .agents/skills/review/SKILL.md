@@ -60,4 +60,4 @@ bun run ci:lint
 ## References
 
 - [AGENTS.md](../../../AGENTS.md) — absolute constraints
-- [CONTRIBUTING.md](../../../CONTRIBUTING.md)
+- [Contributing guide](../../../README.md#contributing)

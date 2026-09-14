@@ -43,4 +43,4 @@ Customize via `configs/stale/stale.base.yml` or `stale.yml` fragment.
 
 Opt-in, default false. Enable with `--stale` during `bun create`.
 
-See [AGENT.md](./AGENT.md).
+See [AGENTS.md](./AGENTS.md).

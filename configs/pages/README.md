@@ -259,6 +259,6 @@ Fragments are sorted and injected into `{{STEPS}}` in `pages.base.yml` via `bun 
 ## References
 
 - [GitHub Pages Docs](https://docs.github.com/en/pages)
-- [AGENT.md](./AGENT.md)
+- [AGENTS.md](./AGENTS.md)
 - [gh-actions README](../gh-actions/README.md)
 - [Example README](../../apps/example/README.md)

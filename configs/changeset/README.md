@@ -64,4 +64,4 @@ bun run changeset
 | `mchangeset version` | Bump versions from changesets |
 | `mchangeset publish` | Publish to npm |
 
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+See [AGENTS.md](./AGENTS.md) for the agent-facing reference.

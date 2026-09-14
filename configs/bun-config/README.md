@@ -73,4 +73,4 @@ sequenceDiagram
 > [!WARNING]
 > Bun uses JavaScriptCore (JSC), not V8: never use Node coverage APIs, and don't expect `bun test --coverage` to capture separately spawned processes.
 
-See [AGENT.md](./AGENT.md) for the agent-facing reference.
+See [AGENTS.md](./AGENTS.md) for the agent-facing reference.

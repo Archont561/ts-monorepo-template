@@ -26,4 +26,4 @@ indent_size = 2
 
 Always included. No opt-out — it's a repo health baseline.
 
-See [AGENT.md](./AGENT.md) for agent reference.
+See [AGENTS.md](./AGENTS.md) for agent reference.
