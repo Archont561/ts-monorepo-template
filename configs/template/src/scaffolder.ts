@@ -1,7 +1,12 @@
 import { $, file, Glob, spawnSync, write } from "bun";
 import { regenerateAll } from "./aggregate";
-import type { DiscoveredConfig, ScaffoldMeta, ScaffoldRemovals } from "./configs";
-import { discoverConfigs } from "./configs";
+import type {
+  DiscoveredConfig,
+  ScaffoldMeta,
+  ScaffoldRemovals,
+  ScaffoldSelection,
+} from "./configs";
+import { DEFAULT_SCOPE, discoverConfigs } from "./configs";
 
 export interface ScaffolderOptions {
   targetDir?: string;
@@ -12,7 +17,7 @@ export interface ScaffolderOptions {
   /** Repository name used for badge, Cargo and Pages URLs. */
   repo?: string;
   /** Flag -> selected value for opt-in configs (from scaffold metadata). */
-  configs?: Record<string, boolean | string>;
+  configs?: Record<string, ScaffoldSelection>;
 }
 
 /** Identity that badge/Cargo/Pages URLs are rewritten to. */
@@ -337,13 +342,13 @@ export class MonorepoScaffolder {
   readonly gitHooks: boolean;
   readonly owner: string;
   readonly repo: string;
-  readonly configs: Record<string, boolean | string>;
-  private readonly placeholder = "@myorg";
+  readonly configs: Record<string, ScaffoldSelection>;
+  private readonly placeholder = DEFAULT_SCOPE;
   private disabledScopes = new Set<string>(["template"]);
 
   constructor(options: ScaffolderOptions = {}) {
     this.targetDir = options.targetDir ?? ".";
-    this.scope = options.scope ?? "@myorg";
+    this.scope = options.scope ?? DEFAULT_SCOPE;
     this.gitHooks = options.gitHooks ?? true;
     this.owner = options.owner ?? resolveOwner();
     this.repo = options.repo ?? resolveRepo(this.targetDir);
@@ -477,17 +482,17 @@ export class MonorepoScaffolder {
    * Returns the selected value for an opt-in config, falling back to the
    * metadata default when no explicit override was provided.
    */
-  private selectedFor(meta: ScaffoldMeta): boolean | string {
+  private selectedFor(meta: ScaffoldMeta): ScaffoldSelection {
     const selected = meta.flag ? this.configs[meta.flag] : undefined;
     if (selected !== undefined) return selected;
-    return meta.default as boolean | string;
+    return meta.default;
   }
 
   /**
    * A select-type config is disabled when the "none"-ish default is chosen;
    * a confirm-type config is disabled when the user answers "no".
    */
-  private isDisabled(meta: ScaffoldMeta, selected: boolean | string): boolean {
+  private isDisabled(meta: ScaffoldMeta, selected: ScaffoldSelection): boolean {
     return meta.type === "select" ? selected === meta.default : !selected;
   }
 
@@ -498,7 +503,7 @@ export class MonorepoScaffolder {
    * per-value removals so both are honored (e.g. template self-destruct has
    * top-level scriptsToRemove + per-value extraRemovals).
    */
-  private removalsFor(meta: ScaffoldMeta, selected: boolean | string): ScaffoldRemovals {
+  private removalsFor(meta: ScaffoldMeta, selected: ScaffoldSelection): ScaffoldRemovals {
     const base: ScaffoldRemovals = {
       extraRemovals: meta.extraRemovals,
       scriptsToRemove: meta.scriptsToRemove,

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { spawnSync, which } from "bun";
 import { defineCommand, runMain } from "citty";
 import {
+  DEFAULT_NATIVE_SCOPE,
   NATIVE_DIR,
   NATIVE_NPM_DIR,
   NATIVE_TARGETS,
@@ -431,7 +432,7 @@ async function resolveScope(explicit?: string): Promise<string> {
     }
   }
 
-  return process.env.NATIVE_SCOPE ?? "@myorg";
+  return process.env.NATIVE_SCOPE ?? DEFAULT_NATIVE_SCOPE;
 }
 
 const addCommand = defineCommand({

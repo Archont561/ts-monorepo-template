@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  DEFAULT_NATIVE_SCOPE,
   NATIVE_TARGET_TRIPLES,
   NATIVE_WASM_TARGET,
   type NativeCrateSpec,
@@ -24,7 +25,7 @@ export type TemplateOptions = {
   repository?: string;
 };
 
-const SCOPE = (options: TemplateOptions): string => options.scope ?? "@myorg";
+const SCOPE = (options: TemplateOptions): string => options.scope ?? DEFAULT_NATIVE_SCOPE;
 const REPO = (options: TemplateOptions): string =>
   options.repository ?? "https://github.com/OWNER/REPO";
 

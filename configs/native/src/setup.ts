@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { $, file, spawnSync } from "bun";
 import {
   DEFAULT_NATIVE_CRATES,
+  DEFAULT_NATIVE_SCOPE,
   NATIVE_DIR,
   NATIVE_WORKSPACE_GLOB,
   type NativeCrateSpec,
@@ -48,7 +49,7 @@ const REPO_PLACEHOLDER = "Archont561/ts-monorepo-template";
 const NATIVE_ROOT = join(TARGET_DIR, NATIVE_DIR);
 const REPO_URL = repositoryUrl();
 /** Rewritten by the scaffolder — the npm scope every generated manifest uses. */
-const SCOPE = process.env.NATIVE_SCOPE ?? "@myorg";
+const SCOPE = process.env.NATIVE_SCOPE ?? DEFAULT_NATIVE_SCOPE;
 
 const ROOT_PACKAGE_JSON = join(TARGET_DIR, "package.json");
 const TURBO_BASE = join(TARGET_DIR, "configs/turbo/turbo.base.json");

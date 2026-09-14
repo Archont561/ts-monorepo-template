@@ -4,6 +4,9 @@ import { join } from "node:path";
 import { $, file, write } from "bun";
 import { defineCommand, runCommand, runMain } from "citty";
 
+/** Scope the curated skills are written with — rewritten by the scaffolder. */
+const DEFAULT_SKILLS_SCOPE = "@myorg";
+
 const CURATED_DIR = `${import.meta.dir}/../skills`;
 const TARGET_DIR = `${process.cwd()}/.agents/skills`;
 const INDEX_FILE = `${process.cwd()}/.agents/skills.index.json`;
@@ -79,8 +82,8 @@ async function findAllSkillMd(dir: string): Promise<string[]> {
 const syncCommand = defineCommand({
   meta: { name: "sync", description: "Sync curated skills to .agents/skills/ + validate + index" },
   run: async () => {
-    const scope = process.env.SKILLS_SCOPE || process.env.SCOPE || "@myorg";
-    const placeholder = "@myorg";
+    const scope = process.env.SKILLS_SCOPE || process.env.SCOPE || DEFAULT_SKILLS_SCOPE;
+    const placeholder = DEFAULT_SKILLS_SCOPE;
     await mkdir(TARGET_DIR, { recursive: true });
     console.log(
       `\n📦 Syncing curated skills from ${CURATED_DIR} to ${TARGET_DIR}/ (scope: ${scope})\n`,

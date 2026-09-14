@@ -2,6 +2,9 @@ import { FileSystemRouter, serve } from "bun";
 import { appFile, detectFeatures, hasUnocss } from "./features";
 import { PORT } from "./port";
 
+/** How long the generated CSS may be cached — the build is deterministic. */
+const CSS_CACHE_MAX_AGE_SECONDS = 60;
+
 // Detect opt-in features via file existence (handled via scaffold file deletion)
 const { native: nativeEnabled } = await detectFeatures();
 // The log line describes which page `/` serves, so it asks about the page itself
@@ -33,7 +36,7 @@ const server = serve({
           return new Response(await unoCssFile.text(), {
             headers: {
               "Content-Type": "text/css; charset=utf-8",
-              "Cache-Control": "public, max-age=60",
+              "Cache-Control": `public, max-age=${CSS_CACHE_MAX_AGE_SECONDS}`,
             },
           });
         }

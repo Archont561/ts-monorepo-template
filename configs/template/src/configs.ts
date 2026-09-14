@@ -1,5 +1,20 @@
 import { $, file } from "bun";
 
+/** Values the native config accepts — one source of truth for the select metadata. */
+export const NATIVE_MODES = { none: "none", publish: "publish", docker: "docker" } as const;
+
+/** A native build mode: skip bindings, publish them, or build them in Docker. */
+export type NativeMode = (typeof NATIVE_MODES)[keyof typeof NATIVE_MODES];
+
+/**
+ * How a scaffolder flag is selected: `"always"` for always-on configs, a boolean
+ * for confirm configs, or one of the select-type modes.
+ */
+export type ScaffoldSelection = boolean | "always" | NativeMode;
+
+/** The scope every placeholder in the template is written as. */
+export const DEFAULT_SCOPE = "@myorg";
+
 export interface ScaffoldRemovals {
   extraRemovals?: string[];
   scriptsToRemove?: string[];
@@ -12,14 +27,15 @@ export interface ScaffoldRemovals {
 }
 
 export interface ScaffoldMeta extends ScaffoldRemovals {
-  /** "always" = never removed. boolean/string = default for opt-in. */
-  default: "always" | boolean | string;
+  /** "always" = never removed. boolean/mode = default for opt-in. */
+  default: ScaffoldSelection;
   /** Template-only workspace: always removed from generated projects. */
   selfDestruct?: boolean;
   flag?: string;
   prompt?: string;
   type?: "confirm" | "select";
-  options?: Array<{ value: string; label: string }>;
+  /** Select values — the typed vocabulary, so a typo cannot fall through. */
+  options?: Array<{ value: NativeMode; label: string }>;
   setup?: string;
   removals?: Record<string, ScaffoldRemovals>;
 }

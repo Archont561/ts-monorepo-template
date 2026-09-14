@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { $, file, write } from "bun";
+import { discoverConfigs, NATIVE_MODES } from "../src/configs";
 import {
   collectScopeTargets,
   MonorepoScaffolder,
@@ -1045,3 +1047,46 @@ function setDisabledScopes(s: MonorepoScaffolder, scopes: string[]): void {
 async function pathExists(path: string): Promise<boolean> {
   return (await $`test -e ${path}`.nothrow().quiet()).exitCode === 0;
 }
+
+// ── scaffold metadata vocabulary ─────────────────
+
+describe("scaffold metadata", () => {
+  const repoRoot = join(import.meta.dir, "../../..");
+
+  test("the native select offers exactly the NATIVE_MODES values", async () => {
+    const configs = await discoverConfigs(repoRoot);
+    const native = configs.find((config) => config.meta.flag === "native");
+    expect(native).toBeDefined();
+
+    // Renaming a mode in one place and not the other is what this catches: the
+    // select would offer a value that has no removal set (or vice versa).
+    const modes = Object.values(NATIVE_MODES).sort();
+    expect((native?.meta.options ?? []).map((option) => option.value).sort()).toEqual(modes);
+    expect(Object.keys(native?.meta.removals ?? {}).sort()).toEqual(modes);
+  });
+
+  test("every select config defaults to one of its own options", async () => {
+    const configs = await discoverConfigs(repoRoot);
+    const selects = configs.filter((config) => config.meta.type === "select");
+    expect(selects.length).toBeGreaterThan(0);
+
+    for (const config of selects) {
+      const values = (config.meta.options ?? []).map((option) => String(option.value));
+      expect(values, config.name).toContain(String(config.meta.default));
+      expect(values.length, config.name).toBeGreaterThan(0);
+    }
+  });
+
+  test("a select config keys its removals by the values it offers", async () => {
+    const configs = await discoverConfigs(repoRoot);
+    const selects = configs.filter((config) => config.meta.type === "select");
+
+    for (const config of selects) {
+      const values = (config.meta.options ?? []).map((option) => String(option.value));
+      for (const key of Object.keys(config.meta.removals ?? {})) {
+        // A removal set keyed by a mode nobody can pick is dead configuration.
+        expect(values, `${config.name} → ${key}`).toContain(key);
+      }
+    }
+  });
+});
