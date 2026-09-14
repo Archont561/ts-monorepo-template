@@ -106,7 +106,8 @@ export async function aggregateWorkflow(
     stepsFileName === "coverage.steps.yml" ||
     stepsFileName === "dependabot.yml" ||
     stepsFileName === "dependabot-auto-merge.steps.yml" ||
-    stepsFileName === "stale.steps.yml"
+    stepsFileName === "stale.steps.yml" ||
+    stepsFileName === "native.steps.yml"
   ) {
     const found =
       await $`find ${targetDir}/configs -mindepth 2 -maxdepth 2 -name ${stepsFileName} -type f`.text();
@@ -189,6 +190,18 @@ export async function regenerateAll(targetDir: string): Promise<void> {
           `🗑️ Removed ${coverageWorkflow} (${templateDocsExists ? "coverage published by the docs site" : "coverage included in pages.yml"})`,
         );
       }
+    }
+  }
+  // Native build matrix: one job per target triple, then a fan-in job that
+  // assembles the per-platform npm packages. Only when configs/native is kept —
+  // deleting the config deletes the workflow with it.
+  if (await file(`${targetDir}/configs/native/package.json`).exists()) {
+    await aggregateWorkflow(targetDir, "native.base.yml", "native.steps.yml");
+  } else {
+    const nativeWorkflow = `${targetDir}/.github/workflows/native.yml`;
+    if (await file(nativeWorkflow).exists()) {
+      await $`rm -rf ${nativeWorkflow}`.quiet();
+      console.log(`🗑️ Removed ${nativeWorkflow} (native disabled)`);
     }
   }
   // Dependabot is always generated (always config), but check existence for safety

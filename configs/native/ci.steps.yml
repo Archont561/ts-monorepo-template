@@ -38,7 +38,7 @@
         shell: bash
 
       - name: Check native package types
-        if: hashFiles('{{NATIVE_MANIFEST}}') != ''
+        if: hashFiles('{{NATIVE_NPM}}') != ''
         run: mnative typecheck
         shell: bash
       # TEMPLATE-ONLY:END(native)

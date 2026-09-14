@@ -1,0 +1,147 @@
+name: Native
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - packages/native/**
+      - configs/native/**
+      - .github/workflows/native.yml
+  pull_request:
+    paths:
+      - packages/native/**
+      - configs/native/**
+      - .github/workflows/native.yml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+# The WASI SDK is only downloaded for the wasm32-wasip1-threads job; the version
+# is pinned in configs/native (24) so the toolchain and
+# the CI stay on the same release.
+env:
+  WASI_SDK_VERSION: 24
+
+jobs:
+  # One entry per target triple, printed by `mnative matrix --gha`: the runner
+  # and container images live in configs/native next to the `napi.targets` each
+  # package declares, so this file never lists a platform by hand.
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.matrix.outputs.targets }}
+      has_targets: ${{ steps.matrix.outputs.has_targets }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - id: matrix
+        run: mnative matrix --gha >> "$GITHUB_OUTPUT"
+
+  # Compile the bindings. Each job uploads its .node/.wasm; nothing here is
+  # published — the fan-in job assembles the platform packages.
+  build:
+    needs: matrix
+    if: needs.matrix.outputs.has_targets == 'true'
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    # Blank for targets that build on the runner itself (macOS, Windows, WASI).
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.targets) }}
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "packages/native"
+          key: ${{ matrix.target }}
+
+      # The WASI SDK provides the clang that links wasm32-wasip1-threads.
+      - name: Install WASI SDK
+        if: matrix.wasi
+        run: |
+          set -euo pipefail
+          curl -fsSL -o wasi-sdk.tar.gz \
+            "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VERSION}/wasi-sdk-${WASI_SDK_VERSION}.0-x86_64-linux.tar.gz"
+          mkdir -p "${RUNNER_TEMP}/wasi-sdk"
+          tar -xzf wasi-sdk.tar.gz -C "${RUNNER_TEMP}/wasi-sdk" --strip-components=1
+          echo "WASI_SDK_PATH=${RUNNER_TEMP}/wasi-sdk" >> "$GITHUB_ENV"
+        shell: bash
+
+      - run: bun install --frozen-lockfile
+
+      # One triple per job — `napi build` cannot cross-compile them all at once.
+      - name: Build bindings
+        run: mnative napi:build --target ${{ matrix.target }}
+        shell: bash
+
+      - name: Upload bindings
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-${{ matrix.target }}
+          path: |
+            packages/native/npm/*/*.node
+            packages/native/npm/*/*.wasm
+            packages/native/npm/*/*.mjs
+            packages/native/npm/*/*.cjs
+          if-no-files-found: error
+
+  # Download every target's binary and let napi sort them into the per-platform
+  # npm packages (`napi create-npm-dirs` + `napi artifacts`). Those directories
+  # are generated here and never committed.
+  assemble:
+    needs: [matrix, build]
+    if: needs.matrix.outputs.has_targets == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Download bindings
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bindings-*
+          path: packages/native/npm/.artifacts
+          merge-multiple: true
+
+      - name: Create platform package dirs
+        run: mnative create-npm-dirs
+
+      - name: Move binaries into their platform packages
+        run: mnative artifacts --dir packages/native/npm/.artifacts
+
+      - name: Upload npm packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-npm-packages
+          path: |
+            packages/native/npm/**
+            !packages/native/npm/.artifacts/**

@@ -41,7 +41,8 @@ that have a single source of truth in TypeScript (`src/vars.ts`):
 | `{{BUN_VERSION}}` | Bun version installed by the workflow |
 | `{{NATIVE_DIR}}` | `packages/native` |
 | `{{NATIVE_CARGO}}` | `packages/native/Cargo.toml` |
-| `{{NATIVE_MANIFEST}}` | `packages/native/package.json` |
+| `{{NATIVE_NPM}}` | `packages/native/npm/*/package.json` |
+| `{{NATIVE_WASI_SDK_VERSION}}` | WASI SDK release used by the native workflow |
 | `{{APP_DIR}}` | `apps/example` |
 | `{{APP_DOCKERFILE}}` | `apps/example/Dockerfile` |
 

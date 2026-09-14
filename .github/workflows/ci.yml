@@ -155,7 +155,7 @@ jobs:
         shell: bash
 
       - name: Check native package types
-        if: hashFiles('packages/native/package.json') != ''
+        if: hashFiles('packages/native/npm/*/package.json') != ''
         run: mnative typecheck
         shell: bash
       # TEMPLATE-ONLY:END(native)

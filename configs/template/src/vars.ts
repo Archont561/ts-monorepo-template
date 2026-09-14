@@ -27,7 +27,11 @@ export const WORKFLOW_VARS = {
   BUN_VERSION,
   NATIVE_DIR,
   NATIVE_CARGO: `${NATIVE_DIR}/Cargo.toml`,
-  NATIVE_MANIFEST: `${NATIVE_DIR}/package.json`,
+  // One npm package per binding crate, so the workflow guards on a glob rather
+  // than a single path. `hashFiles` understands globs.
+  NATIVE_NPM: `${NATIVE_DIR}/npm/*/package.json`,
+  // Keep in sync with NATIVE_WASI_SDK_VERSION in configs/native/index.ts.
+  NATIVE_WASI_SDK_VERSION: "24",
   APP_DIR,
   APP_DOCKERFILE: `${APP_DIR}/Dockerfile`,
 } as const;

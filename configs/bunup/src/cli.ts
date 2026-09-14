@@ -15,12 +15,30 @@ function run(cmd: string[], cwd?: string): number {
 }
 
 /**
+ * Workspace globs from the root package.json. Read rather than hardcoded so
+ * nested layouts — `packages/native/npm/*` for the native bindings — are
+ * health-checked without this config knowing about them.
+ */
+function workspaceGlobs(): string[] {
+  try {
+    const root = JSON.parse(readFileSync("package.json", "utf8"));
+    const globs = Array.isArray(root.workspaces)
+      ? root.workspaces.filter((g: unknown): g is string => typeof g === "string")
+      : [];
+    if (globs.length > 0) return globs;
+  } catch {
+    // no readable root manifest — fall through to the conventional layout
+  }
+  return ["packages/*", "configs/*", "apps/*"];
+}
+
+/**
  * Every workspace package that isn't `private` — these are the ones that would
  * actually hit the registry, so they are the ones worth health-checking.
  */
 function publishablePackages(): string[] {
   const found: string[] = [];
-  for (const pattern of ["packages/*", "configs/*", "apps/*"]) {
+  for (const pattern of workspaceGlobs()) {
     for (const pkgJson of new Glob(`${pattern}/package.json`).scanSync(".")) {
       try {
         const pkg = JSON.parse(readFileSync(pkgJson, "utf8"));
