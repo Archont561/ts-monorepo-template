@@ -34,6 +34,8 @@ export interface WrapperOptions {
    * paths are in place, so it appends them.
    */
   configArgsPlacement?: "prepend" | "append";
+  /** Extra subcommands to register next to the wrapper's passthrough run. */
+  subCommands?: Record<string, CommandDef>;
 }
 
 export function defineWrapperCommand(opts: WrapperOptions) {
@@ -43,6 +45,7 @@ export function defineWrapperCommand(opts: WrapperOptions) {
       version: opts.version ?? "1.0.0",
       description: opts.description,
     },
+    subCommands: opts.subCommands,
     args: {
       [opts.argsName ?? "args"]: {
         type: "positional",

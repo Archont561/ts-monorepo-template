@@ -15,6 +15,7 @@
     ".": "./index.ts"
   },
   "devDependencies": {
+    "@myorg/citty": "workspace:*",
     "bunup": "^0.16.32"
   },
   "dependencies": {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { existsSync, readFileSync } from "node:fs";
+import { defineCommand, defineWrapperCommand, runMain } from "@myorg/citty";
 import { Glob, spawnSync } from "bun";
-import { defineCommand, runMain } from "citty";
 
 function run(cmd: string[], cwd?: string): number {
   const result = spawnSync({
@@ -101,31 +101,19 @@ const healthCommand = defineCommand({
   },
 });
 
-const main = defineCommand({
-  meta: {
-    name: "mbunup",
-    version: "1.0.0",
-    description: "Bunup wrapper — bundler owned by @myorg/bunup, hoisted, use mbunup not bunup",
-  },
-  args: {
-    entry: { type: "positional", description: "Entry files or bunup args", required: false },
-  },
-  subCommands: {
-    health: healthCommand,
-  },
-  run() {
-    const bunup = Bun.fileURLToPath(
-      import.meta.resolve("bunup/package.json").replace("package.json", "dist/cli/index.js"),
-    );
-    const args = process.argv.slice(2);
-    const result = spawnSync({
-      cmd: ["bun", bunup, ...args],
-      stdout: "inherit",
-      stderr: "inherit",
-      stdin: "inherit",
-    });
-    process.exit(result.exitCode);
-  },
+const BUNUP = Bun.fileURLToPath(
+  import.meta.resolve("bunup/package.json").replace("package.json", "dist/cli/index.js"),
+);
+
+const main = defineWrapperCommand({
+  name: "mbunup",
+  version: "1.0.0",
+  description: "Bunup wrapper — bundler owned by @myorg/bunup, hoisted, use mbunup not bunup",
+  binPath: "bun",
+  configArgs: [BUNUP],
+  argsName: "entry",
+  argsDescription: "Entry files or bunup args",
+  subCommands: { health: healthCommand },
 });
 
 runMain(main);
