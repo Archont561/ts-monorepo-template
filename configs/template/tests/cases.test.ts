@@ -495,6 +495,10 @@ describe("template cases — common flows with every combination", () => {
         });
         await scaffolder.execute();
         const hasNative = await pathExists(`${result.templateDir}/packages/native`);
+        // The build-matrix workflow is generated with configs/native and deleted with it.
+        expect(await pathExists(`${result.templateDir}/.github/workflows/native.yml`)).toBe(
+          opt !== "none",
+        );
         if (opt === "none") {
           expect(hasNative).toBe(false);
         } else {
@@ -505,8 +509,23 @@ describe("template cases — common flows with every combination", () => {
           expect(await pathExists(`${result.templateDir}/packages/native/.cargo/config.toml`)).toBe(
             true,
           );
-          // tsconfig should have scope replaced
-          const tsconfig = await file(`${result.templateDir}/packages/native/tsconfig.json`).text();
+          // Cargo workspace: virtual manifest + one crate per binding
+          const workspace = await file(`${result.templateDir}/packages/native/Cargo.toml`).text();
+          expect(workspace).toContain("[workspace]");
+          expect(workspace).toContain('"crates/native"');
+          const crate = await file(
+            `${result.templateDir}/packages/native/crates/native/Cargo.toml`,
+          ).text();
+          expect(crate).toContain("cdylib");
+          // npm package: napi config, and the scope rewritten everywhere
+          const npmPkg = await file(
+            `${result.templateDir}/packages/native/npm/native/package.json`,
+          ).json();
+          expect(npmPkg.napi.binaryName).toBe("native");
+          expect(npmPkg.scripts.build).toBe("mnative napi:build --only native");
+          const tsconfig = await file(
+            `${result.templateDir}/packages/native/npm/native/tsconfig.json`,
+          ).text();
           expect(tsconfig).toContain("@native-test/ts");
           expect(tsconfig).not.toContain("@myorg");
         }

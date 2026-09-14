@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { $, file, spawnSync, write } from "bun";
+import { $, file, Glob, spawnSync, write } from "bun";
 import { aggregateWorkflow } from "./aggregate";
 import type { ScaffoldMeta, ScaffoldRemovals } from "./configs";
 import { discoverConfigs } from "./configs";
@@ -185,12 +185,10 @@ export class MonorepoScaffolder {
       "packages/external/src/user.ts",
       "packages/external/src/native.ts",
 
-      // Native package (self-contained, no root Cargo.toml)
-      "packages/native/package.json",
-      "packages/native/tsconfig.json",
+      // Native workspace (self-contained, no root Cargo.toml)
       "packages/native/Cargo.toml",
-      "packages/native/src/lib.rs",
-      "packages/native/README.md",
+      // The npm packages underneath it are discovered below — there is one per
+      // binding crate, so they cannot be listed here.
 
       // Example app
       "apps/example/package.json",
@@ -226,6 +224,13 @@ export class MonorepoScaffolder {
       ".editorconfig",
       ".gitattributes",
     ];
+
+    // Native npm packages: one per binding crate (`crates/*` → `npm/*`), so
+    // they are discovered rather than enumerated.
+    const nativeGlob = new Glob("packages/native/npm/**/*.{json,ts,md}");
+    for await (const relativePath of nativeGlob.scan({ cwd: this.targetDir })) {
+      files.push(relativePath);
+    }
 
     // Config package manifests and config files carry the @myorg scope in
     // their names and contents (e.g. changeset ignore lists). Replacing the
@@ -659,6 +664,18 @@ export class MonorepoScaffolder {
           await $`rm -rf ${coverageWorkflow}`.quiet();
           console.log(`🗑️ Removed ${coverageWorkflow} (coverage included in pages.yml)`);
         }
+      }
+    }
+    // Native build matrix: one job per target triple, then a fan-in job that
+    // assembles the per-platform npm packages. Generated with configs/native so
+    // choosing `none` deletes the workflow along with the config.
+    if (await file(`${this.targetDir}/configs/native/package.json`).exists()) {
+      await aggregateWorkflow(this.targetDir, "native.base.yml", "native.steps.yml");
+    } else {
+      const nativeWorkflow = `${this.targetDir}/.github/workflows/native.yml`;
+      if (await file(nativeWorkflow).exists()) {
+        await $`rm -rf ${nativeWorkflow}`.quiet();
+        console.log(`🗑️ Removed ${nativeWorkflow} (native disabled)`);
       }
     }
     // Dependabot is always generated (always config), but check existence for safety
