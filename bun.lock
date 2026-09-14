@@ -87,6 +87,9 @@
       "dependencies": {
         "citty": "^0.2.2",
       },
+      "devDependencies": {
+        "@myorg/citty": "workspace:*",
+      },
     },
     "configs/bunup": {
       "name": "@myorg/bunup",
