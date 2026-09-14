@@ -185,7 +185,7 @@ configs/
 configs/
   codeql/           SAST via CodeQL — opt-in default true
   devcontainer/     Codespaces / Dev Containers — opt-in
-  native/           NAPI-RS bindings — opt-in (publish/docker/none)
+  native/           NAPI-RS bindings (mnative) — opt-in (publish/docker/none)
   pages/            GitHub Pages deployment — opt-in
   playwright/       E2E testing (me2e) — opt-in default true
   skills/           AI agent skills (mskills) — opt-in

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Production-ready Dockerfile for @myorg/example
-# Self-contained native: packages/native/Cargo.toml only, no root Cargo.toml, via mnative CLI
+# Native: packages/native is a virtual Cargo workspace (crates/* + npm/*), driven by mnative
 # Follows guide: pinned tags, multi-stage, layer caching, non-root, exec form, HEALTHCHECK, OCI labels, BuildKit cache
 
 ARG BUN_VERSION=1.4.2
@@ -23,7 +23,7 @@ COPY package.json bun.lock ./
 COPY apps/example/package.json ./apps/example/package.json
 COPY packages/external/package.json ./packages/external/package.json
 COPY packages/internal/package.json ./packages/internal/package.json
-COPY packages/native/package.json ./packages/native/package.json
+COPY packages/native/npm/native/package.json ./packages/native/npm/native/package.json
 COPY configs/biome/package.json ./configs/biome/package.json
 COPY configs/bun-config/package.json ./configs/bun-config/package.json
 COPY configs/bunup/package.json ./configs/bunup/package.json
@@ -44,10 +44,9 @@ COPY configs/ts/package.json ./configs/ts/package.json
 COPY configs/turbo/package.json ./configs/turbo/package.json
 COPY configs/unocss/package.json ./configs/unocss/package.json
 
-# Copy Rust manifests self-contained (no root Cargo.toml)
-COPY rust-toolchain.toml .cargo/config.toml* ./.cargo/ 2>/dev/null || true
-COPY packages/native/Cargo.toml ./packages/native/Cargo.toml
-COPY packages/native/build.rs ./packages/native/build.rs
+# The Rust workspace lives in packages/native (no root Cargo.toml): the virtual
+# manifest, its crates and their npm packages — busted only when they change.
+COPY packages/native/ ./packages/native/
 
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile || bun install
@@ -67,9 +66,9 @@ RUN if [ -f "configs/unocss/uno.config.ts" ]; then \
       echo "UnoCSS not enabled, skipping"; \
     fi
 
-# Cargo via mnative CLI (self-contained, no root Cargo.toml)
+# Cargo via mnative CLI (virtual workspace in packages/native)
 RUN if [ -f "packages/native/Cargo.toml" ]; then \
-      echo "🦀 Native package detected (self-contained)"; \
+      echo "🦀 Native workspace detected (packages/native)"; \
       if command -v cargo >/dev/null 2>&1; then \
         echo "→ mnative check (fast)"; \
         bun run --filter @myorg/native-config run build || true; \
@@ -103,19 +102,18 @@ RUN curl -fsSL https://bun.sh/install | bash && \
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package.json ./package.json
 COPY --from=deps /app/bun.lock ./bun.lock
-COPY rust-toolchain.toml ./
-COPY .cargo/ ./.cargo/ 2>/dev/null || true
+# rust-toolchain.toml and .cargo/config.toml live inside packages/native
 COPY packages/native/ ./packages/native/
 COPY configs/ ./configs/
 COPY packages/ ./packages/
 COPY apps/ ./apps/
 
-# Build Rust release + napi via mnative (self-contained)
+# Build every crate + every binding in the workspace via mnative
 RUN if [ -f "packages/native/Cargo.toml" ]; then \
       echo "🦀 Rust-builder: mnative build:release"; \
-      ./node_modules/.bin/mnative build:release || cargo build --manifest-path packages/native/Cargo.toml --release || true; \
-      echo "🦀 Rust-builder: mnative napi:build"; \
-      bun --filter @myorg/native run build || ./node_modules/.bin/mnative napi:build || true; \
+      ./node_modules/.bin/mnative build:release || cargo build --manifest-path packages/native/Cargo.toml --workspace --release || true; \
+      echo "🦀 Rust-builder: mnative napi:build (once per package)"; \
+      ./node_modules/.bin/mnative napi:build || bun --filter @myorg/native run build || true; \
     else \
       echo "No native Cargo.toml in rust-builder, skipping"; \
     fi
@@ -145,13 +143,13 @@ COPY --from=builder --chown=app:app /app/apps/example ./apps/example
 COPY --from=builder --chown=app:app /app/packages ./packages
 COPY --from=builder --chown=app:app /app/configs ./configs
 COPY --from=builder --chown=app:app /app/node_modules ./node_modules
-COPY --from=builder --chown=app:app /app/rust-toolchain.toml ./rust-toolchain.toml 2>/dev/null || true
 
-COPY --from=rust-builder --chown=app:app /app/packages/native/*.node ./packages/native/ 2>/dev/null || true
-COPY --from=rust-builder --chown=app:app /app/packages/native/index.js ./packages/native/ 2>/dev/null || true
-COPY --from=rust-builder --chown=app:app /app/packages/native/index.d.ts ./packages/native/ 2>/dev/null || true
-COPY --from=rust-builder --chown=app:app /app/packages/native/*.wasi.cjs ./packages/native/ 2>/dev/null || true
-COPY --from=rust-builder --chown=app:app /app/packages/native/target ./packages/native/target 2>/dev/null || true
+# Built bindings: one npm package per crate, loaders + binaries generated next to it
+COPY --from=rust-builder --chown=app:app /app/packages/native/npm/*/*.node ./packages/native/npm/native/ 2>/dev/null || true
+COPY --from=rust-builder --chown=app:app /app/packages/native/npm/*/*.wasm ./packages/native/npm/native/ 2>/dev/null || true
+COPY --from=rust-builder --chown=app:app /app/packages/native/npm/*/index.js ./packages/native/npm/native/ 2>/dev/null || true
+COPY --from=rust-builder --chown=app:app /app/packages/native/npm/*/index.d.ts ./packages/native/npm/native/ 2>/dev/null || true
+COPY --from=rust-builder --chown=app:app /app/packages/native/npm/*/*.wasi.cjs ./packages/native/npm/native/ 2>/dev/null || true
 
 COPY --from=builder --chown=app:app /app/apps/example/public ./apps/example/public 2>/dev/null || true
 

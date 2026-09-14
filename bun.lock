@@ -396,7 +396,7 @@
         "@myorg/ts": "workspace:*",
       },
     },
-    "packages/native": {
+    "packages/native/npm/native": {
       "name": "@myorg/native",
       "version": "0.0.0",
       "devDependencies": {
@@ -719,7 +719,7 @@
 
     "@myorg/lefthook": ["@myorg/lefthook@workspace:configs/lefthook"],
 
-    "@myorg/native": ["@myorg/native@workspace:packages/native"],
+    "@myorg/native": ["@myorg/native@workspace:packages/native/npm/native"],
 
     "@myorg/native-config": ["@myorg/native-config@workspace:configs/native"],
 

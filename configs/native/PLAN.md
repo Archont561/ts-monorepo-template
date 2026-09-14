@@ -1,6 +1,12 @@
 # Rust + napi-rs Integration Plan for Bun Monorepo
 
 > How to integrate native Rust speed into TypeScript packages with WASM fallback and platform-specific binaries.
+>
+> Historical design record — `packages/native` has since become a **virtual Cargo
+> workspace** (`crates/*` + `npm/*`, see [README.md](./README.md) and
+> [AGENT.md](./AGENT.md)). Sections below are updated where the layout changed;
+> the rationale (why opt-in, why no root `Cargo.toml`, why WASM fallback) still
+> holds.
 
 ## 1. What napi-rs is
 
@@ -20,7 +26,7 @@ rustup --version
 bun --version
 ```
 
-## 3. Monorepo Structure (Refactored — no root Cargo.toml)
+## 3. Monorepo Structure (virtual Cargo workspace in packages/native)
 
 ```
 my-monorepo/
@@ -31,25 +37,35 @@ my-monorepo/
         native.ts     # Native import with fallback
     internal/         # Private TS impl
     native/           # Rust + napi-rs (opt-in, only when selected)
-      Cargo.toml      # Self-contained Rust crate (cdylib, edition 2021, direct deps, profiles) — NO root Cargo.toml
-      build.rs        # napi-build
-      src/
-        lib.rs        # Rust code with #[napi] macros
-      package.json    # napi config + scripts (targets, binaryName) + cargo:* via mnative
-      npm/            # per-platform optional packages (generated)
-      index.js        # generated JS loader (auto picks .node)
-      index.d.ts      # generated TS types
-      index.wasi.cjs  # WASM loader (if wasm target)
-      *.node          # native binaries (per-platform, gitignored)
+      Cargo.toml      # virtual workspace — resolver 3, members = crates/*, NO [package]
+      rust-toolchain.toml # stable + rustfmt, clippy, wasm32-wasip1-threads
+      .cargo/config.toml  # optional build config (WASI linker)
+      .gitignore      # generated loaders, binaries, npm per-platform dirs
+      crates/
+        native/       # one crate per Rust unit
+          Cargo.toml  # inherits from the workspace, crate-type = ["cdylib"]
+          build.rs    # napi-build
+          src/
+            lib.rs    # Rust code with #[napi] macros
+      npm/
+        native/       # one npm package per binding crate
+          package.json # napi config (targets, binaryName) + mnative --only scripts
+          tsconfig.json
+          index.js    # generated JS loader (auto picks .node)
+          index.d.ts  # generated TS types
+          *.node      # native binaries (per-platform, gitignored)
+          native-*/   # per-platform optional packages (generated in CI)
   configs/
     native/           # Opt-in config, provides @napi-rs/cli + mnative CLI
       package.json    # scaffold metadata (none/publish/docker) + bin: mnative
       src/
-        cli.ts        # mnative CLI (cargo wrapper: check, clippy, fmt, test, build, napi:build)
-        setup.ts      # Setup script that scaffolds packages/native self-contained when enabled
-  packages/native/
-    rust-toolchain.toml # stable + rustfmt, clippy, wasm32-wasip1-threads (self-contained, no root file)
-    .cargo/config.toml  # optional build config (self-contained)
+        cli.ts        # mnative CLI (cargo workspace-wide + napi per package)
+        discover.ts   # crates/packages discovery from disk
+        templates.ts  # generated file bodies
+        setup.ts      # Setup script that scaffolds packages/native when enabled
+      native.base.yml # native.yml skeleton (matrix → build → assemble)
+      native.steps.yml
+      ci.steps.yml
   apps/
     example/          # Demo app, can import from external which may use native
 ```
@@ -115,15 +131,18 @@ Current `configs/native/package.json` scaffold:
 `configs/native/src/setup.ts` should:
 
 1. Create `packages/native/` if not exists
-2. Copy templates: `Cargo.toml`, `src/lib.rs`, `package.json` (napi config)
+2. Write the virtual workspace manifest, then one crate (`crates/<name>/Cargo.toml`, `build.rs`, `src/lib.rs`) and one npm package (`npm/<name>/package.json`) per binding
 3. Replace `@myorg` scope with user's scope
-4. Run `napi create-npm-dirs` to create `npm/` per-platform dirs
-5. Add scripts to root `package.json`: `build:native`, `build:wasm`, `test:native`
+4. Migrate the old single-crate layout (`src/`, `build.rs`, `package.json` at the workspace root) if it is still there
+5. Add `packages/native/npm/*` to the root `workspaces`, and `build:native`, `build:wasm`, `test:native` to the root scripts
+
+Per-platform dirs (`npm/<name>-<platform>/`) are generated later in CI by
+`mnative create-npm-dirs` — setup never writes them.
 
 ## 5. Write Rust with #[napi]
 
 ```rust
-// packages/native/src/lib.rs
+// packages/native/crates/native/src/lib.rs
 use napi_derive::napi;
 
 #[napi]
@@ -225,20 +244,34 @@ impl Counter {
 ## 7. Build Locally
 
 ```bash
-# Native for current host
-bun run build:native        # napi build --release --platform
-# or
-bun --filter @myorg/native run build
+# Native for current host — one `napi build` per npm package
+bun run build:native        # → mnative napi:build
+# or just this package
+bun --filter @myorg/native run build   # → mnative napi:build --only native
 
 # Debug (faster)
 bun --filter @myorg/native run build:debug
 
+# Cargo, over the whole workspace
+mnative check               # cargo check --workspace
+mnative clippy              # clippy --workspace --all-targets -- -D warnings
+mnative test                # cargo test --workspace
+
 # WASM fallback
 rustup target add wasm32-wasip1-threads
-bun run build:wasm          # napi build --release --target wasm32-wasip1-threads
+bun run build:wasm          # → mnative napi:build:wasm
 ```
 
-Output: `.node` file (e.g. `native.darwin-arm64.node`) + `index.js` loader picks it up.
+Output: `native.darwin-arm64.node` inside `packages/native/npm/native/`, plus the
+`index.js` loader that picks it up and the generated `index.d.ts`.
+
+Adding a second binding is one command — crate + npm package + workspace member:
+
+```bash
+mnative add parser          # crates/parser + npm/parser
+mnative add shared --pure   # crate only, no Node-API surface
+mnative list                # what builds into what
+```
 
 ## 8. Using in Bun (with Fallback)
 
@@ -323,11 +356,11 @@ Root `package.json` has `optionalDependencies` for each platform.
 ### Publish Flow
 
 ```bash
-# 1. Create per-target npm/ directories
-napi create-npm-dirs
+# 1. Create per-target directories (npm/<name>-<platform>/)
+mnative create-npm-dirs
 
 # 2. (In CI) Build per-target, collect artifacts
-napi artifacts
+mnative artifacts --dir packages/native/npm/.artifacts
 
 # 3. Publish platform packages + root
 napi pre-publish
@@ -335,6 +368,10 @@ napi pre-publish
 # Then
 npm publish --access public
 ```
+
+`native.yml` does steps 1–2: one `build` job per target uploads `bindings-<target>`,
+the `assemble` job downloads them all and runs the two `mnative` commands. The
+generated directories are a CI artifact, never committed.
 
 > [!IMPORTANT]
 > Publishing is not atomic. Run ordinary CI path successfully before release. Never publish locally-built binary as multi-platform — always use `napi artifacts` + `pre-publish` from CI.
@@ -354,50 +391,50 @@ Integrates `cargo-zigbuild` and `cargo-xwin` for many targets on single machine.
 
 ## 12. CI Matrix (GitHub Actions)
 
-Add to `configs/gh-actions/ci.base.yml` + `release.base.yml` fragments:
+Split in two: `ci.steps.yml` verifies on every push, and `native.base.yml` +
+`native.steps.yml` generate `.github/workflows/native.yml` — its own workflow,
+because a seven-target matrix does not belong in the verify job.
 
 ```yaml
-# configs/native/ci.steps.yml
+# configs/native/ci.steps.yml (host target only)
 - name: Build native bindings
-  run: bun run build:native
+  run: mnative napi:build
 
-# For release matrix — one job per target
-strategy:
+# configs/native/native.base.yml (one job per target)
+jobs:
   matrix:
-    include:
-      - host: ubuntu-latest
-        target: x86_64-unknown-linux-gnu
-        build: napi build --release --target x86_64-unknown-linux-gnu --use-napi-cross
-      - host: macos-latest
-        target: aarch64-apple-darwin
-        build: napi build --release --target aarch64-apple-darwin
-      - host: windows-latest
-        target: x86_64-pc-windows-msvc
-        build: napi build --release --target x86_64-pc-windows-msvc
-      - host: ubuntu-latest
-        target: wasm32-wasip1-threads
-        build: napi build --release --target wasm32-wasip1-threads
+    # mnative matrix --gha prints every target the packages declare, with its
+    # runner and (for Linux) the nodejs-rust container image
+    steps:
+      - run: mnative matrix --gha >> "$GITHUB_OUTPUT"
+  build:
+    needs: matrix
+    strategy:
+      matrix: ${{ fromJSON(needs.matrix.outputs.targets) }}
+    container: ${{ matrix.container }}
+    steps:
+      - run: mnative napi:build --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bindings-${{ matrix.target }}
+          path: packages/native/npm/*/*.node
+  assemble:
+    needs: [matrix, build]
+    steps:
+      - run: mnative create-npm-dirs
+      - run: mnative artifacts --dir packages/native/npm/.artifacts
 
-steps:
-  - uses: actions/checkout@v4
-  - uses: oven-sh/setup-bun@v1
-  - run: bun install
-  - run: ${{ matrix.build }}
-  - uses: actions/upload-artifact@v4
-    with:
-      name: bindings-${{ matrix.target }}
-      path: "*.node"
-
-# Publish job
-- uses: actions/download-artifact@v4
-  with: { path: artifacts }
-- run: napi artifacts
+# Publish job (release flow — out of scope for the matrix itself)
 - run: napi pre-publish --skip-optional-publish
 - run: npm publish --access public
 ```
 
+The matrix is data, not YAML: edit `NATIVE_TARGETS` in `configs/native/index.ts`
+and every workflow follows. `mnative matrix` also filters out targets no package
+declares in `napi.targets`, so trimming a package trims CI.
+
 > [!WARNING]
-> Do not publish binary built on dev machine as if it supported other OS.
+> Do not publish a binary built on your dev machine as if it supported other OS.
 
 ### Turbo Integration
 
@@ -449,16 +486,18 @@ NAPI_RS_ENFORCE_VERSION_CHECK=1 bun run build
 
 We have:
 
-- `packages/native/` — example native package (opt-in, removed when `none`)
-  - `Cargo.toml` — cdylib crate with napi-derive
-  - `src/lib.rs` — `add`, `fibonacci`, `Counter` struct
-  - `package.json` — napi targets + wasm config + scripts
-  - `index.js`/`index.d.ts` — generated loaders (gitignored, built)
-  - `npm/` — per-platform dirs (generated via `create-npm-dirs`)
+- `packages/native/` — example native workspace (opt-in, removed when `none`)
+  - `Cargo.toml` — virtual workspace: `resolver = "3"`, `members = ["crates/native"]`
+  - `crates/native/` — cdylib crate with napi-derive (`add`, `fibonacci`, `Counter`, …)
+  - `npm/native/` — the npm package built from it (napi targets + wasm config)
+  - `npm/native/index.js`/`index.d.ts` — generated loaders (gitignored, built)
+  - `npm/native-<platform>/` — per-platform dirs (generated via `mnative create-npm-dirs`)
 
 - `configs/native/` — config package
   - `package.json` scaffold with `none`/`publish`/`docker` + `filePatternsToRemove` + `setup`
-  - `src/setup.ts` — scaffolds `packages/native` when enabled
+  - `src/setup.ts` — scaffolds the `packages/native` workspace when enabled
+  - `src/discover.ts` + `src/templates.ts` — discovery and generated file bodies
+  - `native.base.yml`/`native.steps.yml` — the native build-matrix workflow
   - `README.md`/`AGENT.md` — docs
 
 - Integration with `external`:

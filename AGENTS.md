@@ -75,7 +75,7 @@ All tool invocations use `m`-prefixed aliases that bake in config paths. Each co
 | `mgitleaks` | `gitleaks` | Secret scanning — `detect` + `protect --staged` (defensive, always) |
 | `mcodeql` | `codeql` | CodeQL SAST info — runs in Actions (opt-in default true) |
 | `mtrivy` | `trivy` | Vuln scanning — `fs` + `image` + `build` (defensive, opt-in) |
-| `mnative` | `cargo` + `napi` | Rust bindings — check/clippy/fmt/test/build + napi build + typecheck (opt-in) |
+| `mnative` | `cargo` + `napi` | Rust bindings — list/add/matrix, check/clippy/fmt/test/build over the `packages/native` workspace, napi build per package, create-npm-dirs/artifacts + typecheck (opt-in) |
 | `mcoverage` | `genhtml` + `lcov` | Coverage — setup/collect/html/check/pages/merge/summary (always) |
 | `mpages` | GitHub Pages | Pages deploy — `build` discovers declared packages and stages `.pages/`, `base` computes/injects the base path, `list` shows what was found (opt-in) |
 | `munocss` | `unocss` | Atomic CSS — `build`/`watch` with the shared config, no-op when disabled (opt-in) |

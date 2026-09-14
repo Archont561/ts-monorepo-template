@@ -58,8 +58,8 @@ docker run -p 3000:3000 example:latest
 # With native bindings (when Cargo.toml present, auto-detected)
 # The Dockerfile has:
 # - deps stage (bun install --frozen-lockfile with --mount=type=cache)
-# - builder stage (UnoCSS + cargo check + bun run build:native)
-# - rust-builder stage (rust:1.84-bookworm + bun, cargo build --release + napi build)
+# - builder stage (UnoCSS + mnative check/clippy + bun run build:native)
+# - rust-builder stage (rust:1.84-bookworm + bun, mnative build:release + napi build)
 # - runner stage (oven/bun:1.4.2-alpine, non-root app user, HEALTHCHECK)
 
 # BuildKit secrets (never baked into layers)

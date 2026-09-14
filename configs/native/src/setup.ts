@@ -2,47 +2,59 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { $, file, spawnSync } from "bun";
+import {
+  DEFAULT_NATIVE_CRATES,
+  NATIVE_DIR,
+  NATIVE_WORKSPACE_GLOB,
+  type NativeCrateSpec,
+  nativeCrateDir,
+  nativePackageDir,
+} from "../index.ts";
+import {
+  addWorkspaceMember,
+  cargoConfigToml,
+  nativeGitignore,
+  rustToolchainToml,
+  workspaceCargoToml,
+  writeCrate,
+} from "./templates.ts";
 
 /**
- * Setup script for native bindings — run when native config is enabled (publish/docker).
- * Scaffolds packages/native/ with self-contained Cargo.toml + napi-rs structure.
+ * Setup script for native bindings — run when the native config is enabled.
  *
- * Refactored: No root Cargo.toml — packages/native/Cargo.toml is standalone
- * (edition 2021, direct deps, profiles dev/release/ci). All cargo operations
- * via mnative CLI (configs/native/src/cli.ts) or bun --filter @myorg/native.
+ * Scaffolds `packages/native` as a **Cargo workspace** with one crate per Rust
+ * unit and one npm package per napi binding:
  *
- * Cargo-first handling:
- * - edition = "2021"
- * - cargo check (fast), clippy -D warnings, fmt --check in CI
- * - profiles: dev, release (lto, codegen-units=1, strip), ci
- * - Cargo.lock gitignored for library (cdylib)
+ * ```
+ * packages/native/
+ * ├── Cargo.toml        virtual workspace (members: crates/*)
+ * ├── rust-toolchain.toml
+ * ├── .cargo/config.toml
+ * ├── .gitignore
+ * ├── crates/native/    cdylib binding
+ * └── npm/native/       @scope/native — platform packages are generated in CI
+ * ```
  *
- * Self-contained Rust:
- * - packages/native/rust-toolchain.toml (stable + rustfmt, clippy, wasm32-wasip1-threads)
- * - packages/native/.cargo/config.toml (optional build flags)
- * - No root rust-toolchain.toml or root .cargo/config.toml needed — rustup searches parent dirs, but self-contained is cleaner.
+ * Supports any number of crates: add one with `mnative add <name>` (or
+ * `mnative add shared --pure` for a crate with no Node-API surface). Cargo runs
+ * against the whole workspace; napi runs per package.
  *
- * Data-driven via scaffold.setup field in configs/native/package.json
+ * Data-driven via `scaffold.setup` in configs/native/package.json.
  */
 
 const TARGET_DIR = process.cwd();
 /** Rewritten by the scaffolder (and by CI/local git) — never a real repo. */
 const REPO_PLACEHOLDER = "Archont561/ts-monorepo-template";
-const NATIVE_DIR = join(TARGET_DIR, "packages/native");
+const NATIVE_ROOT = join(TARGET_DIR, NATIVE_DIR);
 const REPO_URL = repositoryUrl();
+const scope = process.env.NATIVE_SCOPE ?? "@myorg";
 
 async function exists(path: string): Promise<boolean> {
-  return (
-    (await file(path).exists()) ||
-    (await $`test -d ${path}`
-      .nothrow()
-      .quiet()
-      .then((r) => r.exitCode === 0))
-  );
+  return (await file(path).exists()) || (await $`test -d ${path}`.nothrow().quiet()).exitCode === 0;
 }
 
 /**
- * Repository URL for the generated Cargo.toml.
+ * Repository URL for the generated manifests.
  *
  * Prefers the repo Actions is running in, then the local git remote, so a
  * project never inherits the template's URL. Falls back to an obvious
@@ -63,314 +75,197 @@ function repositoryUrl(): string {
   return `https://github.com/${REPO_PLACEHOLDER}`;
 }
 
+/**
+ * Moves a pre-workspace `packages/native/{src,build.rs,Cargo.toml}` package
+ * into `crates/<name>/` so older projects pick up the new shape on setup.
+ */
+async function migrateLegacyCrate(name: string): Promise<boolean> {
+  const manifest = join(NATIVE_ROOT, "Cargo.toml");
+  if (!(await file(manifest).exists())) return false;
+  const content = await file(manifest).text();
+  if (!content.includes("[package]")) return false;
+
+  const crateDir = join(TARGET_DIR, nativeCrateDir(name));
+  if (await exists(crateDir)) return false;
+
+  console.log(`  📦 Migrating the single-crate layout into crates/${name}/...`);
+  await mkdir(join(crateDir, "src"), { recursive: true });
+  await $`cp -r ${join(NATIVE_ROOT, "src")} ${join(crateDir, "src")} 2>/dev/null`.nothrow().quiet();
+  if (await file(join(NATIVE_ROOT, "build.rs")).exists()) {
+    await $`mv ${join(NATIVE_ROOT, "build.rs")} ${join(crateDir, "build.rs")}`.quiet();
+  }
+  await $`rm -rf ${join(NATIVE_ROOT, "src")}`.quiet();
+  await $`rm -f ${manifest}`.quiet();
+
+  // The npm package used to live at the workspace root — move it under npm/.
+  const legacyPackage = join(NATIVE_ROOT, "package.json");
+  const packageDir = join(TARGET_DIR, nativePackageDir(name));
+  if ((await file(legacyPackage).exists()) && !(await file(packageDir).exists())) {
+    await mkdir(packageDir, { recursive: true });
+    await $`mv ${legacyPackage} ${join(packageDir, "package.json")}`.quiet();
+    for (const extra of ["tsconfig.json", "turbo.json", "README.md"]) {
+      if (await file(join(NATIVE_ROOT, extra)).exists()) {
+        await $`mv ${join(NATIVE_ROOT, extra)} ${join(packageDir, extra)}`.quiet();
+      }
+    }
+    if (await exists(join(NATIVE_ROOT, "tests"))) {
+      await mkdir(join(packageDir, "tests"), { recursive: true });
+      await $`sh -c 'mv ${join(NATIVE_ROOT, "tests")}/* ${join(packageDir, "tests")}/ 2>/dev/null'`
+        .nothrow()
+        .quiet();
+      await $`rm -rf ${join(NATIVE_ROOT, "tests")}`.quiet();
+    }
+  }
+  console.log(`  ✓ Moved crate + npm package under packages/native/`);
+  return true;
+}
+
 async function main() {
-  console.log("\n🦀 Setting up native Rust bindings (Cargo + napi-rs)...\n");
-  console.log("  Mode: self-contained (no root Cargo.toml, packages/native/Cargo.toml only)");
-  console.log("  CLI: mnative (cargo wrapper) + napi\n");
+  console.log("\n🦀 Setting up native Rust bindings (Cargo workspace + napi-rs)...\n");
+  console.log(`  Mode: Cargo workspace at ${NATIVE_DIR}/ (crates/* + npm/*)`);
+  console.log("  CLI: mnative (cargo + napi wrapper)\n");
 
-  const scope = process.env.NATIVE_SCOPE ?? "@myorg";
+  await mkdir(NATIVE_ROOT, { recursive: true });
 
-  // Check if already exists
-  if (await exists(join(NATIVE_DIR, "Cargo.toml"))) {
-    console.log(`  ✓ ${NATIVE_DIR}/ already exists, checking Cargo setup...`);
-    const cargoPath = join(NATIVE_DIR, "Cargo.toml");
-    const cargoContent = await file(cargoPath).text();
-
-    // Migrate from workspace=true to standalone if needed
-    if (cargoContent.includes("workspace = true")) {
-      console.log(`  ⚠️ Migrating Cargo.toml from workspace=true to standalone...`);
-      const updated = `[package]
-name = "native"
-version = "0.1.0"
-edition = "2021"
-description = "Native Rust bindings for ${scope}/external — napi-rs with WASM fallback"
-license = "MIT"
-repository = "${REPO_URL}"
-
-[lib]
-crate-type = ["cdylib"]
-name = "native"
-
-[dependencies]
-napi = { version = "3.0.0", features = ["napi4"] }
-napi-derive = "3.0.0"
-
-[build-dependencies]
-napi-build = "2"
-
-[features]
-default = []
-
-[profile.dev]
-opt-level = 0
-debug = true
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = "symbols"
-
-[profile.ci]
-inherits = "dev"
-opt-level = 1
-`;
-      await writeFile(cargoPath, updated);
-      console.log(`  ✓ Updated Cargo.toml to standalone (no workspace)`);
-    } else if (!cargoContent.includes("[profile.release]")) {
-      console.log(`  ⚠️ Adding missing profiles to Cargo.toml`);
-      const withProfiles =
-        cargoContent.trim() +
-        `
-
-[profile.dev]
-opt-level = 0
-debug = true
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = "symbols"
-
-[profile.ci]
-inherits = "dev"
-opt-level = 1
-`;
-      await writeFile(cargoPath, withProfiles);
-      console.log(`  ✓ Added profiles`);
-    }
-  } else {
-    console.log(`  📦 Creating ${NATIVE_DIR}/...`);
-    await mkdir(join(NATIVE_DIR, "src"), { recursive: true });
-
-    // Cargo.toml — self-contained (no workspace)
-    const cargoToml = `[package]
-name = "native"
-version = "0.1.0"
-edition = "2021"
-description = "Native Rust bindings — napi-rs with WASM fallback"
-license = "MIT"
-repository = "${REPO_URL}"
-
-[lib]
-crate-type = ["cdylib"]
-name = "native"
-
-[dependencies]
-napi = { version = "3.0.0", features = ["napi4"] }
-napi-derive = "3.0.0"
-
-[build-dependencies]
-napi-build = "2"
-
-[features]
-default = []
-
-[profile.dev]
-opt-level = 0
-debug = true
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = "symbols"
-
-[profile.ci]
-inherits = "dev"
-opt-level = 1
-`;
-
-    await writeFile(join(NATIVE_DIR, "Cargo.toml"), cargoToml);
-    console.log(`  ✓ Cargo.toml (edition=2021, standalone, cdylib, profiles)`);
-
-    // build.rs
-    await writeFile(
-      join(NATIVE_DIR, "build.rs"),
-      `extern crate napi_build;\nfn main() { napi_build::setup(); }\n`,
-    );
-    console.log(`  ✓ build.rs (napi_build::setup)`);
-
-    // src/lib.rs
-    const libRs = `#![deny(clippy::all)]
-
-use napi_derive::napi;
-
-#[napi]
-pub fn add(a: i32, b: i32) -> i32 { a + b }
-
-#[napi]
-pub fn fibonacci(n: u32) -> u32 {
-  match n {
-    0 => 0,
-    1 => 1,
-    _ => {
-      let mut a = 0;
-      let mut b = 1;
-      for _ in 2..=n {
-        let c = a + b;
-        a = b;
-        b = c;
-      }
-      b
-    }
-  }
-}
-
-#[napi]
-pub fn reverse_string(s: String) -> String { s.chars().rev().collect() }
-
-#[napi]
-pub struct Counter { count: i32 }
-
-#[napi]
-impl Counter {
-  #[napi(constructor)]
-  pub fn new(initial: Option<i32>) -> Self { Self { count: initial.unwrap_or(0) } }
-  #[napi] pub fn increment(&mut self) -> i32 { self.count += 1; self.count }
-  #[napi] pub fn get_count(&self) -> i32 { self.count }
-}
-
-#[napi]
-pub fn primes_up_to(n: u32) -> Vec<u32> {
-  if n < 2 { return vec![]; }
-  let mut sieve = vec![true; (n+1) as usize];
-  sieve[0] = false;
-  sieve[1] = false;
-  let mut primes = Vec::new();
-  for i in 2..=n {
-    if sieve[i as usize] {
-      primes.push(i);
-      let mut j = i * i;
-      while j <= n {
-        sieve[j as usize] = false;
-        j += i;
-      }
-    }
-  }
-  primes
-}
-`;
-    await writeFile(join(NATIVE_DIR, "src/lib.rs"), libRs);
-    console.log(`  ✓ src/lib.rs (#[napi] add, fibonacci, Counter, primes)`);
-
-    // package.json — all cargo via mnative CLI (single source of truth)
-    const pkgJson = {
-      name: "@myorg/native",
-      version: "0.0.0",
-      private: true,
-      type: "module",
-      main: "index.js",
-      types: "index.d.ts",
-      files: ["index.js", "index.d.ts", "*.node", "*.wasi.cjs"],
-      napi: {
-        binaryName: "native",
-        packageName: "@myorg/native",
-        targets: [
-          "x86_64-apple-darwin",
-          "aarch64-apple-darwin",
-          "x86_64-pc-windows-msvc",
-          "x86_64-unknown-linux-gnu",
-          "aarch64-unknown-linux-gnu",
-          "x86_64-unknown-linux-musl",
-          "wasm32-wasip1-threads",
-        ],
-        wasm: {
-          initialMemory: 16,
-          maximumMemory: 65536,
-          browser: { fs: false, asyncInit: true },
-        },
-      },
-      scripts: {
-        build: "mnative napi:build",
-        "build:debug": "mnative napi:build:debug",
-        "build:wasm": "mnative napi:build:wasm",
-        "create-npm-dirs": "mnative napi create-npm-dirs",
-        artifacts: "mnative napi artifacts",
-        prepublish: "mnative napi pre-publish",
-        test: "mbun test",
-        typecheck: "mtsc --noEmit",
-        "cargo:check": "mnative check",
-        "cargo:clippy": "mnative clippy",
-        "cargo:fmt": "mnative fmt",
-        "cargo:fmt:check": "mnative fmt:check",
-        "cargo:test": "mnative test",
-        "cargo:nextest": "mnative nextest",
-        "cargo:build": "mnative build",
-        "cargo:build:release": "mnative build:release",
-        "cargo:build:ci": "mnative build:ci",
-        "cargo:tree": "mnative tree",
-        "cargo:tree:duplicates": "mnative tree -d",
-        "cargo:update": "mnative update",
-        "cargo:doc": "mnative doc",
-        "cargo:audit": "mnative audit",
-        "cargo:deny": "mnative deny check",
-      },
-      devDependencies: {
-        "@myorg/bun-config": "workspace:*",
-        "@myorg/bunup": "workspace:*",
-        "@myorg/native-config": "workspace:*",
-        "@myorg/ts": "workspace:*",
-        "@napi-rs/cli": "^3.9.1",
-      },
-    };
-
-    const pkgStr = JSON.stringify(pkgJson, null, 2).replaceAll("@myorg", scope);
-    await writeFile(join(NATIVE_DIR, "package.json"), pkgStr);
-    console.log(`  ✓ package.json (napi + cargo:* scripts via mnative)`);
-
-    // tsconfig.json
-    await writeFile(
-      join(NATIVE_DIR, "tsconfig.json"),
-      JSON.stringify(
-        {
-          extends: "@myorg/ts/library.json".replace("@myorg", scope),
-          compilerOptions: { rootDir: ".", outDir: "./dist", types: ["bun"] },
-          include: ["src/**/*", "tests/**/*"],
-        },
-        null,
-        2,
-      ),
-    );
-    console.log(`  ✓ tsconfig.json`);
-
-    // turbo.json
-    await writeFile(
-      join(NATIVE_DIR, "turbo.json"),
-      JSON.stringify(
-        {
-          extends: ["//"],
-          tasks: {
-            build: {
-              outputs: ["*.node", "index.js", "index.d.ts"],
-              cache: false,
-            },
-          },
-        },
-        null,
-        2,
-      ),
-    );
-    console.log(`  ✓ turbo.json (cache false for cargo)`);
+  // 1. Crates + npm packages (migrating the old single-crate layout first).
+  for (const spec of DEFAULT_NATIVE_CRATES) {
+    await migrateLegacyCrate(spec.name);
   }
 
-  // Remove root Cargo.toml if exists (migrated to self-contained)
-  const rootCargoPath = join(TARGET_DIR, "Cargo.toml");
-  if (await file(rootCargoPath).exists()) {
-    const content = await file(rootCargoPath).text();
-    if (content.includes('members = ["packages/native"]') || content.includes("[workspace]")) {
+  const crates: NativeCrateSpec[] = [];
+  for (const spec of DEFAULT_NATIVE_CRATES) {
+    const crateDir = join(TARGET_DIR, nativeCrateDir(spec.name));
+    if (await exists(join(crateDir, "Cargo.toml"))) {
+      console.log(`  ✓ ${nativeCrateDir(spec.name)}/ exists`);
+    } else {
+      const written = await writeCrate(TARGET_DIR, spec, { scope, repository: REPO_URL });
       console.log(
-        `  🗑️ Removing root Cargo.toml (migrated to packages/native/Cargo.toml self-contained)`,
+        `  ✓ ${written.crate.replace(`${TARGET_DIR}/`, "")}/ (crate)${written.package ? ` + ${written.package.replace(`${TARGET_DIR}/`, "")}/ (npm)` : ""}`,
       );
-      await $`rm -f ${rootCargoPath}`.quiet();
+    }
+    crates.push(spec);
+  }
+
+  // 2. Virtual workspace manifest — members are re-synced, never clobbered.
+  const workspaceManifest = join(NATIVE_ROOT, "Cargo.toml");
+  if (await file(workspaceManifest).exists()) {
+    for (const spec of crates) await addWorkspaceMember(TARGET_DIR, spec.name);
+    console.log("  ✓ packages/native/Cargo.toml (members synced)");
+  } else {
+    await writeFile(workspaceManifest, workspaceCargoToml(crates, { scope, repository: REPO_URL }));
+    console.log("  ✓ packages/native/Cargo.toml (virtual workspace, resolver 3)");
+  }
+
+  // 3. Toolchain + cargo config + gitignore, all self-contained.
+  const toolchainPath = join(NATIVE_ROOT, "rust-toolchain.toml");
+  const rootToolchainPath = join(TARGET_DIR, "rust-toolchain.toml");
+  if (!(await file(toolchainPath).exists())) {
+    if (await file(rootToolchainPath).exists()) {
+      await writeFile(toolchainPath, await file(rootToolchainPath).text());
+      await $`rm -f ${rootToolchainPath}`.quiet();
+      console.log("  ✓ Moved rust-toolchain.toml into packages/native/");
+    } else {
+      await writeFile(toolchainPath, rustToolchainToml());
+      console.log("  ✓ packages/native/rust-toolchain.toml (stable + wasm32-wasip1-threads)");
     }
   }
 
-  // Ensure example native routes exist
+  const cargoConfigDir = join(NATIVE_ROOT, ".cargo");
+  const cargoConfigPath = join(cargoConfigDir, "config.toml");
+  const rootCargoConfigPath = join(TARGET_DIR, ".cargo", "config.toml");
+  if (!(await file(cargoConfigPath).exists())) {
+    await mkdir(cargoConfigDir, { recursive: true });
+    await writeFile(
+      cargoConfigPath,
+      (await file(rootCargoConfigPath).exists())
+        ? await file(rootCargoConfigPath).text()
+        : cargoConfigToml(),
+    );
+    console.log("  ✓ packages/native/.cargo/config.toml");
+  }
+  if (await file(rootCargoConfigPath).exists()) {
+    await $`rm -f ${rootCargoConfigPath}`.quiet();
+    await $`rmdir ${join(TARGET_DIR, ".cargo")}`.nothrow().quiet();
+  }
+
+  const gitignorePath = join(NATIVE_ROOT, ".gitignore");
+  if (!(await file(gitignorePath).exists())) {
+    await writeFile(gitignorePath, nativeGitignore());
+    console.log("  ✓ packages/native/.gitignore (target/, generated loaders, npm/*-*/)");
+  }
+
+  // 4. Root package.json — link the npm packages into the Bun workspace.
+  const rootPkgPath = join(TARGET_DIR, "package.json");
+  if (await file(rootPkgPath).exists()) {
+    const pkg = await file(rootPkgPath).json();
+    let updated = false;
+
+    pkg.workspaces = Array.isArray(pkg.workspaces) ? pkg.workspaces : [];
+    if (!pkg.workspaces.includes(NATIVE_WORKSPACE_GLOB)) {
+      pkg.workspaces = [...pkg.workspaces, NATIVE_WORKSPACE_GLOB];
+      console.log(`  ✓ Added workspace glob ${NATIVE_WORKSPACE_GLOB}`);
+      updated = true;
+    }
+
+    pkg.scripts = pkg.scripts ?? {};
+    const scriptsToEnsure: Record<string, string> = {
+      "build:native": "mnative napi:build",
+      "build:wasm": "mnative napi:build:wasm",
+      "test:native": "mnative test",
+    };
+    for (const [k, v] of Object.entries(scriptsToEnsure)) {
+      if (pkg.scripts[k] !== v) {
+        pkg.scripts[k] = v;
+        console.log(`  ✓ Set root script ${k} → ${v}`);
+        updated = true;
+      }
+    }
+    for (const k of Object.keys(pkg.scripts)) {
+      if (k.startsWith("cargo:") && pkg.scripts[k].includes("bun --filter")) {
+        delete pkg.scripts[k];
+        console.log(`  🗑️ Removed root script ${k} (cargo goes through mnative)`);
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      await Bun.write(rootPkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+    }
+  }
+
+  // 5. Turbo tasks — one build per npm package, cargo stays uncached.
+  const turboPath = join(TARGET_DIR, "configs/turbo/turbo.base.json");
+  if (await file(turboPath).exists()) {
+    const turbo = await file(turboPath).json();
+    turbo.tasks = turbo.tasks ?? {};
+    let changed = false;
+    if (!turbo.tasks["build:native"]) {
+      turbo.tasks["build:native"] = {
+        dependsOn: ["^build"],
+        outputs: ["*.node", "index.js", "index.d.ts"],
+        cache: false,
+      };
+      console.log("  ✓ Added turbo task build:native");
+      changed = true;
+    }
+    if (!turbo.tasks["build:wasm"]) {
+      turbo.tasks["build:wasm"] = {
+        dependsOn: ["build:native"],
+        outputs: ["*.wasi.cjs", "*.wasi-browser.js", "*.wasm"],
+        cache: false,
+      };
+      console.log("  ✓ Added turbo task build:wasm");
+      changed = true;
+    }
+    if (changed) {
+      await Bun.write(turboPath, `${JSON.stringify(turbo, null, 2)}\n`);
+    }
+  }
+
+  // 6. Example routes — unchanged, they talk to @scope/native through external.
   const exampleNativeDir = join(TARGET_DIR, "apps/example/src/pages/api/native");
   if (!(await exists(exampleNativeDir))) {
-    console.log(`  📦 Creating example native routes...`);
+    console.log("  📦 Creating example native routes...");
     await mkdir(join(exampleNativeDir, "fibonacci"), { recursive: true });
     await mkdir(join(exampleNativeDir, "primes"), { recursive: true });
 
@@ -425,191 +320,22 @@ export default async function handleNativeStatus(): Promise<Response> {
 `,
     );
 
-    console.log(`  ✓ Example native routes`);
+    console.log("  ✓ Example native routes");
   }
 
-  // Update root package.json scripts — only build wrappers, no cargo:* (cargo via mnative directly)
-  const rootPkgPath = join(TARGET_DIR, "package.json");
-  if (await file(rootPkgPath).exists()) {
-    const pkg = await file(rootPkgPath).json();
-    pkg.scripts = pkg.scripts ?? {};
-    const scriptsToEnsure: Record<string, string> = {
-      "build:native": "bun --filter @myorg/native run build",
-      "build:wasm": "bun --filter @myorg/native run build:wasm",
-      "test:native": "bun --filter @myorg/native run test",
-    };
-    // Remove old cargo:* scripts from root (now only via mnative CLI directly)
-    const cargoScripts = [
-      "cargo:check",
-      "cargo:clippy",
-      "cargo:fmt",
-      "cargo:fmt:check",
-      "cargo:test",
-      "cargo:build",
-      "cargo:build:release",
-      "cargo:build:ci",
-    ];
-    let updated = false;
-    for (const k of cargoScripts) {
-      if (pkg.scripts[k]) {
-        delete pkg.scripts[k];
-        console.log(
-          `  🗑️ Removed root script ${k} (use mnative ${k.replace("cargo:", "")} directly)`,
-        );
-        updated = true;
-      }
-    }
-    for (const [k, v] of Object.entries(scriptsToEnsure)) {
-      if (pkg.scripts[k] !== v) {
-        pkg.scripts[k] = v;
-        console.log(`  ✓ Set root script ${k} → ${v}`);
-        updated = true;
-      }
-    }
-    if (updated) {
-      await Bun.write(rootPkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
-    }
-  }
-
-  // Update turbo config — only build:native and build:wasm, no cargo:* (cargo via mnative directly)
-  const turboPath = join(TARGET_DIR, "configs/turbo/turbo.base.json");
-  if (await file(turboPath).exists()) {
-    const turbo = await file(turboPath).json();
-    turbo.tasks = turbo.tasks ?? {};
-    let changed = false;
-    if (!turbo.tasks["build:native"]) {
-      turbo.tasks["build:native"] = {
-        dependsOn: ["^build"],
-        outputs: ["*.node", "index.js", "index.d.ts"],
-        cache: false,
-      };
-      console.log(`  ✓ Added turbo task build:native`);
-      changed = true;
-    }
-    if (!turbo.tasks["build:wasm"]) {
-      turbo.tasks["build:wasm"] = {
-        dependsOn: ["build:native"],
-        outputs: ["*.wasi.cjs"],
-        cache: false,
-      };
-      console.log(`  ✓ Added turbo task build:wasm`);
-      changed = true;
-    }
-    // Remove old cargo:* turbo tasks (now via mnative CLI directly)
-    const oldCargoTasks = [
-      "cargo:check",
-      "cargo:clippy",
-      "cargo:fmt",
-      "cargo:fmt:check",
-      "cargo:test",
-      "cargo:build",
-      "cargo:build:release",
-      "cargo:build:ci",
-    ];
-    for (const t of oldCargoTasks) {
-      if (turbo.tasks[t]) {
-        delete turbo.tasks[t];
-        console.log(`  🗑️ Removed turbo task ${t} (use mnative directly)`);
-        changed = true;
-      }
-    }
-    if (changed) {
-      await Bun.write(turboPath, `${JSON.stringify(turbo, null, 2)}\n`);
-    }
-  }
-
-  // Create rust-toolchain.toml self-contained in packages/native (not root) — rustup searches parent dirs, but self-contained is cleaner
-  const toolchainPath = join(NATIVE_DIR, "rust-toolchain.toml");
-  const rootToolchainPath = join(TARGET_DIR, "rust-toolchain.toml");
-  // Migrate root toolchain to native if root exists and native doesn't
-  if ((await file(rootToolchainPath).exists()) && !(await file(toolchainPath).exists())) {
-    console.log(
-      `  📦 Migrating rust-toolchain.toml from root to packages/native/ (self-contained)`,
-    );
-    const content = await file(rootToolchainPath).text();
-    await writeFile(toolchainPath, content);
-    await $`rm -f ${rootToolchainPath}`.quiet();
-    console.log(`  ✓ Moved rust-toolchain.toml to packages/native/`);
-  }
-  if (!(await file(toolchainPath).exists())) {
-    await writeFile(
-      toolchainPath,
-      `[toolchain]
-channel = "stable"
-components = ["rustfmt", "clippy"]
-targets = ["wasm32-wasip1-threads"]
-`,
-    );
-    console.log(
-      `  ✓ packages/native/rust-toolchain.toml (stable + rustfmt, clippy, wasm32-wasip1-threads)`,
-    );
-  } else {
-    console.log(`  ✓ packages/native/rust-toolchain.toml exists`);
-  }
-  // Remove root rust-toolchain.toml if it still exists (not needed, self-contained in packages/native)
-  if (await file(rootToolchainPath).exists()) {
-    console.log(`  🗑️ Removing root rust-toolchain.toml (now self-contained in packages/native/)`);
-    await $`rm -f ${rootToolchainPath}`.quiet();
-  }
-
-  // Create .cargo/config.toml self-contained in packages/native/.cargo/ (not root)
-  const cargoConfigDir = join(NATIVE_DIR, ".cargo");
-  const cargoConfigPath = join(cargoConfigDir, "config.toml");
-  const rootCargoConfigDir = join(TARGET_DIR, ".cargo");
-  const rootCargoConfigPath = join(rootCargoConfigDir, "config.toml");
-  // Migrate root .cargo/config.toml to native if needed
-  if ((await file(rootCargoConfigPath).exists()) && !(await file(cargoConfigPath).exists())) {
-    console.log(
-      `  📦 Migrating .cargo/config.toml from root to packages/native/.cargo/ (self-contained)`,
-    );
-    const content = await file(rootCargoConfigPath).text();
-    await mkdir(cargoConfigDir, { recursive: true });
-    await writeFile(cargoConfigPath, content);
-    console.log(`  ✓ Moved .cargo/config.toml to packages/native/.cargo/`);
-  }
-  if (!(await file(cargoConfigPath).exists())) {
-    await mkdir(cargoConfigDir, { recursive: true });
-    await writeFile(
-      cargoConfigPath,
-      `# Cargo config — self-contained, packages/native/Cargo.toml only
-# No root Cargo.toml needed
-
-[build]
-# Use faster linker if available
-# rustflags = ["-C", "link-arg=-fuse-ld=mold"]
-`,
-    );
-    console.log(`  ✓ packages/native/.cargo/config.toml (self-contained)`);
-  }
-  // Remove root .cargo/config.toml if it still exists (optional cleanup — root .cargo not needed for self-contained native)
-  if (await file(rootCargoConfigPath).exists()) {
-    const rootContent = await file(rootCargoConfigPath).text();
-    if (
-      rootContent.includes("self-contained") ||
-      rootContent.includes("No workspace root needed")
-    ) {
-      console.log(
-        `  🗑️ Removing root .cargo/config.toml (now self-contained in packages/native/.cargo/)`,
-      );
-      await $`rm -f ${rootCargoConfigPath}`.quiet();
-      const isEmpty = await $`ls -A ${rootCargoConfigDir}`.nothrow().quiet();
-      if (isEmpty.exitCode !== 0 || (await $`ls ${rootCargoConfigDir}`.text()).trim() === "") {
-        await $`rmdir ${rootCargoConfigDir}`.quiet().nothrow();
-      }
-    }
-  }
-
-  console.log(`\n✅ Native setup complete (self-contained, no root Cargo.toml).\n`);
-  console.log(`  Cargo via mnative CLI:`);
-  console.log(`    mnative check              # cargo check (fast)`);
-  console.log(`    mnative clippy             # cargo clippy -D warnings`);
-  console.log(`    mnative fmt:check          # cargo fmt --check`);
-  console.log(`    mnative test               # cargo test`);
-  console.log(`    mnative build:release      # cargo build --release (lto, strip)`);
-  console.log(`  NAPI:`);
-  console.log(`    bun run build:native       # mnative napi:build`);
-  console.log(`    bun run build:wasm         # mnative napi:build:wasm`);
-  console.log(`\n  Next: bun install && mnative check && bun run build:native && bun run test\n`);
+  console.log("\n✅ Native setup complete (Cargo workspace + napi-rs).\n");
+  console.log("  Layout:");
+  console.log(`    ${NATIVE_DIR}/Cargo.toml       virtual workspace`);
+  console.log(`    ${NATIVE_DIR}/crates/<name>/   one crate per Rust unit`);
+  console.log(`    ${NATIVE_DIR}/npm/<name>/      one npm package per binding\n`);
+  console.log("  Commands:");
+  console.log("    mnative list              # crates + packages");
+  console.log("    mnative add <name>        # add a crate (+ npm package)");
+  console.log("    mnative add shared --pure # pure Rust crate, no Node-API");
+  console.log("    mnative check             # cargo check --workspace");
+  console.log("    mnative napi:build        # build every package's .node");
+  console.log("    mnative napi:build:wasm   # wasm32-wasip1-threads\n");
+  console.log("  Next: bun install && mnative check && bun run build:native\n");
 }
 
 if (import.meta.main) {

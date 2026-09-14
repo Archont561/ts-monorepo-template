@@ -64,11 +64,10 @@ Cargo.lock
 **/*.node
 **/*.wasi.cjs
 **/wasi-worker.mjs
-npm/
-# Keep root Cargo.toml workspace, ignore generated JS loader in packages/native when built
-packages/native/index.js
-packages/native/index.d.ts
-packages/native/*.node
+# A stray npm dir at the repo root — NOT packages/native/npm, which is source.
+/npm/
+# Generated napi loaders/binaries are ignored per package in
+# packages/native/.gitignore (npm/*/index.js, npm/*/*.node, npm/*-*/, ...)
 # Generic JS loader (if generated at root)
 index.js
 index.d.ts

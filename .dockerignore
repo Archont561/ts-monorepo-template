@@ -46,10 +46,14 @@ target/
 **/*.node
 **/*.wasi.cjs
 **/wasi-worker.mjs
-npm/
-packages/native/index.js
-packages/native/index.d.ts
-packages/native/*.node
+# A stray npm dir at the repo root — NOT packages/native/npm, which is source.
+/npm/
+# Generated loaders, binaries and per-platform packages (one npm dir per binding)
+packages/native/npm/*/index.js
+packages/native/npm/*/index.d.ts
+packages/native/npm/*/*.node
+packages/native/npm/*/*.wasm
+packages/native/npm/*-*/
 
 # Git
 .git
