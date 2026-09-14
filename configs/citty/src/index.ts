@@ -19,9 +19,10 @@ import { defineCommand } from "citty";
  * in the repo funnels through here, so "spawn, inherit, exit with the code" is
  * written once.
  */
-export function spawnTool(cmd: string[]): number {
+export function spawnTool(cmd: string[], opts: { cwd?: string } = {}): number {
   const result = spawnSync({
     cmd,
+    ...(opts.cwd ? { cwd: opts.cwd } : {}),
     stdout: "inherit",
     stderr: "inherit",
     stdin: "inherit",
