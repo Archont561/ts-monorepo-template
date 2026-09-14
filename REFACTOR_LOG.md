@@ -153,6 +153,10 @@ reverted once and re-landed last, after R12, which is why its commit follows the
    survives the next regeneration, and the one static workflow is fixed in place. Nothing in
    the refactor changed; the scaffold gate was re-run because the fragments ship into
    generated projects (their workflows now resolve the bins too).
+   With the fix in place the `matrix` job passes; the downstream build jobs — the container bun
+   installs, the Windows binding build and the WASI/artifact fan-in — still fail or have never
+   completed, and are left as the documented-unverified part of that workflow rather than reworked
+   here.
 
 ## Skipped / deferred
 

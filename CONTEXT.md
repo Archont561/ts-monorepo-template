@@ -80,7 +80,7 @@ not an npm package — the npm package is `packages/native/npm/native`.
 
 - Rust toolchain absent in this sandbox — cargo/napi builds no-op, so native bindings have never been compiled here.
 - Playwright browsers absent — `bun run test:e2e` skips by design.
-- `native.yml` (the build matrix) has never run on real GitHub Actions: container targets, WASI SDK download and the artifact fan-in are unverified.
+- `native.yml`'s build matrix is still unverified. It had never run on real GitHub Actions; with the m-bin `PATH` fix in place its `matrix` job now passes, but the container jobs cannot install bun (the Debian image has no `unzip`; the Alpine image cannot execute the glibc bun), the Windows binding build exits 1, and the WASI download plus the artifact fan-in have not completed a run yet.
 - Manifests are edited as text through the shared editor in `configs/manifest`, so adding or removing turbo tasks and workspace entries leaves the surrounding formatting alone; a manifest that does not parse is left untouched instead of being rewritten.
 - Publish ordering for the per-platform native npm packages is still unwired — `native.yml` uploads them as `native-npm-packages` but nothing consumes that artifact yet.
 
