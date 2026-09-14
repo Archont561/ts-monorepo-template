@@ -96,6 +96,85 @@ export function removeJsonObjectEntry(source: string, key: string): string {
   return source.slice(0, start) + source.slice(end);
 }
 
+/**
+ * Text files that can carry marker blocks, and the three comment styles they use.
+ *
+ * The marker line's own indentation is part of each match: leaving it behind
+ * glues it onto whatever follows (a kept block gets its first line
+ * double-indented, a removed block leaves a whitespace-only line that
+ * `biome check` rejects in the scaffolded project).
+ */
+const MARKER_EXTENSIONS = [".yml", ".yaml", ".ts", ".js", ".md", ".toml", ".html"];
+
+export const MARKER_PATTERNS: readonly RegExp[] = [
+  // YAML/TOML/shell
+  /[ \t]*#[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)[ \t]*#[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
+  // TS/JS
+  /[ \t]*\/\/[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)[ \t]*\/\/[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
+  // HTML/MD
+  /[ \t]*<!--[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[ \t]*-->([\s\S]*?)<!--[ \t]*TEMPLATE-ONLY:END\([^)]*\)[ \t]*-->[ \t]*\n?/g,
+];
+
+/** `find` argv for every marker-carrying file under `root`. */
+export function markerFindArgs(root: string): string[] {
+  // Bun's shell does not word-split interpolated strings, so the find
+  // arguments must be spread as an array (one element per word).
+  return [
+    root,
+    "-type",
+    "f",
+    "(",
+    ...MARKER_EXTENSIONS.flatMap((ext, i) => [...(i > 0 ? ["-o"] : []), "-name", `*${ext}`]),
+    ")",
+    "-not",
+    "-path",
+    "*/node_modules/*",
+    "-not",
+    "-path",
+    "*/dist/*",
+    "-not",
+    "-path",
+    "*/configs/template/*",
+  ];
+}
+
+/**
+ * Pure marker pass: a block is removed entirely when ALL its scopes are
+ * disabled; when any scope is enabled only the marker lines go and the content
+ * is preserved. Whitespace left behind by a removal is normalised.
+ *
+ * Returns whether anything matched, so the caller can skip the write —
+ * behaviour the file loop had before this was extracted.
+ */
+export function stripMarkerBlocks(
+  content: string,
+  disabledScopes: ReadonlySet<string>,
+): { content: string; changed: boolean } {
+  let next = content;
+  let changed = false;
+
+  for (const regex of MARKER_PATTERNS) {
+    next = next.replace(regex, (_match, scopesStr: string, innerContent: string) => {
+      const scopes = scopesStr.split(",").map((s) => s.trim());
+      changed = true;
+      return scopes.every((s) => disabledScopes.has(s)) ? "" : innerContent;
+    });
+  }
+
+  if (!changed) return { content, changed };
+
+  return {
+    changed,
+    content: next
+      // Marker lines left over from a removal, e.g. an indented block that
+      // was cut out whole.
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      // A block that ended the file leaves a blank tail behind.
+      .replace(/\n{2,}$/, "\n"),
+  };
+}
+
 export class MonorepoScaffolder {
   readonly targetDir: string;
   readonly scope: string;
@@ -438,92 +517,16 @@ export class MonorepoScaffolder {
    * and the content is preserved.
    */
   async stripTemplateMarkers(): Promise<void> {
-    const disabled = this.disabledScopes;
-
-    const patterns: Array<{
-      regex: RegExp;
-    }> = [
-      {
-        // YAML/TOML/shell: # TEMPLATE-ONLY:START(scope)
-        //
-        // The marker line's own indentation is part of the match: leaving it
-        // behind glues it onto whatever follows (a kept block gets its first
-        // line double-indented, a removed block leaves a whitespace-only line
-        // that `biome check` rejects in the scaffolded project).
-        regex:
-          /[ \t]*#[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)[ \t]*#[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
-      },
-      {
-        // TS/JS: // TEMPLATE-ONLY:START(scope)
-        regex:
-          /[ \t]*\/\/[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)[ \t]*\/\/[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
-      },
-      {
-        // HTML/MD: <!-- TEMPLATE-ONLY:START(scope) -->
-        regex:
-          /[ \t]*<!--[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[ \t]*-->([\s\S]*?)<!--[ \t]*TEMPLATE-ONLY:END\([^)]*\)[ \t]*-->[ \t]*\n?/g,
-      },
-    ];
-
-    const extensions = [".yml", ".yaml", ".ts", ".js", ".md", ".toml", ".html"];
-
-    // Bun's shell does not word-split interpolated strings, so the find
-    // arguments must be spread as an array (one element per word).
-    const findArgs = [
-      this.targetDir,
-      "-type",
-      "f",
-      "(",
-      ...extensions.flatMap((e, i) => [...(i > 0 ? ["-o"] : []), "-name", `*${e}`]),
-      ")",
-      "-not",
-      "-path",
-      "*/node_modules/*",
-      "-not",
-      "-path",
-      "*/dist/*",
-      "-not",
-      "-path",
-      "*/configs/template/*",
-    ];
-
-    const result = await $`find ${findArgs}`.text();
+    const result = await $`find ${markerFindArgs(this.targetDir)}`.text();
 
     for (const filePath of result.trim().split("\n").filter(Boolean)) {
       const target = file(filePath);
       if (!(await target.exists())) continue;
 
-      let content = await target.text();
-      let modified = false;
-
-      for (const { regex } of patterns) {
-        const next = content.replace(regex, (_match, scopesStr, innerContent) => {
-          const scopes = scopesStr.split(",").map((s: string) => s.trim());
-          const shouldStrip = scopes.every((s: string) => disabled.has(s));
-
-          modified = true;
-          if (shouldStrip) {
-            return ""; // Remove entire block
-          }
-          // Keep content, remove only marker lines
-          return innerContent;
-        });
-        content = next;
-      }
-
-      if (modified) {
-        content = content
-          // Marker lines left over from a removal, e.g. an indented block that
-          // was cut out whole.
-          .replace(/[ \t]+\n/g, "\n")
-          .replace(/\n{3,}/g, "\n\n")
-          // A block that ended the file leaves a blank tail behind.
-          .replace(/\n{2,}$/, "\n");
-        await write(filePath, content);
-      }
+      const { content, changed } = stripMarkerBlocks(await target.text(), this.disabledScopes);
+      if (changed) await write(filePath, content);
     }
   }
-
   /**
    * Removes files that only exist in the template source.
    */

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir } from "node:fs/promises";
 import { $, file, write } from "bun";
-import { MonorepoScaffolder, removeJsonObjectEntry } from "../src/scaffolder";
+import { MonorepoScaffolder, removeJsonObjectEntry, stripMarkerBlocks } from "../src/scaffolder";
 
 describe("MonorepoScaffolder (unit)", () => {
   let workDir: string;
@@ -862,6 +862,84 @@ describe("MonorepoScaffolder (unit)", () => {
         '{\n  "a": {\n    "cmd": "echo {\\"x\\"}"\n  },\n  "b": {\n    "n": 1\n  }\n}\n';
       const next = removeJsonObjectEntry(source, "a");
       expect(JSON.parse(next)).toEqual({ b: { n: 1 } });
+    });
+  });
+  // ── Pure marker pass ─────────────────────────────
+
+  describe("stripMarkerBlocks (pure)", () => {
+    const disabled = new Set(["native"]);
+
+    test("reports no change when the content carries no markers", () => {
+      const source = "const a = 1;\n";
+      expect(stripMarkerBlocks(source, disabled)).toEqual({ content: source, changed: false });
+    });
+
+    test("removes a block whose scopes are all disabled", () => {
+      const source = [
+        "start",
+        "// TEMPLATE-ONLY:START(native)",
+        "gone",
+        "// TEMPLATE-ONLY:END(native)",
+        "end",
+        "",
+      ].join("\n");
+      expect(stripMarkerBlocks(source, disabled)).toEqual({
+        content: "start\nend\n",
+        changed: true,
+      });
+    });
+
+    test("keeps a block with a scope that is still enabled, dropping only markers", () => {
+      const source = [
+        "start",
+        "// TEMPLATE-ONLY:START(native, unocss)",
+        "kept",
+        "// TEMPLATE-ONLY:END(native)",
+        "end",
+        "",
+      ].join("\n");
+      expect(stripMarkerBlocks(source, disabled).content).toBe("start\nkept\nend\n");
+    });
+
+    test("normalises the indentation and blank lines a removal leaves behind", () => {
+      const source = [
+        "if (x) {",
+        "  // TEMPLATE-ONLY:START(native)",
+        "  native();",
+        "  // TEMPLATE-ONLY:END(native)",
+        "}",
+        "",
+      ].join("\n");
+      const { content, changed } = stripMarkerBlocks(source, disabled);
+      expect(changed).toBe(true);
+      expect(content).toBe("if (x) {\n}\n");
+      expect(content).not.toMatch(/[ \t]+\n/);
+      expect(content).not.toMatch(/\n{3,}/);
+    });
+
+    test("strips every marker style in one pass", () => {
+      const source = [
+        "# TEMPLATE-ONLY:START(native)",
+        "yaml",
+        "# TEMPLATE-ONLY:END(native)",
+        "// TEMPLATE-ONLY:START(native)",
+        "ts",
+        "// TEMPLATE-ONLY:END(native)",
+        "<!-- TEMPLATE-ONLY:START(native) -->",
+        "html",
+        "<!-- TEMPLATE-ONLY:END(native) -->",
+        "tail",
+        "",
+      ].join("\n");
+      expect(stripMarkerBlocks(source, disabled).content).toBe("tail\n");
+    });
+
+    test("is idempotent once the markers are gone", () => {
+      const once = stripMarkerBlocks(
+        "a\n// TEMPLATE-ONLY:START(native)\nb\n// TEMPLATE-ONLY:END(native)\nc\n",
+        disabled,
+      ).content;
+      expect(stripMarkerBlocks(once, disabled)).toEqual({ content: once, changed: false });
     });
   });
 });
