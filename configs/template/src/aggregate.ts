@@ -38,39 +38,6 @@ import { WORKFLOW_VARS } from "./vars";
  * `bun configs/template/src/aggregate.ts <targetDir>`.
  */
 
-export async function aggregateMarkdown(
-  targetDir: string,
-  fileName: string,
-  outputFileName: string,
-  marker: string,
-): Promise<void> {
-  const configsDir = `${targetDir}/configs`;
-  const found =
-    await $`find ${configsDir} -mindepth 2 -maxdepth 2 -name ${fileName} -type f`.text();
-  const files = found.trim().split("\n").filter(Boolean).sort();
-
-  const blocks: string[] = [];
-  for (const absolutePath of files) {
-    const name = absolutePath.split("/").at(-2);
-    const content = (await file(absolutePath).text()).trimEnd();
-    blocks.push(
-      [`<!-- ${marker}:${name}:START -->`, content, `<!-- ${marker}:${name}:END -->`].join("\n"),
-    );
-  }
-
-  const intro = (await file(`${configsDir}/${fileName}`).text()).trim();
-  const output = [
-    `<!-- AUTO-GENERATED from configs/*/${fileName} -->`,
-    intro,
-    "",
-    blocks.join("\n\n"),
-    "",
-  ].join("\n");
-
-  await write(`${targetDir}/${outputFileName}`, `${output}\n`);
-  console.log(`✅ generated ${targetDir}/${outputFileName} (${blocks.length} sections)`);
-}
-
 /**
  * Renders a workflow skeleton, splicing the matching step fragments into
  * the `{{STEPS}}` placeholder. Both ci.steps.yml and release.steps.yml

@@ -68,9 +68,11 @@ const main = defineCommand({
     // Default: full setup
     await msetup("lefthook");
     try {
-      const mod = await import("@myorg/changeset/src/cli.ts");
-      if ((mod as any).minit) {
-        await (mod as any).minit("changeset").catch(() => {});
+      const mod = (await import("@myorg/changeset/src/cli.ts")) as {
+        minit?: (target?: string) => Promise<void>;
+      };
+      if (mod.minit) {
+        await mod.minit("changeset").catch(() => {});
       }
     } catch {}
   },

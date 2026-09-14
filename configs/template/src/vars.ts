@@ -35,5 +35,3 @@ export const WORKFLOW_VARS = {
   APP_DIR,
   APP_DOCKERFILE: `${APP_DIR}/Dockerfile`,
 } as const;
-
-export type WorkflowVar = keyof typeof WORKFLOW_VARS;

@@ -2,7 +2,7 @@
 import { mkdir, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { $, file, write } from "bun";
-import { defineCommand, runMain } from "citty";
+import { defineCommand, runCommand, runMain } from "citty";
 
 const CURATED_DIR = `${import.meta.dir}/../skills`;
 const TARGET_DIR = `${process.cwd()}/.agents/skills`;
@@ -398,7 +398,7 @@ const main = defineCommand({
   run: async ({ args }) => {
     // Default to sync if no subcommand
     if (!args._ || (Array.isArray(args._) && args._.length === 0)) {
-      await syncCommand.run?.({ args: {} } as any);
+      await runCommand(syncCommand, { rawArgs: [] });
     }
   },
 });

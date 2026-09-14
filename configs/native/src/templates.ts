@@ -74,7 +74,7 @@ export function workspaceCargoToml(crates: NativeCrateSpec[], options: TemplateO
 }
 
 /** A crate manifest — `cdylib` for bindings, plain lib for pure Rust. */
-export function crateCargoToml(spec: NativeCrateSpec, options: TemplateOptions): string {
+export function crateCargoToml(spec: NativeCrateSpec): string {
   const lines = [
     "[package]",
     `name    = "${spec.name}"`,
@@ -479,7 +479,7 @@ export async function writeCrate(
 ): Promise<{ crate: string; package?: string }> {
   const crateDir = join(root, nativeCrateDir(spec.name));
   await mkdir(join(crateDir, "src"), { recursive: true });
-  await writeFile(join(crateDir, "Cargo.toml"), crateCargoToml(spec, options));
+  await writeFile(join(crateDir, "Cargo.toml"), crateCargoToml(spec));
   await writeFile(join(crateDir, "src", "lib.rs"), crateLibRs(spec));
   if (spec.binding) {
     await writeFile(join(crateDir, "build.rs"), crateBuildRs());

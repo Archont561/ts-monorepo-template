@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { file } from "bun";
-import { defineCommand, runMain } from "citty";
+import { defineCommand, runCommand, runMain } from "citty";
 import { checkBadges } from "./index.ts";
 
 const checkCommand = defineCommand({
@@ -40,9 +40,9 @@ const main = defineCommand({
   },
   subCommands: { check: checkCommand },
   run: async () => {
-    await checkCommand.run?.({
-      args: { owner: "YOUR_ORG/YOUR_REPO", scope: "@your-scope" },
-    } as any);
+    // citty's own invoker builds the typed context; calling `run` by hand needs
+    // a hand-made one (and a cast) because the parsed args are not optional.
+    await runCommand(checkCommand, { rawArgs: [] });
   },
 });
 

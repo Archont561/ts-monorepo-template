@@ -5,15 +5,7 @@
  */
 
 export type { ArgDef, ArgsDef, CommandDef } from "citty";
-export {
-  createMain,
-  defineCommand,
-  parseArgs,
-  renderUsage,
-  runCommand,
-  runMain,
-  showUsage,
-} from "citty";
+export { defineCommand, renderUsage, runCommand, runMain, showUsage } from "citty";
 
 import { spawnSync } from "bun";
 /**
