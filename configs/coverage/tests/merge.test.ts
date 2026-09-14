@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import {
   coveragePattern,
   coverageReports,
+  formatSigned,
   meetsThreshold,
   sumTotals,
   totals,
@@ -113,5 +114,24 @@ describe("report discovery", () => {
     const root = makeTree({ "packages/internal/package.json": "{}\n" });
     expect(coverageReports(root)).toEqual([]);
     expect(coverageReports(root, true)).toEqual([]);
+  });
+});
+
+describe("report-only delta formatting", () => {
+  test("a positive delta keeps its explicit plus", () => {
+    expect(formatSigned(2.05, 2)).toBe("+2.05");
+    expect(formatSigned(844, 0)).toBe("+844");
+  });
+
+  test("a zero delta reads as plus zero, not a drop", () => {
+    expect(formatSigned(0, 2)).toBe("+0.00");
+    expect(formatSigned(0, 0)).toBe("+0");
+  });
+
+  test("a drop is signed once, never rendered as +-", () => {
+    // The dry run exists to show that widening the gate can hide a drop, so a
+    // negative delta must print as `-10.00`, not `+-10.00`.
+    expect(formatSigned(-10, 2)).toBe("-10.00");
+    expect(formatSigned(-100, 0)).toBe("-100");
   });
 });

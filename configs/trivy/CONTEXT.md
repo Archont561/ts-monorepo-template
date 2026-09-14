@@ -7,7 +7,7 @@
 - Opt-in (`confirm`, default `false`), but present in this repo, so its steps are in the generated `ci.yml`.
 - Two scans: filesystem (always) and image (when `apps/example/Dockerfile` exists). Both emit SARIF to the Security tab.
 - `mtrivy` supports `fs`, `image` and `build`; it warns and exits 0 when Trivy is absent. Root script: `bun run security:trivy`.
-- Actions in use: `aquasecurity/trivy-action@0.24.0` for the scan, `github/codeql-action/upload-sarif@v3` for the upload.
+- Actions in use: `aquasecurity/trivy-action@v0.24.0` for the scan, `github/codeql-action/upload-sarif@v3` for the upload.
 
 ## Decisions as outcomes
 
