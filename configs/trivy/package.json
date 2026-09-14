@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@myorg/bunup": "workspace:*",
+    "@myorg/citty": "workspace:*",
     "@myorg/ts": "workspace:*"
   },
   "dependencies": {
