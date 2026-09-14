@@ -1,14 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { removeJsonEntry } from "@myorg/manifest";
 import { $, file, write } from "bun";
 import { discoverConfigs, NATIVE_MODES } from "../src/configs";
-import {
-  collectScopeTargets,
-  MonorepoScaffolder,
-  removeJsonObjectEntry,
-  stripMarkerBlocks,
-} from "../src/scaffolder";
+import { collectScopeTargets, MonorepoScaffolder, stripMarkerBlocks } from "../src/scaffolder";
 
 describe("MonorepoScaffolder (unit)", () => {
   let workDir: string;
@@ -815,9 +811,9 @@ describe("MonorepoScaffolder (unit)", () => {
     });
   });
 
-  // ── removeJsonObjectEntry ────────────────────────
+  // ── removeJsonEntry (manifest editor) ────────────
 
-  describe("removeJsonObjectEntry", () => {
+  describe("removeJsonEntry", () => {
     const turbo = [
       "{",
       '  "$schema": "https://turborepo.dev/schema.json",',
@@ -839,7 +835,7 @@ describe("MonorepoScaffolder (unit)", () => {
     ].join("\n");
 
     test("removes a middle entry and its comma without reformatting", () => {
-      const next = removeJsonObjectEntry(turbo, "test:e2e");
+      const next = removeJsonEntry(turbo, "tasks.test:e2e");
       expect(next).not.toContain("test:e2e");
       // Serializing the rest would have reflowed arrays onto their own lines.
       expect(next).toContain('"dependsOn": ["^build"]');
@@ -851,7 +847,7 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("removes the last entry and the preceding comma", () => {
-      const next = removeJsonObjectEntry(turbo, "typecheck");
+      const next = removeJsonEntry(turbo, "tasks.typecheck");
       expect(next).not.toContain("typecheck");
       expect(next).toContain('"cache": false\n    }\n  }');
       expect(JSON.parse(next).tasks).toEqual({
@@ -861,13 +857,13 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("leaves the source untouched for an unknown key", () => {
-      expect(removeJsonObjectEntry(turbo, "build:wasm")).toBe(turbo);
+      expect(removeJsonEntry(turbo, "tasks.build:wasm")).toBe(turbo);
     });
 
     test("survives braces inside strings", () => {
       const source =
         '{\n  "a": {\n    "cmd": "echo {\\"x\\"}"\n  },\n  "b": {\n    "n": 1\n  }\n}\n';
-      const next = removeJsonObjectEntry(source, "a");
+      const next = removeJsonEntry(source, "a");
       expect(JSON.parse(next)).toEqual({ b: { n: 1 } });
     });
   });
@@ -949,6 +945,55 @@ describe("MonorepoScaffolder (unit)", () => {
       expect(stripMarkerBlocks(once, disabled)).toEqual({ content: once, changed: false });
     });
   });
+  // ── Manifest edits keep their formatting ─────────
+
+  describe("handleConfig formatting", () => {
+    test("removals leave the surrounding manifests formatted as committed", async () => {
+      await mkdir(`${workDir}/configs/demo`, { recursive: true });
+      await write(
+        `${workDir}/configs/demo/package.json`,
+        `${JSON.stringify({
+          name: "@myorg/demo",
+          scaffold: {
+            default: false,
+            scriptsToRemove: ["demo"],
+            turboTasksToRemove: ["demo"],
+          },
+        })}\n`,
+      );
+      await mkdir(`${workDir}/configs/turbo`, { recursive: true });
+      await write(`${workDir}/configs/turbo/package.json`, '{ "name": "@myorg/turbo" }\n');
+      await write(
+        `${workDir}/configs/turbo/turbo.base.json`,
+        '{\n  "tasks": {\n    "build": {\n      "dependsOn": ["^build"],\n      "outputs": ["dist/**"]\n    },\n    "demo": {\n      "dependsOn": ["build"]\n    }\n  }\n}\n',
+      );
+      await write(
+        `${workDir}/package.json`,
+        '{\n  "name": "demo",\n  "workspaces": ["packages/*", "configs/*"],\n  "scripts": {\n    "build": "mturbo build",\n    "demo": "mdemo"\n  },\n  "devDependencies": {\n    "@myorg/demo": "workspace:*",\n    "@myorg/internal": "workspace:*"\n  }\n}\n',
+      );
+      await mkdir(`${workDir}/packages/internal`, { recursive: true });
+      await write(`${workDir}/packages/internal/package.json`, '{ "name": "@myorg/internal" }\n');
+
+      const s = new MonorepoScaffolder({ targetDir: workDir, scope: "@myorg" });
+      await s.handleConfig();
+
+      const root = await file(`${workDir}/package.json`).text();
+      expect(root).toContain('"workspaces": ["packages/*", "configs/*"]');
+      expect(root).not.toContain("mdemo");
+      expect(root).not.toContain("@myorg/demo");
+      expect(root).toContain('"@myorg/internal": "workspace:*"');
+      expect(JSON.parse(root).scripts).toEqual({ build: "mturbo build" });
+
+      const turbo = await file(`${workDir}/configs/turbo/turbo.base.json`).text();
+      expect(turbo).toContain('"dependsOn": ["^build"]');
+      expect(turbo).toContain('"outputs": ["dist/**"]');
+      expect(turbo).not.toContain("demo");
+      expect(JSON.parse(turbo).tasks).toEqual({
+        build: { dependsOn: ["^build"], outputs: ["dist/**"] },
+      });
+    });
+  });
+
   // ── Workspace reconciliation ─────────────────────
 
   describe("reconcileWorkspaces", () => {
@@ -971,13 +1016,19 @@ describe("MonorepoScaffolder (unit)", () => {
       );
 
       const s = new MonorepoScaffolder({ targetDir: workDir, scope: "@myorg" });
-      const manifest = await file(`${workDir}/package.json`).json();
-      const result = await callReconcile(s, manifest);
+      const source = await file(`${workDir}/package.json`).text();
+      const result = await callReconcile(s, source);
 
       expect(result.droppedWorkspaces).toEqual(["packages/native/npm/*"]);
       expect(result.droppedDependencies).toEqual(["@myorg/native"]);
-      expect(result.manifest.workspaces).toEqual(["packages/*"]);
-      expect(result.manifest.devDependencies).toEqual({ citty: "^0.2.2" });
+      // The edited text keeps the committed formatting; only the drops are gone.
+      const reconciled = JSON.parse(result.source) as {
+        workspaces?: string[];
+        devDependencies?: Record<string, string>;
+      };
+      expect(reconciled.workspaces).toEqual(["packages/*"]);
+      expect(reconciled.devDependencies).toEqual({ citty: "^0.2.2" });
+      expect(result.source).toContain('"workspaces": [\n    "packages/*"\n  ]');
     });
   });
 
@@ -1025,19 +1076,16 @@ describe("MonorepoScaffolder (unit)", () => {
 });
 
 interface ReconcileOutcome {
-  manifest: {
-    workspaces?: string[];
-    devDependencies?: Record<string, string>;
-    dependencies?: Record<string, string>;
-  };
+  /** The edited manifest text — the assertions parse it. */
+  source: string;
   droppedWorkspaces: string[];
   droppedDependencies: string[];
 }
 
 /** `reconcileWorkspaces` is an implementation detail; the unit tests drive it directly. */
-async function callReconcile(s: MonorepoScaffolder, manifest: unknown): Promise<ReconcileOutcome> {
-  const target = s as unknown as { reconcileWorkspaces(m: unknown): Promise<ReconcileOutcome> };
-  return target.reconcileWorkspaces(manifest);
+async function callReconcile(s: MonorepoScaffolder, source: string): Promise<ReconcileOutcome> {
+  const target = s as unknown as { reconcileWorkspaces(s: string): Promise<ReconcileOutcome> };
+  return target.reconcileWorkspaces(source);
 }
 
 function setDisabledScopes(s: MonorepoScaffolder, scopes: string[]): void {

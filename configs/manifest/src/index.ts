@@ -342,13 +342,13 @@ export function readJson<T = Record<string, unknown>>(source: string): T {
  */
 export async function updateManifestFile(
   path: string,
-  edit: (source: string) => string,
+  edit: (source: string) => string | Promise<string>,
 ): Promise<boolean> {
   const file = Bun.file(path);
   if (!(await file.exists())) return false;
 
   const source = await file.text();
-  const next = edit(source);
+  const next = await edit(source);
   if (next === source) return false;
 
   await Bun.write(path, next);

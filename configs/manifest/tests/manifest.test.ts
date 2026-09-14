@@ -177,6 +177,13 @@ describe("manifest editor", () => {
     );
   });
 
+  test("removing a value its array does not hold is a no-op", () => {
+    expect(removeJsonArrayValue(FIXTURE, "workspaces", "packages/*")).not.toBe(FIXTURE);
+    expect(removeJsonArrayValue(FIXTURE, "workspaces", "missing/*")).toBe(FIXTURE);
+    expect(removeJsonArrayValue(FIXTURE, "turbo.tasks.build.outputs", "dist/**")).not.toBe(FIXTURE);
+    expect(removeJsonArrayValue(FIXTURE, "name", "myorg")).toBe(FIXTURE);
+  });
+
   test("malformed or non-object documents are left alone", () => {
     expect(removeJsonEntry("[1, 2, 3]", "a")).toBe("[1, 2, 3]");
     expect(removeJsonEntry(`{ "a" 1 }`, "a")).toBe(`{ "a" 1 }`);

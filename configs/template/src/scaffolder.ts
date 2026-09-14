@@ -1,3 +1,9 @@
+import {
+  readJson,
+  removeJsonArrayValue,
+  removeJsonEntry,
+  updateManifestFile,
+} from "@myorg/manifest";
 import { $, file, Glob, spawnSync, write } from "bun";
 import { regenerateAll } from "./aggregate";
 import type {
@@ -43,62 +49,6 @@ const PACKAGE_JSON_SCRIPTS_TO_REMOVE = [
   "docs:preview",
   "docs:site",
 ];
-
-/**
- * Deletes a `"key": { ... }` entry from a JSON document without touching the
- * formatting of the entries around it.
- *
- * Parsing and re-serializing is the obvious way to drop a Turbo task, but
- * `JSON.stringify(value, null, 2)` reflows every array in the file onto its own
- * line, and the scaffolded project's own `biome check` then rejects the config
- * it was just handed. Editing the text keeps every surviving byte as committed.
- */
-export function removeJsonObjectEntry(source: string, key: string): string {
-  const keyIndex = source.indexOf(`"${key}"`);
-  if (keyIndex === -1) return source;
-
-  const openBrace = source.indexOf("{", keyIndex);
-  if (openBrace === -1) return source;
-
-  // Walk to the entry's matching closing brace, ignoring braces inside strings.
-  let depth = 0;
-  let closeBrace = -1;
-  for (let i = openBrace; i < source.length; i++) {
-    const char = source[i];
-    if (char === '"') {
-      for (i++; i < source.length; i++) {
-        if (source[i] === "\\") i++;
-        else if (source[i] === '"') break;
-      }
-      continue;
-    }
-    if (char === "{") depth++;
-    else if (char === "}") {
-      depth--;
-      if (depth === 0) {
-        closeBrace = i;
-        break;
-      }
-    }
-  }
-  if (closeBrace === -1) return source;
-
-  const start = source.lastIndexOf("\n", keyIndex) + 1;
-  let end = closeBrace + 1;
-
-  const trailingComma = /^[ \t]*,[ \t]*\n?/.exec(source.slice(end));
-  if (trailingComma) {
-    end += trailingComma[0].length;
-  } else {
-    // Last entry in the object — its predecessor keeps the comma instead.
-    const before = source.slice(0, start).replace(/[ \t]*\n$/, "");
-    if (before.endsWith(",")) {
-      return `${before.slice(0, -1)}${source.slice(end)}`;
-    }
-  }
-
-  return source.slice(0, start) + source.slice(end);
-}
 
 /**
  * Text files that can carry marker blocks, and the three comment styles they use.
@@ -329,9 +279,10 @@ interface RootManifest {
   [key: string]: unknown;
 }
 
-/** The reconciled manifest plus what had to go, for callers and tests. */
+/** The reconciled root manifest plus what had to go, for callers and tests. */
 interface ReconcileResult {
-  manifest: RootManifest;
+  /** The edited manifest text — the file's committed formatting survives. */
+  source: string;
   droppedWorkspaces: string[];
   droppedDependencies: string[];
 }
@@ -679,16 +630,21 @@ export class MonorepoScaffolder {
     return !(meta.selfDestruct || this.isDisabled(meta, selected));
   }
 
-  /** Every removal one disabled config asks for, in the order it was written. */
-  private async applyRemovals(config: DiscoveredConfig, rootPkg: RootManifest): Promise<void> {
+  /**
+   * Every removal one disabled config asks for, applied as edits to the root
+   * manifest text — the committed formatting of the entries that stay must
+   * survive, so nothing here is re-serialized.
+   */
+  private async applyRemovals(config: DiscoveredConfig, source: string): Promise<string> {
     const { meta } = config;
     const removals = this.removalsFor(meta, this.selectedFor(meta));
+    let next = source;
 
     // 1. Remove the config package directory
     await $`rm -rf ${this.targetDir}/configs/${config.dir}`.quiet();
 
     // 2. Remove the workspace dependency from root
-    delete rootPkg.devDependencies?.[config.name];
+    next = removeJsonEntry(next, `devDependencies.${config.name}`);
 
     // 3. Extra removals (exact paths, backward compat)
     for (const relativePath of removals.extraRemovals ?? []) {
@@ -707,51 +663,50 @@ export class MonorepoScaffolder {
 
     // 4. Root scripts
     for (const script of removals.scriptsToRemove ?? []) {
-      delete rootPkg.scripts?.[script];
+      next = removeJsonEntry(next, `scripts.${script}`);
     }
 
-    // 5. Turbo tasks — text surgery so the committed formatting survives.
+    // 5. Turbo tasks live in their own manifest and keep its formatting too.
     if (removals.turboTasksToRemove) {
-      const turboPath = `${this.targetDir}/configs/turbo/turbo.base.json`;
-      if (await file(turboPath).exists()) {
-        let turbo = await file(turboPath).text();
-        for (const task of removals.turboTasksToRemove) {
-          turbo = removeJsonObjectEntry(turbo, task);
-        }
-        await write(turboPath, turbo);
-      }
+      const tasks = removals.turboTasksToRemove;
+      await updateManifestFile(`${this.targetDir}/configs/turbo/turbo.base.json`, (turbo) => {
+        let edited = turbo;
+        for (const task of tasks) edited = removeJsonEntry(edited, `tasks.${task}`);
+        return edited;
+      });
     }
 
     // 6. App deps
     if (removals.appDepsToRemove) {
-      const appPkgPath = `${this.targetDir}/apps/example/package.json`;
-      if (await file(appPkgPath).exists()) {
-        const appPkg = await file(appPkgPath).json();
-        for (const dep of removals.appDepsToRemove) {
-          delete appPkg.devDependencies?.[dep];
-        }
-        await write(appPkgPath, `${JSON.stringify(appPkg, null, 2)}\n`);
-      }
+      const deps = removals.appDepsToRemove;
+      await updateManifestFile(`${this.targetDir}/apps/example/package.json`, (appManifest) => {
+        let edited = appManifest;
+        for (const dep of deps) edited = removeJsonEntry(edited, `devDependencies.${dep}`);
+        return edited;
+      });
     }
+
+    return next;
   }
 
   async handleConfig(): Promise<void> {
     const configs = await discoverConfigs(this.targetDir);
     const rootPkgPath = `${this.targetDir}/package.json`;
-    if (!(await file(rootPkgPath).exists())) return;
-    const rootPkg = (await file(rootPkgPath).json()) as RootManifest;
 
-    for (const config of configs) {
-      if (this.isStaying(config.meta)) continue;
-      await this.applyRemovals(config, rootPkg);
-    }
+    await updateManifestFile(rootPkgPath, async (source) => {
+      let next = source;
+      for (const config of configs) {
+        if (this.isStaying(config.meta)) continue;
+        next = await this.applyRemovals(config, next);
+      }
 
-    // A config removal can take a whole workspace with it (native=none deletes
-    // packages/native, the npm packages under npm/* included). A root
-    // dependency or workspace glob left pointing at the missing directory makes
-    // `bun install` fail outright, so both are reconciled with what survived.
-    const { manifest } = await this.reconcileWorkspaces(rootPkg);
-    await write(rootPkgPath, `${JSON.stringify(manifest, null, 2)}\n`);
+      // A config removal can take a whole workspace with it (native=none deletes
+      // packages/native, the npm packages under npm/* included). A root
+      // dependency or workspace glob left pointing at the missing directory makes
+      // `bun install` fail outright, so both are reconciled with what survived.
+      const reconciled = await this.reconcileWorkspaces(next);
+      return reconciled.source;
+    });
   }
 
   /**
@@ -762,16 +717,16 @@ export class MonorepoScaffolder {
    * regular npm dependency is left alone, even when its name matches nothing
    * locally.
    *
-   * Mutates the manifest in place so the field order of the committed file
-   * survives, and reports what it dropped.
+   * Returns the edited text, so the entries that survive keep the bytes the
+   * repository committed, and reports what it dropped.
    */
-  private async reconcileWorkspaces(manifest: RootManifest): Promise<ReconcileResult> {
+  private async reconcileWorkspaces(source: string): Promise<ReconcileResult> {
+    const manifest = readJson<RootManifest>(source);
+
     const droppedWorkspaces: string[] = [];
-    const surviving: string[] = [];
     for (const pattern of manifest.workspaces ?? []) {
       const manifests = [...new Glob(`${pattern}/package.json`).scanSync({ cwd: this.targetDir })];
-      if (manifests.length > 0) surviving.push(pattern);
-      else droppedWorkspaces.push(pattern);
+      if (manifests.length === 0) droppedWorkspaces.push(pattern);
     }
 
     // Package names come from the whole tree rather than only the surviving
@@ -794,20 +749,19 @@ export class MonorepoScaffolder {
     }
 
     const droppedDependencies: string[] = [];
-    const keepResolvable = (deps: Record<string, string>): Record<string, string> =>
-      Object.fromEntries(
-        Object.entries(deps).filter(([name, spec]) => {
-          const keep = !spec.startsWith("workspace:") || names.has(name);
-          if (!keep) droppedDependencies.push(name);
-          return keep;
-        }),
-      );
+    let next = source;
+    for (const pattern of droppedWorkspaces) {
+      next = removeJsonArrayValue(next, "workspaces", pattern);
+    }
+    for (const field of ["devDependencies", "dependencies"] as const) {
+      for (const [name, spec] of Object.entries(manifest[field] ?? {})) {
+        if (!spec.startsWith("workspace:") || names.has(name)) continue;
+        droppedDependencies.push(name);
+        next = removeJsonEntry(next, `${field}.${name}`);
+      }
+    }
 
-    manifest.workspaces = surviving;
-    manifest.devDependencies = keepResolvable(manifest.devDependencies ?? {});
-    manifest.dependencies = keepResolvable(manifest.dependencies ?? {});
-
-    return { manifest, droppedWorkspaces, droppedDependencies };
+    return { source: next, droppedWorkspaces, droppedDependencies };
   }
 
   /**
