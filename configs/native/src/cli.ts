@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { spawnSync, which } from "bun";
-import { defineCommand, runMain } from "citty";
+import { defineCommand, runMain, spawnTool } from "@myorg/citty";
+import { which } from "bun";
 import {
   DEFAULT_NATIVE_SCOPE,
   NATIVE_DIR,
@@ -51,14 +51,7 @@ function nativeExistsOrWarn(): boolean {
 
 function runCargo(args: string[], opts: { cwd?: string } = {}): number {
   if (!nativeExistsOrWarn() || !cargoExistsOrWarn()) return 0;
-  const result = spawnSync({
-    cmd: ["cargo", ...args],
-    cwd: opts.cwd ?? WORKSPACE_DIR,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  return result.exitCode;
+  return spawnTool(["cargo", ...args], { cwd: opts.cwd ?? WORKSPACE_DIR });
 }
 
 function napiBin(): string {
@@ -117,8 +110,8 @@ function runNapiPerPackage(
   let failed = 0;
   for (const pkg of packages) {
     console.log(`\n▸ ${pkg.name}: ${pkg.crateDir} → ${pkg.dir}`);
-    const result = spawnSync({
-      cmd: [
+    const exitCode = spawnTool(
+      [
         "bun",
         napiBin(),
         ...args,
@@ -128,14 +121,11 @@ function runNapiPerPackage(
         ...(options.cross ? ["--use-napi-cross"] : []),
         ...(options.dryRun ? ["--dry-run"] : []),
       ],
-      cwd: ROOT,
-      stdout: "inherit",
-      stderr: "inherit",
-      stdin: "inherit",
-    });
-    if (result.exitCode !== 0) {
-      failed = result.exitCode;
-      console.error(`::error::${args.join(" ")} failed for ${pkg.name} (exit ${result.exitCode})`);
+      { cwd: ROOT },
+    );
+    if (exitCode !== 0) {
+      failed = exitCode;
+      console.error(`::error::${args.join(" ")} failed for ${pkg.name} (exit ${exitCode})`);
     }
   }
   return failed;
@@ -143,14 +133,7 @@ function runNapiPerPackage(
 
 function runNapi(args: string[], cwd: string = WORKSPACE_DIR): number {
   if (!nativeExistsOrWarn() || !cargoExistsOrWarn()) return 0;
-  const result = spawnSync({
-    cmd: ["bun", napiBin(), ...args],
-    cwd,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  return result.exitCode;
+  return spawnTool(["bun", napiBin(), ...args], { cwd });
 }
 
 /** WASI builds need a linker from the SDK; CI installs it, laptops often don't. */
@@ -305,14 +288,8 @@ const typecheckCommand = defineCommand({
     for (const pkg of packages) {
       console.log(`▸ typecheck ${pkg.name}`);
       // mtsc from the package dir keeps every path in the tsconfig relative.
-      const result = spawnSync({
-        cmd: ["bun", "run", "typecheck"],
-        cwd: join(ROOT, pkg.dir),
-        stdout: "inherit",
-        stderr: "inherit",
-        stdin: "inherit",
-      });
-      if (result.exitCode !== 0) failed = result.exitCode;
+      const exitCode = spawnTool(["bun", "run", "typecheck"], { cwd: join(ROOT, pkg.dir) });
+      if (exitCode !== 0) failed = exitCode;
     }
     process.exit(failed);
   },
