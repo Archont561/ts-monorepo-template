@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { spawnSync, which } from "bun";
-import { defineCommand, runMain } from "citty";
+import { defineCommand, runMain, spawnTool } from "@myorg/citty";
+import { which } from "bun";
 import {
+  DEFAULT_NATIVE_SCOPE,
   NATIVE_DIR,
   NATIVE_NPM_DIR,
   NATIVE_TARGETS,
@@ -50,14 +51,7 @@ function nativeExistsOrWarn(): boolean {
 
 function runCargo(args: string[], opts: { cwd?: string } = {}): number {
   if (!nativeExistsOrWarn() || !cargoExistsOrWarn()) return 0;
-  const result = spawnSync({
-    cmd: ["cargo", ...args],
-    cwd: opts.cwd ?? WORKSPACE_DIR,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  return result.exitCode;
+  return spawnTool(["cargo", ...args], { cwd: opts.cwd ?? WORKSPACE_DIR });
 }
 
 function napiBin(): string {
@@ -116,8 +110,8 @@ function runNapiPerPackage(
   let failed = 0;
   for (const pkg of packages) {
     console.log(`\n▸ ${pkg.name}: ${pkg.crateDir} → ${pkg.dir}`);
-    const result = spawnSync({
-      cmd: [
+    const exitCode = spawnTool(
+      [
         "bun",
         napiBin(),
         ...args,
@@ -127,14 +121,11 @@ function runNapiPerPackage(
         ...(options.cross ? ["--use-napi-cross"] : []),
         ...(options.dryRun ? ["--dry-run"] : []),
       ],
-      cwd: ROOT,
-      stdout: "inherit",
-      stderr: "inherit",
-      stdin: "inherit",
-    });
-    if (result.exitCode !== 0) {
-      failed = result.exitCode;
-      console.error(`::error::${args.join(" ")} failed for ${pkg.name} (exit ${result.exitCode})`);
+      { cwd: ROOT },
+    );
+    if (exitCode !== 0) {
+      failed = exitCode;
+      console.error(`::error::${args.join(" ")} failed for ${pkg.name} (exit ${exitCode})`);
     }
   }
   return failed;
@@ -142,14 +133,7 @@ function runNapiPerPackage(
 
 function runNapi(args: string[], cwd: string = WORKSPACE_DIR): number {
   if (!nativeExistsOrWarn() || !cargoExistsOrWarn()) return 0;
-  const result = spawnSync({
-    cmd: ["bun", napiBin(), ...args],
-    cwd,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  return result.exitCode;
+  return spawnTool(["bun", napiBin(), ...args], { cwd });
 }
 
 /** WASI builds need a linker from the SDK; CI installs it, laptops often don't. */
@@ -304,14 +288,8 @@ const typecheckCommand = defineCommand({
     for (const pkg of packages) {
       console.log(`▸ typecheck ${pkg.name}`);
       // mtsc from the package dir keeps every path in the tsconfig relative.
-      const result = spawnSync({
-        cmd: ["bun", "run", "typecheck"],
-        cwd: join(ROOT, pkg.dir),
-        stdout: "inherit",
-        stderr: "inherit",
-        stdin: "inherit",
-      });
-      if (result.exitCode !== 0) failed = result.exitCode;
+      const exitCode = spawnTool(["bun", "run", "typecheck"], { cwd: join(ROOT, pkg.dir) });
+      if (exitCode !== 0) failed = exitCode;
     }
     process.exit(failed);
   },
@@ -409,6 +387,31 @@ const listCommand = defineCommand({
   },
 });
 
+/**
+ * npm scope for a newly added package: `--scope` wins, then the scope the
+ * existing packages already use (a scaffolded monorepo renames `@myorg` to the
+ * user's own scope, and `mnative add` must not reintroduce the template's),
+ * then `NATIVE_SCOPE`, then the template default.
+ */
+async function resolveScope(explicit?: string): Promise<string> {
+  if (explicit) return explicit;
+
+  const first = discoverPackages(ROOT)[0];
+  if (first) {
+    try {
+      const manifest = (await Bun.file(join(ROOT, first.dir, "package.json")).json()) as {
+        name?: string;
+      };
+      const prefix = manifest.name?.split("/")[0];
+      if (prefix?.startsWith("@")) return prefix;
+    } catch {
+      // Unreadable manifest — fall through to the env/default scope.
+    }
+  }
+
+  return process.env.NATIVE_SCOPE ?? DEFAULT_NATIVE_SCOPE;
+}
+
 const addCommand = defineCommand({
   meta: {
     name: "add",
@@ -449,11 +452,7 @@ const addCommand = defineCommand({
       sample: "arithmetic" as const,
     };
 
-    const scope =
-      (args.scope as string) ??
-      (discoverPackages(ROOT)[0]?.name ? undefined : undefined) ??
-      process.env.NATIVE_SCOPE ??
-      "@myorg";
+    const scope = await resolveScope(args.scope as string | undefined);
 
     await writeCrate(ROOT, spec, { scope });
     await addWorkspaceMember(ROOT, name);

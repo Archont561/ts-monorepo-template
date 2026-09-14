@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { existsSync, readdirSync, rmSync } from "node:fs";
-import { spawnSync, which } from "bun";
-import { defineCommand, runMain } from "citty";
+import { defineCommand, runMain, spawnTool } from "@myorg/citty";
+import { which } from "bun";
 
 const bunfig = `${import.meta.dir}/../bunfig.toml`;
 
@@ -17,13 +17,7 @@ async function runCoverage() {
   // Per-package coverage is turbo's job; merging is mcoverage's
   // (`bun run coverage` = mturbo coverage && mcoverage merge).
   console.log("Running per-package coverage via mturbo...\n");
-  const turboResult = spawnSync([mturbo, "coverage"], {
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-
-  process.exit(turboResult.exitCode);
+  process.exit(spawnTool([mturbo, "coverage"]));
 }
 
 /** Removes workspace node_modules dirs (never the root one — we run from it). */
@@ -64,8 +58,7 @@ if (
   } else {
     cmd = ["bun", ...rawArgs];
   }
-  const result = spawnSync({ cmd, stdout: "inherit", stderr: "inherit", stdin: "inherit" });
-  process.exit(result.exitCode);
+  process.exit(spawnTool(cmd));
 }
 
 const coverageCommand = defineCommand({
@@ -91,8 +84,7 @@ const testCommand = defineCommand({
   run() {
     const raw = process.argv.slice(3);
     const cmd = ["bun", "test", `--config=${bunfig}`, ...raw];
-    const result = spawnSync({ cmd, stdout: "inherit", stderr: "inherit", stdin: "inherit" });
-    process.exit(result.exitCode);
+    process.exit(spawnTool(cmd));
   },
 });
 
@@ -128,8 +120,7 @@ const main = defineCommand({
       cmd = ["bun", ...raw];
     }
 
-    const result = spawnSync({ cmd, stdout: "inherit", stderr: "inherit", stdin: "inherit" });
-    process.exit(result.exitCode);
+    process.exit(spawnTool(cmd));
   },
 });
 

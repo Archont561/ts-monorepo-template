@@ -13,7 +13,9 @@
   },
   "scripts": {
     "build": "mbunup",
-    "dev": "mbunup --watch"
+    "dev": "mbunup --watch",
+    "test": "mbun test",
+    "coverage": "mbun test --coverage"
   },
   "exports": {
     ".": "./src/index.ts"

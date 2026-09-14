@@ -16,6 +16,9 @@
  * ```
  */
 
+/** Scope used when nothing else (flag, manifest, env) provides one. */
+export const DEFAULT_NATIVE_SCOPE = "@myorg";
+
 /** Workspace-relative path of the Rust workspace. */
 export const NATIVE_DIR = "packages/native";
 

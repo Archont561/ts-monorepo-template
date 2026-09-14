@@ -19,6 +19,7 @@
     "./actionlint.yaml": "./actionlint.yaml"
   },
   "devDependencies": {
+    "@myorg/citty": "workspace:*",
     "github-actionlint": "^1.7.12"
   },
   "dependencies": {

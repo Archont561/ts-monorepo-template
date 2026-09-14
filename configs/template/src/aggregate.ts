@@ -38,39 +38,6 @@ import { WORKFLOW_VARS } from "./vars";
  * `bun configs/template/src/aggregate.ts <targetDir>`.
  */
 
-export async function aggregateMarkdown(
-  targetDir: string,
-  fileName: string,
-  outputFileName: string,
-  marker: string,
-): Promise<void> {
-  const configsDir = `${targetDir}/configs`;
-  const found =
-    await $`find ${configsDir} -mindepth 2 -maxdepth 2 -name ${fileName} -type f`.text();
-  const files = found.trim().split("\n").filter(Boolean).sort();
-
-  const blocks: string[] = [];
-  for (const absolutePath of files) {
-    const name = absolutePath.split("/").at(-2);
-    const content = (await file(absolutePath).text()).trimEnd();
-    blocks.push(
-      [`<!-- ${marker}:${name}:START -->`, content, `<!-- ${marker}:${name}:END -->`].join("\n"),
-    );
-  }
-
-  const intro = (await file(`${configsDir}/${fileName}`).text()).trim();
-  const output = [
-    `<!-- AUTO-GENERATED from configs/*/${fileName} -->`,
-    intro,
-    "",
-    blocks.join("\n\n"),
-    "",
-  ].join("\n");
-
-  await write(`${targetDir}/${outputFileName}`, `${output}\n`);
-  console.log(`✅ generated ${targetDir}/${outputFileName} (${blocks.length} sections)`);
-}
-
 /**
  * Renders a workflow skeleton, splicing the matching step fragments into
  * the `{{STEPS}}` placeholder. Both ci.steps.yml and release.steps.yml
@@ -143,90 +110,155 @@ export async function aggregateWorkflow(
   console.log(`✅ generated ${outputPath}`);
 }
 
-export async function regenerateAll(targetDir: string): Promise<void> {
+/** How a generated workflow should be treated on this pass. */
+type WorkflowOutcome = "generate" | "remove" | "skip";
+
+/** What the surrounding tree looks like — computed once, read by every spec. */
+interface WorkflowContext {
+  /** `configs/pages` survived the removal pass. */
+  pages: boolean;
+  /** `configs/coverage` survived. */
+  coverage: boolean;
+  /** `packages/native` survived. */
+  native: boolean;
+  /** `configs/dependabot` or `configs/gh-actions` survived. */
+  dependabot: boolean;
+  /** `configs/stale` survived. */
+  stale: boolean;
+  /** The template's own docs site deploys Pages — never true inside a scaffold. */
+  templateDocsSite: boolean;
+  /** Pages owns the Pages site, so no standalone `pages.yml` is generated. */
+  pagesDeploysToSite: boolean;
+}
+
+/**
+ * One workflow the generator owns: the skeleton it renders, the config whose
+ * survival decides whether it is generated, and the stale file to clean up
+ * when it is not.
+ *
+ * `skip` exists because an absent config is not always grounds for a cleanup —
+ * a removed coverage config must not delete a `coverage.yml` that belongs to
+ * something else, which is what the original `if (coverageConfigExists)` guard
+ * spelled out inline.
+ */
+interface WorkflowSpec {
+  base: string;
+  steps: string;
+  outcome: (ctx: WorkflowContext) => WorkflowOutcome;
+  /** File to delete when the outcome is `remove`, relative to the target dir. */
+  stale?: string;
+  /** Parenthesised log suffix; omit it to remove silently. */
+  reason?: (ctx: WorkflowContext) => string;
+}
+
+/**
+ * Every workflow the repo and the scaffolds share, in generation order.
+ *
+ * `dependabot.base.yml` renders to `.github/dependabot.yml` rather than into
+ * `.github/workflows/` — `aggregateWorkflow` derives that itself.
+ */
+const WORKFLOWS: readonly WorkflowSpec[] = [
+  { base: "ci.base.yml", steps: "ci.steps.yml", outcome: () => "generate" },
+  { base: "release.base.yml", steps: "release.steps.yml", outcome: () => "generate" },
+  {
+    base: "pages.base.yml",
+    steps: "pages.steps.yml",
+    outcome: (ctx) => (ctx.pagesDeploysToSite ? "generate" : "remove"),
+    stale: ".github/workflows/pages.yml",
+    reason: (ctx) => (ctx.templateDocsSite ? "template docs site deploys Pages" : "pages disabled"),
+  },
+  {
+    base: "coverage.base.yml",
+    steps: "coverage.steps.yml",
+    outcome: (ctx) => {
+      if (!ctx.coverage) return "skip";
+      return ctx.pagesDeploysToSite || ctx.templateDocsSite ? "remove" : "generate";
+    },
+    stale: ".github/workflows/coverage.yml",
+    reason: (ctx) =>
+      ctx.templateDocsSite
+        ? "coverage published by the docs site"
+        : "coverage included in pages.yml",
+  },
+  {
+    base: "native.base.yml",
+    steps: "native.steps.yml",
+    outcome: (ctx) => (ctx.native ? "generate" : "remove"),
+    stale: ".github/workflows/native.yml",
+    reason: () => "native disabled",
+  },
+  {
+    base: "dependabot.base.yml",
+    steps: "dependabot.yml",
+    outcome: (ctx) => (ctx.dependabot ? "generate" : "skip"),
+  },
+  {
+    base: "dependabot-auto-merge.base.yml",
+    steps: "dependabot-auto-merge.steps.yml",
+    outcome: (ctx) => (ctx.dependabot ? "generate" : "skip"),
+  },
+  {
+    base: "stale.base.yml",
+    steps: "stale.steps.yml",
+    outcome: (ctx) => (ctx.stale ? "generate" : "remove"),
+    stale: ".github/workflows/stale.yml",
+  },
+];
+
+/** Generates, cleans up or leaves one workflow alone. */
+async function syncWorkflow(
+  targetDir: string,
+  spec: WorkflowSpec,
+  ctx: WorkflowContext,
+): Promise<void> {
+  const outcome = spec.outcome(ctx);
+  if (outcome === "skip") return;
+  if (outcome === "generate") {
+    await aggregateWorkflow(targetDir, spec.base, spec.steps);
+    return;
+  }
+
+  if (!spec.stale) return;
+  const stale = `${targetDir}/${spec.stale}`;
+  if (!(await file(stale).exists())) return;
+
+  await $`rm -rf ${stale}`.quiet();
+  const reason = spec.reason?.(ctx);
+  if (reason) console.log(`🗑️ Removed ${stale} (${reason})`);
+}
+
+/**
+ * Regenerates every workflow the surviving configs ask for.
+ *
+ * `templateDocsSite` defaults to testing for the template's own docs site, so
+ * `mdocs` (running inside the repo) keeps its behaviour; a scaffolder that has
+ * already deleted `docs/` passes `false` instead of re-testing the pruned tree.
+ */
+export async function regenerateAll(
+  targetDir: string,
+  options: { templateDocsSite?: boolean } = {},
+): Promise<void> {
   await mkdir(`${targetDir}/.github/workflows`, { recursive: true });
   await mkdir(`${targetDir}/.github`, { recursive: true });
-  await aggregateWorkflow(targetDir, "ci.base.yml", "ci.steps.yml");
-  await aggregateWorkflow(targetDir, "release.base.yml", "release.steps.yml");
-  // Only generate pages.yml if pages config is enabled (exists).
-  //
-  // Exception: this repository ships its own template-only docs site (docs/),
-  // deployed by template-docs.yml. Two workflows cannot deploy to one Pages
-  // site, so pages.yml is skipped here and `mdocs site` nests the demo app
-  // under /example/ instead. Scaffolded monorepos have no docs/ (removed by
-  // extraRemovals before CI is regenerated), so they still get pages.yml
-  // whenever the pages config is opted in.
-  const pagesConfigExists = await file(`${targetDir}/configs/pages/package.json`).exists();
-  // The template-only docs site deploys Pages via template-docs.yml.
-  const templateDocsExists = await file(`${targetDir}/docs/.vitepress/config.mts`).exists();
-  const pagesDeploysToSite = pagesConfigExists && !templateDocsExists;
-  if (pagesDeploysToSite) {
-    await aggregateWorkflow(targetDir, "pages.base.yml", "pages.steps.yml");
-  } else {
-    // Ensure no stale pages.yml remains when pages is disabled or the docs site
-    // owns the Pages deployment
-    const pagesWorkflow = `${targetDir}/.github/workflows/pages.yml`;
-    if (await file(pagesWorkflow).exists()) {
-      await $`rm -rf ${pagesWorkflow}`.quiet();
-      console.log(
-        `🗑️ Removed ${pagesWorkflow} (${templateDocsExists ? "template docs site deploys Pages" : "pages disabled"})`,
-      );
-    }
-  }
-  // Coverage workflow: a standalone coverage Pages site only when nothing else
-  // deploys Pages. pages.yml includes coverage at /coverage/ via
-  // pages.steps.yml, and the template docs site renders it with `mdocs site`.
-  const coverageConfigExists = await file(`${targetDir}/configs/coverage/package.json`).exists();
-  if (coverageConfigExists) {
-    if (!pagesDeploysToSite && !templateDocsExists) {
-      // No pages app and no docs site — deploy coverage HTML as its own site
-      await aggregateWorkflow(targetDir, "coverage.base.yml", "coverage.steps.yml");
-    } else {
-      // Remove stale standalone coverage.yml (it would fight over the same site)
-      const coverageWorkflow = `${targetDir}/.github/workflows/coverage.yml`;
-      if (await file(coverageWorkflow).exists()) {
-        await $`rm -rf ${coverageWorkflow}`.quiet();
-        console.log(
-          `🗑️ Removed ${coverageWorkflow} (${templateDocsExists ? "coverage published by the docs site" : "coverage included in pages.yml"})`,
-        );
-      }
-    }
-  }
-  // Native build matrix: one job per target triple, then a fan-in job that
-  // assembles the per-platform npm packages. Only when configs/native is kept —
-  // deleting the config deletes the workflow with it.
-  if (await file(`${targetDir}/configs/native/package.json`).exists()) {
-    await aggregateWorkflow(targetDir, "native.base.yml", "native.steps.yml");
-  } else {
-    const nativeWorkflow = `${targetDir}/.github/workflows/native.yml`;
-    if (await file(nativeWorkflow).exists()) {
-      await $`rm -rf ${nativeWorkflow}`.quiet();
-      console.log(`🗑️ Removed ${nativeWorkflow} (native disabled)`);
-    }
-  }
-  // Dependabot is always generated (always config), but check existence for safety
-  const dependabotConfigExists = await file(
-    `${targetDir}/configs/dependabot/package.json`,
-  ).exists();
-  const ghActionsExists = await file(`${targetDir}/configs/gh-actions/package.json`).exists();
-  if (dependabotConfigExists || ghActionsExists) {
-    await aggregateWorkflow(targetDir, "dependabot.base.yml", "dependabot.yml");
-    await aggregateWorkflow(
-      targetDir,
-      "dependabot-auto-merge.base.yml",
-      "dependabot-auto-merge.steps.yml",
-    );
-  }
-  // Stale workflow — only when stale config is enabled
-  const staleConfigExists = await file(`${targetDir}/configs/stale/package.json`).exists();
-  if (staleConfigExists) {
-    await aggregateWorkflow(targetDir, "stale.base.yml", "stale.steps.yml");
-  } else {
-    const staleWorkflow = `${targetDir}/.github/workflows/stale.yml`;
-    if (await file(staleWorkflow).exists()) {
-      await $`rm -rf ${staleWorkflow}`.quiet();
-      console.log(`🗑️ Removed ${staleWorkflow} (stale disabled)`);
-    }
+
+  const exists = (relative: string) => file(`${targetDir}/${relative}`).exists();
+  const pages = await exists("configs/pages/package.json");
+  const templateDocsSite = options.templateDocsSite ?? (await exists("docs/.vitepress/config.mts"));
+
+  const ctx: WorkflowContext = {
+    pages,
+    coverage: await exists("configs/coverage/package.json"),
+    native: await exists("configs/native/package.json"),
+    dependabot:
+      (await exists("configs/dependabot/package.json")) ||
+      (await exists("configs/gh-actions/package.json")),
+    stale: await exists("configs/stale/package.json"),
+    templateDocsSite,
+    pagesDeploysToSite: pages && !templateDocsSite,
+  };
+
+  for (const spec of WORKFLOWS) {
+    await syncWorkflow(targetDir, spec, ctx);
   }
 }
 

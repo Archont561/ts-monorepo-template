@@ -1,8 +1,18 @@
-import { mkdir } from "node:fs/promises";
+import {
+  readJson,
+  removeJsonArrayValue,
+  removeJsonEntry,
+  updateManifestFile,
+} from "@myorg/manifest";
 import { $, file, Glob, spawnSync, write } from "bun";
-import { aggregateWorkflow } from "./aggregate";
-import type { ScaffoldMeta, ScaffoldRemovals } from "./configs";
-import { discoverConfigs } from "./configs";
+import { regenerateAll } from "./aggregate";
+import type {
+  DiscoveredConfig,
+  ScaffoldMeta,
+  ScaffoldRemovals,
+  ScaffoldSelection,
+} from "./configs";
+import { DEFAULT_SCOPE, discoverConfigs } from "./configs";
 
 export interface ScaffolderOptions {
   targetDir?: string;
@@ -13,7 +23,7 @@ export interface ScaffolderOptions {
   /** Repository name used for badge, Cargo and Pages URLs. */
   repo?: string;
   /** Flag -> selected value for opt-in configs (from scaffold metadata). */
-  configs?: Record<string, boolean | string>;
+  configs?: Record<string, ScaffoldSelection>;
 }
 
 /** Identity that badge/Cargo/Pages URLs are rewritten to. */
@@ -40,19 +50,256 @@ const PACKAGE_JSON_SCRIPTS_TO_REMOVE = [
   "docs:site",
 ];
 
+/**
+ * Text files that can carry marker blocks, and the three comment styles they use.
+ *
+ * The marker line's own indentation is part of each match: leaving it behind
+ * glues it onto whatever follows (a kept block gets its first line
+ * double-indented, a removed block leaves a whitespace-only line that
+ * `biome check` rejects in the scaffolded project).
+ */
+const MARKER_EXTENSIONS = [".yml", ".yaml", ".ts", ".js", ".md", ".toml", ".html"];
+
+export const MARKER_PATTERNS: readonly RegExp[] = [
+  // YAML/TOML/shell
+  /[ \t]*#[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)[ \t]*#[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
+  // TS/JS
+  /[ \t]*\/\/[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)[ \t]*\/\/[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
+  // HTML/MD
+  /[ \t]*<!--[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[ \t]*-->([\s\S]*?)<!--[ \t]*TEMPLATE-ONLY:END\([^)]*\)[ \t]*-->[ \t]*\n?/g,
+];
+
+/** `find` argv for every marker-carrying file under `root`. */
+export function markerFindArgs(root: string): string[] {
+  // Bun's shell does not word-split interpolated strings, so the find
+  // arguments must be spread as an array (one element per word).
+  return [
+    root,
+    "-type",
+    "f",
+    "(",
+    ...MARKER_EXTENSIONS.flatMap((ext, i) => [...(i > 0 ? ["-o"] : []), "-name", `*${ext}`]),
+    ")",
+    "-not",
+    "-path",
+    "*/node_modules/*",
+    "-not",
+    "-path",
+    "*/dist/*",
+    "-not",
+    "-path",
+    "*/configs/template/*",
+  ];
+}
+
+/**
+ * Pure marker pass: a block is removed entirely when ALL its scopes are
+ * disabled; when any scope is enabled only the marker lines go and the content
+ * is preserved. Whitespace left behind by a removal is normalised.
+ *
+ * Returns whether anything matched, so the caller can skip the write —
+ * behaviour the file loop had before this was extracted.
+ */
+export function stripMarkerBlocks(
+  content: string,
+  disabledScopes: ReadonlySet<string>,
+): { content: string; changed: boolean } {
+  let next = content;
+  let changed = false;
+
+  for (const regex of MARKER_PATTERNS) {
+    next = next.replace(regex, (_match, scopesStr: string, innerContent: string) => {
+      const scopes = scopesStr.split(",").map((s) => s.trim());
+      changed = true;
+      return scopes.every((s) => disabledScopes.has(s)) ? "" : innerContent;
+    });
+  }
+
+  if (!changed) return { content, changed };
+
+  return {
+    changed,
+    content: next
+      // Marker lines left over from a removal, e.g. an indented block that
+      // was cut out whole.
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      // A block that ended the file leaves a blank tail behind.
+      .replace(/\n{2,}$/, "\n"),
+  };
+}
+
+/** Files that always carry the placeholder scope, relative to the target dir. */
+const STATIC_SCOPE_TARGETS: readonly string[] = [
+  // Root manifests and wrappers
+  "package.json",
+  "lefthook.yml",
+
+  // Documentation
+  "README.md",
+  "AGENTS.md",
+  "CONTEXT.md",
+  "LICENSE.md",
+  // The per-package and per-app docs are discovered below — every package
+  // and app directory carries its own README/AGENTS/CONTEXT.
+
+  // Changesets
+  ".changeset/config.json",
+
+  // Internal package
+  "packages/internal/package.json",
+  "packages/internal/tsconfig.json",
+  "packages/internal/bunup.config.ts",
+
+  // External package
+  "packages/external/package.json",
+  "packages/external/tsconfig.json",
+  "packages/external/bunup.config.ts",
+  "packages/external/src/index.ts",
+  "packages/external/src/user.ts",
+  "packages/external/src/native.ts",
+
+  // Native workspace (self-contained, no root Cargo.toml)
+  "packages/native/Cargo.toml",
+  // The npm packages underneath it are discovered below — there is one per
+  // binding crate, so they cannot be listed here.
+
+  // Example app
+  "apps/example/package.json",
+  "apps/example/tsconfig.json",
+  "apps/example/src/index.ts",
+  "apps/example/src/pages/index.ts",
+  "apps/example/src/pages/api/index.ts",
+  "apps/example/src/pages/api/greet/[name].ts",
+  "apps/example/src/pages/api/shout/[name].ts",
+  "apps/example/src/pages/api/native/index.ts",
+  "apps/example/src/pages/api/native/add.ts",
+  "apps/example/src/pages/api/native/status.ts",
+  "apps/example/src/pages/api/native/fibonacci/[n].ts",
+  "apps/example/src/pages/api/native/primes/[n].ts",
+  "apps/example/src/pages/api/native/reverse.ts",
+  "apps/example/playwright.config.ts",
+  "apps/example/Dockerfile",
+  "apps/example/docker-compose.yml",
+  "apps/example/.dockerignore",
+  ".dockerignore",
+  ".github/dependabot.yml",
+  ".github/workflows/dependabot-auto-merge.yml",
+  // Community health (always)
+  ".github/CODEOWNERS",
+  ".github/PULL_REQUEST_TEMPLATE.md",
+  ".github/FUNDING.yml",
+  ".github/ISSUE_TEMPLATE/bug_report.yml",
+  ".github/ISSUE_TEMPLATE/feature_request.yml",
+  // Editor / Git
+  ".editorconfig",
+  ".gitattributes",
+];
+
+/** Extensions that are safe to rewrite as text. */
+const SCOPE_TEXT_FILE = /\.(json|ts|js|md|yml|yaml|toml)$/;
+
+/**
+ * Repo-relative text files under `searchPaths`.
+ *
+ * `names` mirrors the filters the discovery passes had inline (`-name "*.md"`
+ * for the package docs); omitting it walks every file and keeps the text ones.
+ * A missing path is not an error — the pass simply discovers nothing there.
+ */
+async function findTextFiles(
+  root: string,
+  searchPaths: readonly string[],
+  options: { names?: readonly string[]; exclude?: readonly string[] } = {},
+): Promise<string[]> {
+  const { names = [], exclude = [] } = options;
+  const args = [
+    ...searchPaths,
+    "-type",
+    "f",
+    ...names.flatMap((name, i) => [...(i > 0 ? ["-o"] : []), "-name", name]),
+    ...exclude.flatMap((path) => ["-not", "-path", path]),
+  ];
+  // Every discovery pass tolerated a missing path (`.catch(() => "")`).
+  const found = await $`find ${args}`.text().catch(() => "");
+  return found
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((absolute) => absolute.replace(`${root}/`, ""))
+    .filter((relative) => SCOPE_TEXT_FILE.test(relative));
+}
+
+/**
+ * Every file whose path or contents carry the placeholder scope.
+ *
+ * Three families are discovered rather than enumerated because their contents
+ * grow with the workspace: per-package docs, the per-crate npm packages, the
+ * config packages (except the template workspace itself, which is removed
+ * later) and the `.agents` tree the skills setup fills in. Duplicates are
+ * harmless — both replacements are idempotent — but deduping keeps the write
+ * pass to one visit per file.
+ */
+export async function collectScopeTargets(targetDir: string): Promise<string[]> {
+  const targets = new Set<string>(STATIC_SCOPE_TARGETS);
+
+  // Per-package and per-app documentation (README/AGENTS/CONTEXT).
+  const docs = await findTextFiles(targetDir, [`${targetDir}/packages`, `${targetDir}/apps`], {
+    names: ["*.md"],
+    exclude: ["*/node_modules/*", "*/dist/*", "*/target/*", "*/.turbo/*"],
+  });
+  for (const relativePath of docs) targets.add(relativePath);
+
+  // Native npm packages: one per binding crate (`crates/*` -> `npm/*`).
+  const nativeGlob = new Glob("packages/native/npm/**/*.{json,ts,md}");
+  for await (const relativePath of nativeGlob.scan({ cwd: targetDir })) {
+    targets.add(relativePath);
+  }
+
+  // Config package manifests and config files.
+  const configs = await findTextFiles(targetDir, [`${targetDir}/configs`], {
+    exclude: ["*/node_modules/*", "*/dist/*", "*/configs/template/*"],
+  });
+  for (const relativePath of configs) targets.add(relativePath);
+
+  // Skills setup copies files to .agents/skills after this method runs.
+  const agents = await findTextFiles(targetDir, [`${targetDir}/.agents`], {
+    exclude: ["*/node_modules/*"],
+  });
+  for (const relativePath of agents) targets.add(relativePath);
+
+  return [...targets];
+}
+
+/** The parts of the root manifest the removal pass reads and edits. */
+interface RootManifest {
+  workspaces?: string[];
+  scripts?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  dependencies?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+/** The reconciled root manifest plus what had to go, for callers and tests. */
+interface ReconcileResult {
+  /** The edited manifest text — the file's committed formatting survives. */
+  source: string;
+  droppedWorkspaces: string[];
+  droppedDependencies: string[];
+}
+
 export class MonorepoScaffolder {
   readonly targetDir: string;
   readonly scope: string;
   readonly gitHooks: boolean;
   readonly owner: string;
   readonly repo: string;
-  readonly configs: Record<string, boolean | string>;
-  private readonly placeholder = "@myorg";
+  readonly configs: Record<string, ScaffoldSelection>;
+  private readonly placeholder = DEFAULT_SCOPE;
   private disabledScopes = new Set<string>(["template"]);
 
   constructor(options: ScaffolderOptions = {}) {
     this.targetDir = options.targetDir ?? ".";
-    this.scope = options.scope ?? "@myorg";
+    this.scope = options.scope ?? DEFAULT_SCOPE;
     this.gitHooks = options.gitHooks ?? true;
     this.owner = options.owner ?? resolveOwner();
     this.repo = options.repo ?? resolveRepo(this.targetDir);
@@ -139,131 +386,17 @@ export class MonorepoScaffolder {
    * Replaces the placeholder scope (@myorg) with the user's scope
    * across all workspace files, configs, docs, and source code.
    */
+  /** Rewrites the placeholder scope in every file that carries it. */
   async replaceScopePlaceholders(): Promise<void> {
-    const files = [
-      // Root manifests and wrappers
-      "package.json",
-      "lefthook.yml",
-
-      // Documentation
-      "README.md",
-      "AGENTS.md",
-      "CONTEXT.md",
-      "LICENSE.md",
-      // The per-package and per-app docs are discovered below — every package
-      // and app directory carries its own README/AGENTS/CONTEXT.
-
-      // Changesets
-      ".changeset/config.json",
-
-      // Internal package
-      "packages/internal/package.json",
-      "packages/internal/tsconfig.json",
-      "packages/internal/bunup.config.ts",
-
-      // External package
-      "packages/external/package.json",
-      "packages/external/tsconfig.json",
-      "packages/external/bunup.config.ts",
-      "packages/external/src/index.ts",
-      "packages/external/src/user.ts",
-      "packages/external/src/native.ts",
-
-      // Native workspace (self-contained, no root Cargo.toml)
-      "packages/native/Cargo.toml",
-      // The npm packages underneath it are discovered below — there is one per
-      // binding crate, so they cannot be listed here.
-
-      // Example app
-      "apps/example/package.json",
-      "apps/example/tsconfig.json",
-      "apps/example/src/index.ts",
-      "apps/example/src/pages/index.ts",
-      "apps/example/src/pages/api/index.ts",
-      "apps/example/src/pages/api/greet/[name].ts",
-      "apps/example/src/pages/api/shout/[name].ts",
-      "apps/example/src/pages/api/native/index.ts",
-      "apps/example/src/pages/api/native/add.ts",
-      "apps/example/src/pages/api/native/status.ts",
-      "apps/example/src/pages/api/native/fibonacci/[n].ts",
-      "apps/example/src/pages/api/native/primes/[n].ts",
-      "apps/example/src/pages/api/native/reverse.ts",
-      "apps/example/playwright.config.ts",
-      "apps/example/Dockerfile",
-      "apps/example/docker-compose.yml",
-      "apps/example/.dockerignore",
-      ".dockerignore",
-      ".github/dependabot.yml",
-      ".github/workflows/dependabot-auto-merge.yml",
-      // Community health (always)
-      ".github/CODEOWNERS",
-      ".github/PULL_REQUEST_TEMPLATE.md",
-      ".github/FUNDING.yml",
-      ".github/ISSUE_TEMPLATE/bug_report.yml",
-      ".github/ISSUE_TEMPLATE/feature_request.yml",
-      // Editor / Git
-      ".editorconfig",
-      ".gitattributes",
-    ];
-
-    // Package and app documentation: README/AGENTS/CONTEXT live in every
-    // package and app directory, including the native workspace root, so they
-    // are discovered rather than enumerated.
-    const docsFiles =
-      await $`find ${this.targetDir}/packages ${this.targetDir}/apps -type f -name "*.md" -not -path "*/node_modules/*" -not -path "*/dist/*" -not -path "*/target/*" -not -path "*/.turbo/*"`
-        .text()
-        .catch(() => "");
-    for (const absolutePath of docsFiles.trim().split("\n").filter(Boolean)) {
-      files.push(absolutePath.replace(`${this.targetDir}/`, ""));
-    }
-
-    // Native npm packages: one per binding crate (`crates/*` → `npm/*`), so
-    // they are discovered rather than enumerated.
-    const nativeGlob = new Glob("packages/native/npm/**/*.{json,ts,md}");
-    for await (const relativePath of nativeGlob.scan({ cwd: this.targetDir })) {
-      files.push(relativePath);
-    }
-
-    // Config package manifests and config files carry the @myorg scope in
-    // their names and contents (e.g. changeset ignore lists). Replacing the
-    // placeholder across all surviving config sources -- except the template
-    // workspace itself, which is removed later -- keeps generated projects
-    // free of the template scope.
-    const configFiles =
-      await $`find ${this.targetDir}/configs -type f -not -path "*/node_modules/*" -not -path "*/dist/*" -not -path "*/configs/template/*"`
-        .text()
-        .catch(() => "");
-    for (const absolutePath of configFiles.trim().split("\n").filter(Boolean)) {
-      const relativePath = absolutePath.replace(`${this.targetDir}/`, "");
-      if (/\.(json|ts|js|md|yml|yaml|toml)$/.test(relativePath)) {
-        files.push(relativePath);
-      }
-    }
-
-    // Skills setup copies files to .agents/skills after this method runs
-    // initially, so also include any already-present .agents files. A second
-    // pass after runSetup() catches files created by setup scripts.
-    const agentsFiles =
-      await $`find ${this.targetDir}/.agents -type f -not -path "*/node_modules/*" 2>/dev/null`
-        .text()
-        .catch(() => "");
-    for (const absolutePath of agentsFiles.trim().split("\n").filter(Boolean)) {
-      const relativePath = absolutePath.replace(`${this.targetDir}/`, "");
-      if (/\.(json|ts|js|md|yml|yaml|toml)$/.test(relativePath)) {
-        files.push(relativePath);
-      }
-    }
-
-    for (const relativePath of files) {
+    for (const relativePath of await collectScopeTargets(this.targetDir)) {
       const fullPath = `${this.targetDir}/${relativePath}`;
       const target = file(fullPath);
+      if (!(await target.exists())) continue;
 
-      if (await target.exists()) {
-        const content = await target.text();
-        const next = this.replaceIdentity(content).replaceAll(this.placeholder, this.scope);
-        if (next !== content) {
-          await write(fullPath, next);
-        }
+      const content = await target.text();
+      const next = this.replaceIdentity(content).replaceAll(this.placeholder, this.scope);
+      if (next !== content) {
+        await write(fullPath, next);
       }
     }
   }
@@ -300,17 +433,17 @@ export class MonorepoScaffolder {
    * Returns the selected value for an opt-in config, falling back to the
    * metadata default when no explicit override was provided.
    */
-  private selectedFor(meta: ScaffoldMeta): boolean | string {
+  private selectedFor(meta: ScaffoldMeta): ScaffoldSelection {
     const selected = meta.flag ? this.configs[meta.flag] : undefined;
     if (selected !== undefined) return selected;
-    return meta.default as boolean | string;
+    return meta.default;
   }
 
   /**
    * A select-type config is disabled when the "none"-ish default is chosen;
    * a confirm-type config is disabled when the user answers "no".
    */
-  private isDisabled(meta: ScaffoldMeta, selected: boolean | string): boolean {
+  private isDisabled(meta: ScaffoldMeta, selected: ScaffoldSelection): boolean {
     return meta.type === "select" ? selected === meta.default : !selected;
   }
 
@@ -321,7 +454,7 @@ export class MonorepoScaffolder {
    * per-value removals so both are honored (e.g. template self-destruct has
    * top-level scriptsToRemove + per-value extraRemovals).
    */
-  private removalsFor(meta: ScaffoldMeta, selected: boolean | string): ScaffoldRemovals {
+  private removalsFor(meta: ScaffoldMeta, selected: ScaffoldSelection): ScaffoldRemovals {
     const base: ScaffoldRemovals = {
       extraRemovals: meta.extraRemovals,
       scriptsToRemove: meta.scriptsToRemove,
@@ -382,81 +515,16 @@ export class MonorepoScaffolder {
    * and the content is preserved.
    */
   async stripTemplateMarkers(): Promise<void> {
-    const disabled = this.disabledScopes;
-
-    const patterns: Array<{
-      regex: RegExp;
-    }> = [
-      {
-        // YAML/TOML/shell: # TEMPLATE-ONLY:START(scope)
-        regex:
-          /#[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)#[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
-      },
-      {
-        // TS/JS: // TEMPLATE-ONLY:START(scope)
-        regex:
-          /\/\/[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)\/\/[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
-      },
-      {
-        // HTML/MD: <!-- TEMPLATE-ONLY:START(scope) -->
-        regex:
-          /<!--[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[ \t]*-->([\s\S]*?)<!--[ \t]*TEMPLATE-ONLY:END\([^)]*\)[ \t]*-->[ \t]*\n?/g,
-      },
-    ];
-
-    const extensions = [".yml", ".yaml", ".ts", ".js", ".md", ".toml", ".html"];
-
-    // Bun's shell does not word-split interpolated strings, so the find
-    // arguments must be spread as an array (one element per word).
-    const findArgs = [
-      this.targetDir,
-      "-type",
-      "f",
-      "(",
-      ...extensions.flatMap((e, i) => [...(i > 0 ? ["-o"] : []), "-name", `*${e}`]),
-      ")",
-      "-not",
-      "-path",
-      "*/node_modules/*",
-      "-not",
-      "-path",
-      "*/dist/*",
-      "-not",
-      "-path",
-      "*/configs/template/*",
-    ];
-
-    const result = await $`find ${findArgs}`.text();
+    const result = await $`find ${markerFindArgs(this.targetDir)}`.text();
 
     for (const filePath of result.trim().split("\n").filter(Boolean)) {
       const target = file(filePath);
       if (!(await target.exists())) continue;
 
-      let content = await target.text();
-      let modified = false;
-
-      for (const { regex } of patterns) {
-        const next = content.replace(regex, (_match, scopesStr, innerContent) => {
-          const scopes = scopesStr.split(",").map((s: string) => s.trim());
-          const shouldStrip = scopes.every((s: string) => disabled.has(s));
-
-          modified = true;
-          if (shouldStrip) {
-            return ""; // Remove entire block
-          }
-          // Keep content, remove only marker lines
-          return innerContent;
-        });
-        content = next;
-      }
-
-      if (modified) {
-        content = content.replace(/\n{3,}/g, "\n\n");
-        await write(filePath, content);
-      }
+      const { content, changed } = stripMarkerBlocks(await target.text(), this.disabledScopes);
+      if (changed) await write(filePath, content);
     }
   }
-
   /**
    * Removes files that only exist in the template source.
    */
@@ -551,150 +619,164 @@ export class MonorepoScaffolder {
    * Always-on configs survive unless they `selfDestruct` (the template);
    * opt-in configs are removed when their selection evaluates to disabled.
    */
+  /**
+   * True when a config survives the removal pass: always-on configs stay
+   * unless they are template-only, opt-in configs stay when selected.
+   */
+  private isStaying(meta: ScaffoldMeta): boolean {
+    if (meta.default === "always" && !meta.selfDestruct) return true;
+
+    const selected = this.selectedFor(meta);
+    return !(meta.selfDestruct || this.isDisabled(meta, selected));
+  }
+
+  /**
+   * Every removal one disabled config asks for, applied as edits to the root
+   * manifest text — the committed formatting of the entries that stay must
+   * survive, so nothing here is re-serialized.
+   */
+  private async applyRemovals(config: DiscoveredConfig, source: string): Promise<string> {
+    const { meta } = config;
+    const removals = this.removalsFor(meta, this.selectedFor(meta));
+    let next = source;
+
+    // 1. Remove the config package directory
+    await $`rm -rf ${this.targetDir}/configs/${config.dir}`.quiet();
+
+    // 2. Remove the workspace dependency from root
+    next = removeJsonEntry(next, `devDependencies.${config.name}`);
+
+    // 3. Extra removals (exact paths, backward compat)
+    for (const relativePath of removals.extraRemovals ?? []) {
+      await $`rm -rf ${this.targetDir}/${relativePath}`.quiet();
+    }
+
+    // 3b. File patterns (glob) — data-driven
+    if (removals.filePatternsToRemove) {
+      await this.removeByGlobPatterns(removals.filePatternsToRemove);
+    }
+
+    // 3c. File regexes — data-driven
+    if (removals.fileRegexesToRemove) {
+      await this.removeByRegexPatterns(removals.fileRegexesToRemove);
+    }
+
+    // 4. Root scripts
+    for (const script of removals.scriptsToRemove ?? []) {
+      next = removeJsonEntry(next, `scripts.${script}`);
+    }
+
+    // 5. Turbo tasks live in their own manifest and keep its formatting too.
+    if (removals.turboTasksToRemove) {
+      const tasks = removals.turboTasksToRemove;
+      await updateManifestFile(`${this.targetDir}/configs/turbo/turbo.base.json`, (turbo) => {
+        let edited = turbo;
+        for (const task of tasks) edited = removeJsonEntry(edited, `tasks.${task}`);
+        return edited;
+      });
+    }
+
+    // 6. App deps
+    if (removals.appDepsToRemove) {
+      const deps = removals.appDepsToRemove;
+      await updateManifestFile(`${this.targetDir}/apps/example/package.json`, (appManifest) => {
+        let edited = appManifest;
+        for (const dep of deps) edited = removeJsonEntry(edited, `devDependencies.${dep}`);
+        return edited;
+      });
+    }
+
+    return next;
+  }
+
   async handleConfig(): Promise<void> {
     const configs = await discoverConfigs(this.targetDir);
     const rootPkgPath = `${this.targetDir}/package.json`;
-    if (!(await file(rootPkgPath).exists())) return;
-    const rootPkg = await file(rootPkgPath).json();
 
-    for (const config of configs) {
-      const meta = config.meta;
-
-      // Always-on configs are kept unless they are template-only.
-      if (meta.default === "always" && !meta.selfDestruct) continue;
-
-      const selected = this.selectedFor(meta);
-      const disabled = meta.selfDestruct || this.isDisabled(meta, selected);
-      if (!disabled) continue;
-
-      const removals = this.removalsFor(meta, selected);
-
-      // 1. Remove the config package directory
-      await $`rm -rf ${this.targetDir}/configs/${config.dir}`.quiet();
-
-      // 2. Remove the workspace dependency from root
-      delete rootPkg.devDependencies?.[config.name];
-
-      // 3. Extra removals (exact paths, backward compat)
-      for (const relativePath of removals.extraRemovals ?? []) {
-        await $`rm -rf ${this.targetDir}/${relativePath}`.quiet();
+    await updateManifestFile(rootPkgPath, async (source) => {
+      let next = source;
+      for (const config of configs) {
+        if (this.isStaying(config.meta)) continue;
+        next = await this.applyRemovals(config, next);
       }
 
-      // 3b. File patterns (glob) — data-driven
-      if (removals.filePatternsToRemove) {
-        await this.removeByGlobPatterns(removals.filePatternsToRemove);
-      }
+      // A config removal can take a whole workspace with it (native=none deletes
+      // packages/native, the npm packages under npm/* included). A root
+      // dependency or workspace glob left pointing at the missing directory makes
+      // `bun install` fail outright, so both are reconciled with what survived.
+      const reconciled = await this.reconcileWorkspaces(next);
+      return reconciled.source;
+    });
+  }
 
-      // 3c. File regexes — data-driven
-      if (removals.fileRegexesToRemove) {
-        await this.removeByRegexPatterns(removals.fileRegexesToRemove);
-      }
+  /**
+   * Drops workspace globs that no longer match a package and `workspace:*`
+   * dependencies that no longer resolve to one.
+   *
+   * Only entries with a `workspace:` specifier can be checked this way — a
+   * regular npm dependency is left alone, even when its name matches nothing
+   * locally.
+   *
+   * Returns the edited text, so the entries that survive keep the bytes the
+   * repository committed, and reports what it dropped.
+   */
+  private async reconcileWorkspaces(source: string): Promise<ReconcileResult> {
+    const manifest = readJson<RootManifest>(source);
 
-      // 4. Root scripts
-      for (const script of removals.scriptsToRemove ?? []) {
-        delete rootPkg.scripts?.[script];
-      }
+    const droppedWorkspaces: string[] = [];
+    for (const pattern of manifest.workspaces ?? []) {
+      const manifests = [...new Glob(`${pattern}/package.json`).scanSync({ cwd: this.targetDir })];
+      if (manifests.length === 0) droppedWorkspaces.push(pattern);
+    }
 
-      // 5. Turbo tasks
-      if (removals.turboTasksToRemove) {
-        const turboPath = `${this.targetDir}/configs/turbo/turbo.base.json`;
-        if (await file(turboPath).exists()) {
-          const turbo = await file(turboPath).json();
-          for (const task of removals.turboTasksToRemove) {
-            delete turbo.tasks?.[task];
-          }
-          await write(turboPath, `${JSON.stringify(turbo, null, 2)}\n`);
-        }
-      }
-
-      // 6. App deps
-      if (removals.appDepsToRemove) {
-        const appPkgPath = `${this.targetDir}/apps/example/package.json`;
-        if (await file(appPkgPath).exists()) {
-          const appPkg = await file(appPkgPath).json();
-          for (const dep of removals.appDepsToRemove) {
-            delete appPkg.devDependencies?.[dep];
-          }
-          await write(appPkgPath, `${JSON.stringify(appPkg, null, 2)}\n`);
-        }
+    // Package names come from the whole tree rather than only the surviving
+    // globs: a nested package (`packages/native/npm/*`) or one whose glob is
+    // imprecise enough that a manifest is missed still resolves, and dropping
+    // it would break `bun install` in the other direction.
+    const names = new Set<string>();
+    const manifests = new Glob("{apps,packages,configs}/**/package.json").scanSync({
+      cwd: this.targetDir,
+      onlyFiles: true,
+    });
+    for (const manifestPath of manifests) {
+      if (/(^|\/)(node_modules|dist|target|\.git|\.turbo)\//.test(manifestPath)) continue;
+      try {
+        const name = (await file(`${this.targetDir}/${manifestPath}`).json()).name;
+        if (typeof name === "string") names.add(name);
+      } catch {
+        // Unreadable manifest — treat the package as absent.
       }
     }
 
-    await write(rootPkgPath, `${JSON.stringify(rootPkg, null, 2)}\n`);
+    const droppedDependencies: string[] = [];
+    let next = source;
+    for (const pattern of droppedWorkspaces) {
+      next = removeJsonArrayValue(next, "workspaces", pattern);
+    }
+    for (const field of ["devDependencies", "dependencies"] as const) {
+      for (const [name, spec] of Object.entries(manifest[field] ?? {})) {
+        if (!spec.startsWith("workspace:") || names.has(name)) continue;
+        droppedDependencies.push(name);
+        next = removeJsonEntry(next, `${field}.${name}`);
+      }
+    }
+
+    return { source: next, droppedWorkspaces, droppedDependencies };
   }
 
   /**
    * Regenerates `.github/workflows/*.yml` + `.github/dependabot.yml` from the
    * gh-actions base skeletons and the surviving configs' step fragments.
    */
+  /**
+   * Regenerates `.github/workflows/*.yml` + `.github/dependabot.yml` from the
+   * surviving configs' step fragments.
+   *
+   * The template's docs site is deleted earlier in the pipeline, so the
+   * docs-site guard is switched off explicitly rather than re-tested.
+   */
   async regenerateCI(): Promise<void> {
-    await mkdir(`${this.targetDir}/.github/workflows`, { recursive: true });
-    await mkdir(`${this.targetDir}/.github`, { recursive: true });
-    await aggregateWorkflow(this.targetDir, "ci.base.yml", "ci.steps.yml");
-    await aggregateWorkflow(this.targetDir, "release.base.yml", "release.steps.yml");
-    // Only generate pages.yml if pages config is enabled (exists)
-    const pagesConfigExists = await file(`${this.targetDir}/configs/pages/package.json`).exists();
-    if (pagesConfigExists) {
-      await aggregateWorkflow(this.targetDir, "pages.base.yml", "pages.steps.yml");
-    } else {
-      const pagesWorkflow = `${this.targetDir}/.github/workflows/pages.yml`;
-      if (await file(pagesWorkflow).exists()) {
-        await $`rm -rf ${pagesWorkflow}`.quiet();
-        console.log(`🗑️ Removed ${pagesWorkflow} (pages disabled)`);
-      }
-    }
-    // Coverage: standalone coverage.yml when pages disabled, otherwise included in pages.yml
-    const coverageConfigExists = await file(
-      `${this.targetDir}/configs/coverage/package.json`,
-    ).exists();
-    if (coverageConfigExists) {
-      if (!pagesConfigExists) {
-        await aggregateWorkflow(this.targetDir, "coverage.base.yml", "coverage.steps.yml");
-      } else {
-        const coverageWorkflow = `${this.targetDir}/.github/workflows/coverage.yml`;
-        if (await file(coverageWorkflow).exists()) {
-          await $`rm -rf ${coverageWorkflow}`.quiet();
-          console.log(`🗑️ Removed ${coverageWorkflow} (coverage included in pages.yml)`);
-        }
-      }
-    }
-    // Native build matrix: one job per target triple, then a fan-in job that
-    // assembles the per-platform npm packages. Generated with configs/native so
-    // choosing `none` deletes the workflow along with the config.
-    if (await file(`${this.targetDir}/configs/native/package.json`).exists()) {
-      await aggregateWorkflow(this.targetDir, "native.base.yml", "native.steps.yml");
-    } else {
-      const nativeWorkflow = `${this.targetDir}/.github/workflows/native.yml`;
-      if (await file(nativeWorkflow).exists()) {
-        await $`rm -rf ${nativeWorkflow}`.quiet();
-        console.log(`🗑️ Removed ${nativeWorkflow} (native disabled)`);
-      }
-    }
-    // Dependabot is always generated (always config), but check existence for safety
-    const dependabotConfigExists = await file(
-      `${this.targetDir}/configs/dependabot/package.json`,
-    ).exists();
-    const ghActionsExists = await file(
-      `${this.targetDir}/configs/gh-actions/package.json`,
-    ).exists();
-    if (dependabotConfigExists || ghActionsExists) {
-      await aggregateWorkflow(this.targetDir, "dependabot.base.yml", "dependabot.yml");
-      await aggregateWorkflow(
-        this.targetDir,
-        "dependabot-auto-merge.base.yml",
-        "dependabot-auto-merge.steps.yml",
-      );
-    }
-    // Stale workflow — only when stale config is enabled
-    const staleConfigExists = await file(`${this.targetDir}/configs/stale/package.json`).exists();
-    if (staleConfigExists) {
-      await aggregateWorkflow(this.targetDir, "stale.base.yml", "stale.steps.yml");
-    } else {
-      const staleWorkflow = `${this.targetDir}/.github/workflows/stale.yml`;
-      if (await file(staleWorkflow).exists()) {
-        await $`rm -rf ${staleWorkflow}`.quiet();
-      }
-    }
+    await regenerateAll(this.targetDir, { templateDocsSite: false });
   }
 
   /**

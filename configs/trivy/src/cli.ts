@@ -1,29 +1,23 @@
 #!/usr/bin/env bun
 import { existsSync } from "node:fs";
-import { spawnSync, which } from "bun";
-import { defineCommand, runMain } from "citty";
+import {
+  defineCommand,
+  defineSpawnSubcommand,
+  runMain,
+  spawnIfPresent,
+  spawnTool,
+} from "@myorg/citty";
+import { which } from "bun";
 
 const DOCKERFILE = "apps/example/Dockerfile";
 const IMAGE = "app:trivy-scan";
 
-function hasTrivy(): boolean {
-  return !!which("trivy");
-}
+const TRIVY_HINTS = [
+  "⚠️ trivy not found — skipping (install: brew install trivy or https://aquasecurity.github.io/trivy/)",
+];
 
 function runTrivy(args: string[]): number {
-  if (!hasTrivy()) {
-    console.warn(
-      "⚠️ trivy not found — skipping (install: brew install trivy or https://aquasecurity.github.io/trivy/)",
-    );
-    return 0;
-  }
-  const result = spawnSync({
-    cmd: ["trivy", ...args],
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  return result.exitCode;
+  return spawnIfPresent("trivy", ["trivy", ...args], TRIVY_HINTS);
 }
 
 const buildCommand = defineCommand({
@@ -37,40 +31,27 @@ const buildCommand = defineCommand({
       console.warn("⚠️ docker not found — skipping image build");
       process.exit(0);
     }
-    const result = spawnSync({
-      cmd: ["docker", "build", "-t", IMAGE, "-f", DOCKERFILE, "."],
-      stdout: "inherit",
-      stderr: "inherit",
-      stdin: "inherit",
-    });
-    if (result.exitCode !== 0) {
+    const exitCode = spawnTool(["docker", "build", "-t", IMAGE, "-f", DOCKERFILE, "."]);
+    if (exitCode !== 0) {
       console.warn("⚠️ image build failed — skipping the Trivy image scan");
     }
     process.exit(0);
   },
 });
 
-const fsCommand = defineCommand({
-  meta: { name: "fs", description: "trivy fs . --severity HIGH,CRITICAL (filesystem scan)" },
-  run() {
-    const raw = process.argv.slice(3);
-    if (raw.length === 0) {
-      process.exit(runTrivy(["fs", ".", "--severity", "HIGH,CRITICAL"]));
-    } else {
-      process.exit(runTrivy(["fs", ...raw]));
-    }
-  },
+const fsCommand = defineSpawnSubcommand({
+  name: "fs",
+  description: "trivy fs . --severity HIGH,CRITICAL (filesystem scan)",
+  prefixArgs: ["fs"],
+  defaultArgs: [".", "--severity", "HIGH,CRITICAL"],
+  spawn: runTrivy,
 });
 
-const imageCommand = defineCommand({
-  meta: {
-    name: "image",
-    description: "trivy image <image> --severity HIGH,CRITICAL (container scan)",
-  },
-  run() {
-    const raw = process.argv.slice(3);
-    process.exit(runTrivy(["image", ...raw]));
-  },
+const imageCommand = defineSpawnSubcommand({
+  name: "image",
+  description: "trivy image <image> --severity HIGH,CRITICAL (container scan)",
+  prefixArgs: ["image"],
+  spawn: runTrivy,
 });
 
 const main = defineCommand({

@@ -22,8 +22,7 @@
           "skills"
         ],
         "scriptsToRemove": [
-          "skills:sync",
-          "skills:list"
+          "skills"
         ]
       }
     }

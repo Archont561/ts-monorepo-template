@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { $, file } from "bun";
+import type { ScaffoldSelection } from "../src/configs";
 import { TemplateHarness } from "../src/harness";
 import { MonorepoScaffolder } from "../src/scaffolder";
 
@@ -17,7 +18,7 @@ import { MonorepoScaffolder } from "../src/scaffolder";
  * Run via `bun run test:template` (root) or `bun --filter @myorg/template test`.
  */
 
-type ConfigMap = Record<string, boolean | string>;
+type ConfigMap = Record<string, ScaffoldSelection>;
 
 interface TemplateCase {
   name: string;

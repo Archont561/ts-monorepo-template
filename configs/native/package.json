@@ -8,7 +8,8 @@
   },
   "scripts": {
     "build": "mbunup",
-    "dev": "mbunup --watch"
+    "dev": "mbunup --watch",
+    "test": "mbun test"
   },
   "scaffold": {
     "default": "none",
@@ -38,7 +39,8 @@
         "scriptsToRemove": [
           "build:native",
           "build:wasm",
-          "test:native"
+          "test:native",
+          "security:audit"
         ],
         "turboTasksToRemove": [
           "build:native",
@@ -78,6 +80,7 @@
   "devDependencies": {
     "@myorg/bunup": "workspace:*",
     "@myorg/citty": "workspace:*",
+    "@myorg/manifest": "workspace:*",
     "@myorg/ts": "workspace:*",
     "@napi-rs/cli": "^3.9.1"
   }

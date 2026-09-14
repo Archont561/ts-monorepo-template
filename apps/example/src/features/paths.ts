@@ -1,0 +1,43 @@
+import { file } from "bun";
+
+/**
+ * App paths, resolved once.
+ *
+ * Every path is resolved from *this* module's location, so the app root is two
+ * levels up: `public/` is `../../public` from `features/`. Spelling the relative
+ * path out per call site is how the lookups drifted — `../../public/...` from
+ * `src/` resolved to `apps/public/`, which does not exist, so every UnoCSS
+ * lookup silently missed and `/uno.css` always served the "not built" fallback.
+ */
+
+/** `apps/example/` — the app root that owns `public/` and `src/`. */
+const APP_ROOT = new URL("../../", import.meta.url);
+
+/** Repository root — the monorepo that owns `configs/`. */
+const REPO_ROOT = new URL("../../../../", import.meta.url);
+
+/** A file inside the app, e.g. `appFile("public/uno.css")`. */
+export function appFile(path: string): ReturnType<typeof file> {
+  return file(new URL(path, APP_ROOT));
+}
+
+/** A file at the repo root, e.g. `repoFile("configs/unocss/uno.config.ts")`. */
+export function repoFile(path: string): ReturnType<typeof file> {
+  return file(new URL(path, REPO_ROOT));
+}
+
+/**
+ * Where a feature looks for its files.
+ *
+ * Injectable so a test can point a provider at a fixture directory instead of
+ * this checkout — the failure mode when the real paths are wrong is silence.
+ */
+export interface FeatureFiles {
+  /** A file inside the app. */
+  app(path: string): ReturnType<typeof file>;
+  /** A file at the repository root. */
+  repo(path: string): ReturnType<typeof file>;
+}
+
+/** The real app: everything relative to this module. */
+export const APP_FILES: FeatureFiles = { app: appFile, repo: repoFile };

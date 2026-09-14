@@ -1,18 +1,7 @@
 #!/usr/bin/env bun
 import { existsSync, readFileSync } from "node:fs";
-import { Glob, spawnSync } from "bun";
-import { defineCommand, runMain } from "citty";
-
-function run(cmd: string[], cwd?: string): number {
-  const result = spawnSync({
-    cmd,
-    ...(cwd ? { cwd } : {}),
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  return result.exitCode;
-}
+import { defineCommand, defineWrapperCommand, runMain, spawnTool } from "@myorg/citty";
+import { Glob } from "bun";
 
 /**
  * Workspace globs from the root package.json. Read rather than hardcoded so
@@ -68,7 +57,7 @@ const healthCommand = defineCommand({
     // publint/attw read dist/ + package.json, so the bundles have to exist first.
     // turbo makes the repeat build a cache hit.
     console.log(`🔨 Building before health checks (${packages.length} package(s))`);
-    const built = run(["bun", "run", "build"]);
+    const built = spawnTool(["bun", "run", "build"]);
     if (built !== 0) {
       console.error("::error::build failed, cannot run package health checks");
       process.exit(built);
@@ -77,14 +66,14 @@ const healthCommand = defineCommand({
     let failed = 0;
     for (const dir of packages) {
       console.log(`\n📦 ${dir}`);
-      const publint = run(["bunx", "--yes", "publint", dir]);
+      const publint = spawnTool(["bunx", "--yes", "publint", dir]);
       if (publint !== 0) {
         console.error(`::error::publint failed for ${dir}`);
         failed++;
       }
-      const attw = run(
+      const attw = spawnTool(
         ["bunx", "--yes", "@arethetypeswrong/cli", "--pack", ".", "--profile", "esm-only"],
-        dir,
+        { cwd: dir },
       );
       if (attw !== 0) {
         console.error(`::error::arethetypeswrong failed for ${dir}`);
@@ -101,31 +90,19 @@ const healthCommand = defineCommand({
   },
 });
 
-const main = defineCommand({
-  meta: {
-    name: "mbunup",
-    version: "1.0.0",
-    description: "Bunup wrapper — bundler owned by @myorg/bunup, hoisted, use mbunup not bunup",
-  },
-  args: {
-    entry: { type: "positional", description: "Entry files or bunup args", required: false },
-  },
-  subCommands: {
-    health: healthCommand,
-  },
-  run() {
-    const bunup = Bun.fileURLToPath(
-      import.meta.resolve("bunup/package.json").replace("package.json", "dist/cli/index.js"),
-    );
-    const args = process.argv.slice(2);
-    const result = spawnSync({
-      cmd: ["bun", bunup, ...args],
-      stdout: "inherit",
-      stderr: "inherit",
-      stdin: "inherit",
-    });
-    process.exit(result.exitCode);
-  },
+const BUNUP = Bun.fileURLToPath(
+  import.meta.resolve("bunup/package.json").replace("package.json", "dist/cli/index.js"),
+);
+
+const main = defineWrapperCommand({
+  name: "mbunup",
+  version: "1.0.0",
+  description: "Bunup wrapper — bundler owned by @myorg/bunup, hoisted, use mbunup not bunup",
+  binPath: "bun",
+  configArgs: [BUNUP],
+  argsName: "entry",
+  argsDescription: "Entry files or bunup args",
+  subCommands: { health: healthCommand },
 });
 
 runMain(main);

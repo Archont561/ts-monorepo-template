@@ -50,7 +50,7 @@ jobs:
       # Runs the suite with coverage, renders the HTML report into the site,
       # builds the docs and nests the demo app under /example/.
       - name: Build the site (docs + coverage + demo app)
-        run: mdocs site
+        run: bunx mdocs site
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

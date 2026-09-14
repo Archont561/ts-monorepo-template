@@ -1,21 +1,19 @@
-import { FileSystemRouter, file, serve } from "bun";
+import { FileSystemRouter, serve } from "bun";
+import { appFile, detectFeatures, hasUnocss } from "./features";
 import { PORT } from "./port";
 
-// Detect opt-in features via file existence / env
-// Unocss detection now via file existence only (handled via scaffold file deletion)
-const hasUnocss =
-  (await file(new URL("../../public/index-unocss.html", import.meta.url))
-    .exists()
-    .catch(() => false)) ||
-  (await file(new URL("../../public/index.html", import.meta.url))
-    .text()
-    .then((t) => t.includes("unocss") || t.includes("UnoCSS"))
-    .catch(() => false));
-const hasNative = await file(new URL("./pages/api/native/index.ts", import.meta.url))
-  .exists()
-  .catch(() => false);
+/** How long the generated CSS may be cached — the build is deterministic. */
+const CSS_CACHE_MAX_AGE_SECONDS = 60;
 
-console.log(`🔍 Features: unocss=${hasUnocss ? "yes" : "no"}, native=${hasNative ? "yes" : "no"}`);
+// Detect opt-in features via file existence (handled via scaffold file deletion)
+const { native: nativeEnabled } = await detectFeatures();
+// The log line describes which page `/` serves, so it asks about the page itself
+// rather than the flag (a surviving config alone does not swap the page).
+const unocssEnabled = await hasUnocss();
+
+console.log(
+  `🔍 Features: unocss=${unocssEnabled ? "yes" : "no"}, native=${nativeEnabled ? "yes" : "no"}`,
+);
 
 const router = new FileSystemRouter({
   style: "nextjs",
@@ -32,13 +30,13 @@ const server = serve({
     // Removed via scaffold file deletion (public/uno.css + index-unocss.html)
     "/uno.css": async () => {
       try {
-        // Try to serve generated uno.css if exists (built via `bunx unocss`)
-        const unoCssFile = file(new URL("../../public/uno.css", import.meta.url));
+        // Try to serve generated uno.css if exists (built via `munocss build`)
+        const unoCssFile = appFile("public/uno.css");
         if (await unoCssFile.exists()) {
           return new Response(await unoCssFile.text(), {
             headers: {
               "Content-Type": "text/css; charset=utf-8",
-              "Cache-Control": "public, max-age=60",
+              "Cache-Control": `public, max-age=${CSS_CACHE_MAX_AGE_SECONDS}`,
             },
           });
         }
@@ -74,7 +72,7 @@ const server = serve({
     // Serve static files from public/ for non-API routes (e.g. /favicon.ico)
     if (!url.pathname.startsWith("/api/") && url.pathname !== "/") {
       try {
-        const publicFile = file(new URL(`../../public${url.pathname}`, import.meta.url));
+        const publicFile = appFile(`public${url.pathname}`);
         if (await publicFile.exists()) {
           const ext = url.pathname.split(".").pop() ?? "";
           const mime: Record<string, string> = {
@@ -108,5 +106,5 @@ const server = serve({
 });
 
 console.log(`🚀 http://localhost:${server.port}`);
-console.log(`   / → ${hasUnocss ? "UnoCSS version" : "plain"} index.html`);
-if (hasNative) console.log(`   /api/native → Rust bindings (with JS fallback)`);
+console.log(`   / → ${unocssEnabled ? "UnoCSS version" : "plain"} index.html`);
+if (nativeEnabled) console.log(`   /api/native → Rust bindings (with JS fallback)`);

@@ -54,6 +54,14 @@ describe("handleApiIndex (page)", () => {
     // When disabled, it won't — both are valid, just check it's array
     expect(Array.isArray(data.endpoints)).toBe(true);
   });
+
+  test("reports the flags it decided on, not a re-derivation", async () => {
+    const response = await handleApiIndex();
+    const data = await response.json();
+    // `features` comes from the providers; the endpoint list is built from the
+    // same providers, so the two must agree in every checkout.
+    expect(data.features.unocss).toBe(data.endpoints.includes("/uno.css"));
+  });
 });
 
 describe("handleGreet (page)", () => {
@@ -85,6 +93,7 @@ describe("handleShout (page)", () => {
   });
 });
 
+// TEMPLATE-ONLY:START(native)
 describe("native routes (optional)", () => {
   test("native routes exist when native enabled", async () => {
     try {
@@ -114,3 +123,4 @@ describe("native routes (optional)", () => {
     }
   });
 });
+// TEMPLATE-ONLY:END(native)

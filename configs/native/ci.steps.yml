@@ -14,31 +14,31 @@
 
       - name: Cargo fmt check (mnative)
         if: hashFiles('{{NATIVE_CARGO}}') != ''
-        run: mnative fmt:check
+        run: bunx mnative fmt:check
         shell: bash
 
       - name: Cargo clippy (deny warnings, mnative)
         if: hashFiles('{{NATIVE_CARGO}}') != ''
-        run: mnative clippy
+        run: bunx mnative clippy
         shell: bash
 
       - name: Cargo check (fast, mnative)
         if: hashFiles('{{NATIVE_CARGO}}') != ''
-        run: mnative check
+        run: bunx mnative check
         shell: bash
 
       - name: Cargo test (mnative)
         if: hashFiles('{{NATIVE_CARGO}}') != ''
-        run: mnative test
+        run: bunx mnative test
         shell: bash
 
       - name: Build native bindings (host, mnative)
         if: hashFiles('{{NATIVE_CARGO}}') != ''
-        run: mnative napi:build
+        run: bunx mnative napi:build
         shell: bash
 
       - name: Check native package types
         if: hashFiles('{{NATIVE_NPM}}') != ''
-        run: mnative typecheck
+        run: bunx mnative typecheck
         shell: bash
       # TEMPLATE-ONLY:END(native)

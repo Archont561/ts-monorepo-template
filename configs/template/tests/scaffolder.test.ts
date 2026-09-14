@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import { removeJsonEntry } from "@myorg/manifest";
 import { $, file, write } from "bun";
-import { MonorepoScaffolder } from "../src/scaffolder";
+import { discoverConfigs, NATIVE_MODES } from "../src/configs";
+import { collectScopeTargets, MonorepoScaffolder, stripMarkerBlocks } from "../src/scaffolder";
 
 describe("MonorepoScaffolder (unit)", () => {
   let workDir: string;
@@ -410,6 +413,52 @@ describe("MonorepoScaffolder (unit)", () => {
       const content = await file(`${workDir}/test.md`).text();
       expect(content).not.toMatch(/\n{3,}/);
     });
+
+    test("keeps the indentation of the code around an indented block", async () => {
+      // Regression: the marker line's indentation used to be left behind, so a
+      // removed block glued it onto the next line and a kept block got its
+      // first line indented twice.
+      await write(
+        `${workDir}/app.ts`,
+        [
+          "const routes = {",
+          '  "/keep": () => 1,',
+          "  // TEMPLATE-ONLY:START(native)",
+          '  "/native": () => 2,',
+          "  // TEMPLATE-ONLY:END(native)",
+          "};",
+          "",
+          "const other = {",
+          "  // TEMPLATE-ONLY:START(unocss)",
+          "  a: 1,",
+          "  // TEMPLATE-ONLY:END(unocss)",
+          "};",
+        ].join("\n"),
+      );
+
+      const removed = new MonorepoScaffolder({ targetDir: workDir });
+      setDisabledScopes(removed, ["template", "native"]);
+      await removed.stripTemplateMarkers();
+      expect(await file(`${workDir}/app.ts`).text()).toContain(
+        'const routes = {\n  "/keep": () => 1,\n};',
+      );
+
+      await write(
+        `${workDir}/kept.ts`,
+        [
+          "const other = {",
+          "  // TEMPLATE-ONLY:START(unocss)",
+          "  a: 1,",
+          "  // TEMPLATE-ONLY:END(unocss)",
+          "};",
+        ].join("\n"),
+      );
+
+      const kept = new MonorepoScaffolder({ targetDir: workDir, configs: { unocss: true } });
+      setDisabledScopes(kept, ["template"]);
+      await kept.stripTemplateMarkers();
+      expect(await file(`${workDir}/kept.ts`).text()).toContain("const other = {\n  a: 1,\n};");
+    });
   });
 
   // ── removeTemplateFiles ──────────────────────────
@@ -761,7 +810,283 @@ describe("MonorepoScaffolder (unit)", () => {
       expect(after).toBe(before);
     });
   });
+
+  // ── removeJsonEntry (manifest editor) ────────────
+
+  describe("removeJsonEntry", () => {
+    const turbo = [
+      "{",
+      '  "$schema": "https://turborepo.dev/schema.json",',
+      '  "tasks": {',
+      '    "build": {',
+      '      "dependsOn": ["^build"],',
+      '      "outputs": ["dist/**", "public/uno.css"]',
+      "    },",
+      '    "test:e2e": {',
+      '      "dependsOn": ["^build"],',
+      '      "cache": false',
+      "    },",
+      '    "typecheck": {',
+      '      "dependsOn": ["^build"]',
+      "    }",
+      "  }",
+      "}",
+      "",
+    ].join("\n");
+
+    test("removes a middle entry and its comma without reformatting", () => {
+      const next = removeJsonEntry(turbo, "tasks.test:e2e");
+      expect(next).not.toContain("test:e2e");
+      // Serializing the rest would have reflowed arrays onto their own lines.
+      expect(next).toContain('"dependsOn": ["^build"]');
+      expect(next).toContain('"outputs": ["dist/**", "public/uno.css"]');
+      expect(JSON.parse(next).tasks).toEqual({
+        build: { dependsOn: ["^build"], outputs: ["dist/**", "public/uno.css"] },
+        typecheck: { dependsOn: ["^build"] },
+      });
+    });
+
+    test("removes the last entry and the preceding comma", () => {
+      const next = removeJsonEntry(turbo, "tasks.typecheck");
+      expect(next).not.toContain("typecheck");
+      expect(next).toContain('"cache": false\n    }\n  }');
+      expect(JSON.parse(next).tasks).toEqual({
+        build: { dependsOn: ["^build"], outputs: ["dist/**", "public/uno.css"] },
+        "test:e2e": { dependsOn: ["^build"], cache: false },
+      });
+    });
+
+    test("leaves the source untouched for an unknown key", () => {
+      expect(removeJsonEntry(turbo, "tasks.build:wasm")).toBe(turbo);
+    });
+
+    test("survives braces inside strings", () => {
+      const source =
+        '{\n  "a": {\n    "cmd": "echo {\\"x\\"}"\n  },\n  "b": {\n    "n": 1\n  }\n}\n';
+      const next = removeJsonEntry(source, "a");
+      expect(JSON.parse(next)).toEqual({ b: { n: 1 } });
+    });
+  });
+  // ── Pure marker pass ─────────────────────────────
+
+  describe("stripMarkerBlocks (pure)", () => {
+    const disabled = new Set(["native"]);
+
+    test("reports no change when the content carries no markers", () => {
+      const source = "const a = 1;\n";
+      expect(stripMarkerBlocks(source, disabled)).toEqual({ content: source, changed: false });
+    });
+
+    test("removes a block whose scopes are all disabled", () => {
+      const source = [
+        "start",
+        "// TEMPLATE-ONLY:START(native)",
+        "gone",
+        "// TEMPLATE-ONLY:END(native)",
+        "end",
+        "",
+      ].join("\n");
+      expect(stripMarkerBlocks(source, disabled)).toEqual({
+        content: "start\nend\n",
+        changed: true,
+      });
+    });
+
+    test("keeps a block with a scope that is still enabled, dropping only markers", () => {
+      const source = [
+        "start",
+        "// TEMPLATE-ONLY:START(native, unocss)",
+        "kept",
+        "// TEMPLATE-ONLY:END(native)",
+        "end",
+        "",
+      ].join("\n");
+      expect(stripMarkerBlocks(source, disabled).content).toBe("start\nkept\nend\n");
+    });
+
+    test("normalises the indentation and blank lines a removal leaves behind", () => {
+      const source = [
+        "if (x) {",
+        "  // TEMPLATE-ONLY:START(native)",
+        "  native();",
+        "  // TEMPLATE-ONLY:END(native)",
+        "}",
+        "",
+      ].join("\n");
+      const { content, changed } = stripMarkerBlocks(source, disabled);
+      expect(changed).toBe(true);
+      expect(content).toBe("if (x) {\n}\n");
+      expect(content).not.toMatch(/[ \t]+\n/);
+      expect(content).not.toMatch(/\n{3,}/);
+    });
+
+    test("strips every marker style in one pass", () => {
+      const source = [
+        "# TEMPLATE-ONLY:START(native)",
+        "yaml",
+        "# TEMPLATE-ONLY:END(native)",
+        "// TEMPLATE-ONLY:START(native)",
+        "ts",
+        "// TEMPLATE-ONLY:END(native)",
+        "<!-- TEMPLATE-ONLY:START(native) -->",
+        "html",
+        "<!-- TEMPLATE-ONLY:END(native) -->",
+        "tail",
+        "",
+      ].join("\n");
+      expect(stripMarkerBlocks(source, disabled).content).toBe("tail\n");
+    });
+
+    test("is idempotent once the markers are gone", () => {
+      const once = stripMarkerBlocks(
+        "a\n// TEMPLATE-ONLY:START(native)\nb\n// TEMPLATE-ONLY:END(native)\nc\n",
+        disabled,
+      ).content;
+      expect(stripMarkerBlocks(once, disabled)).toEqual({ content: once, changed: false });
+    });
+  });
+  // ── Manifest edits keep their formatting ─────────
+
+  describe("handleConfig formatting", () => {
+    test("removals leave the surrounding manifests formatted as committed", async () => {
+      await mkdir(`${workDir}/configs/demo`, { recursive: true });
+      await write(
+        `${workDir}/configs/demo/package.json`,
+        `${JSON.stringify({
+          name: "@myorg/demo",
+          scaffold: {
+            default: false,
+            scriptsToRemove: ["demo"],
+            turboTasksToRemove: ["demo"],
+          },
+        })}\n`,
+      );
+      await mkdir(`${workDir}/configs/turbo`, { recursive: true });
+      await write(`${workDir}/configs/turbo/package.json`, '{ "name": "@myorg/turbo" }\n');
+      await write(
+        `${workDir}/configs/turbo/turbo.base.json`,
+        '{\n  "tasks": {\n    "build": {\n      "dependsOn": ["^build"],\n      "outputs": ["dist/**"]\n    },\n    "demo": {\n      "dependsOn": ["build"]\n    }\n  }\n}\n',
+      );
+      await write(
+        `${workDir}/package.json`,
+        '{\n  "name": "demo",\n  "workspaces": ["packages/*", "configs/*"],\n  "scripts": {\n    "build": "mturbo build",\n    "demo": "mdemo"\n  },\n  "devDependencies": {\n    "@myorg/demo": "workspace:*",\n    "@myorg/internal": "workspace:*"\n  }\n}\n',
+      );
+      await mkdir(`${workDir}/packages/internal`, { recursive: true });
+      await write(`${workDir}/packages/internal/package.json`, '{ "name": "@myorg/internal" }\n');
+
+      const s = new MonorepoScaffolder({ targetDir: workDir, scope: "@myorg" });
+      await s.handleConfig();
+
+      const root = await file(`${workDir}/package.json`).text();
+      expect(root).toContain('"workspaces": ["packages/*", "configs/*"]');
+      expect(root).not.toContain("mdemo");
+      expect(root).not.toContain("@myorg/demo");
+      expect(root).toContain('"@myorg/internal": "workspace:*"');
+      expect(JSON.parse(root).scripts).toEqual({ build: "mturbo build" });
+
+      const turbo = await file(`${workDir}/configs/turbo/turbo.base.json`).text();
+      expect(turbo).toContain('"dependsOn": ["^build"]');
+      expect(turbo).toContain('"outputs": ["dist/**"]');
+      expect(turbo).not.toContain("demo");
+      expect(JSON.parse(turbo).tasks).toEqual({
+        build: { dependsOn: ["^build"], outputs: ["dist/**"] },
+      });
+    });
+  });
+
+  // ── Workspace reconciliation ─────────────────────
+
+  describe("reconcileWorkspaces", () => {
+    test("drops globs and workspace deps that no longer resolve, and reports them", async () => {
+      await write(
+        `${workDir}/package.json`,
+        `${JSON.stringify(
+          {
+            workspaces: ["packages/*", "packages/native/npm/*"],
+            devDependencies: { "@myorg/native": "workspace:*", citty: "^0.2.2" },
+          },
+          null,
+          2,
+        )}\n`,
+      );
+      await mkdir(`${workDir}/packages/internal`, { recursive: true });
+      await write(
+        `${workDir}/packages/internal/package.json`,
+        `${JSON.stringify({ name: "@myorg/internal" })}\n`,
+      );
+
+      const s = new MonorepoScaffolder({ targetDir: workDir, scope: "@myorg" });
+      const source = await file(`${workDir}/package.json`).text();
+      const result = await callReconcile(s, source);
+
+      expect(result.droppedWorkspaces).toEqual(["packages/native/npm/*"]);
+      expect(result.droppedDependencies).toEqual(["@myorg/native"]);
+      // The edited text keeps the committed formatting; only the drops are gone.
+      const reconciled = JSON.parse(result.source) as {
+        workspaces?: string[];
+        devDependencies?: Record<string, string>;
+      };
+      expect(reconciled.workspaces).toEqual(["packages/*"]);
+      expect(reconciled.devDependencies).toEqual({ citty: "^0.2.2" });
+      expect(result.source).toContain('"workspaces": [\n    "packages/*"\n  ]');
+    });
+  });
+
+  // ── Scope target discovery ───────────────────────
+
+  describe("collectScopeTargets", () => {
+    test("includes the static targets even in an empty tree", async () => {
+      const targets = await collectScopeTargets(workDir);
+      expect(targets).toContain("package.json");
+      expect(targets).toContain("apps/example/src/index.ts");
+      expect(targets).toContain("packages/external/src/native.ts");
+    });
+
+    test("discovers package docs, config packages and the agents tree", async () => {
+      await mkdir(`${workDir}/packages/demo`, { recursive: true });
+      await mkdir(`${workDir}/apps/demo`, { recursive: true });
+      await mkdir(`${workDir}/configs/demo`, { recursive: true });
+      await mkdir(`${workDir}/.agents/skills/demo`, { recursive: true });
+      await write(`${workDir}/packages/demo/README.md`, "@myorg/demo\n");
+      await write(`${workDir}/apps/demo/AGENTS.md`, "@myorg/demo\n");
+      await write(`${workDir}/configs/demo/package.json`, '{ "name": "@myorg/demo" }\n');
+      await write(`${workDir}/.agents/skills/demo/SKILL.md`, "@myorg/demo\n");
+      // Non-text files are never rewritten, and node_modules is not walked.
+      await write(`${workDir}/packages/demo/logo.png`, "@myorg/demo\n");
+      await mkdir(`${workDir}/packages/demo/node_modules/x`, { recursive: true });
+      await write(`${workDir}/packages/demo/node_modules/x/README.md`, "@myorg/demo\n");
+
+      const targets = await collectScopeTargets(workDir);
+      expect(targets).toContain("packages/demo/README.md");
+      expect(targets).toContain("apps/demo/AGENTS.md");
+      expect(targets).toContain("configs/demo/package.json");
+      expect(targets).toContain(".agents/skills/demo/SKILL.md");
+      expect(targets).not.toContain("packages/demo/logo.png");
+      expect(targets.some((p) => p.includes("node_modules"))).toBe(false);
+    });
+
+    test("visits every file at most once", async () => {
+      await mkdir(`${workDir}/packages/demo`, { recursive: true });
+      await mkdir(`${workDir}/apps/demo`, { recursive: true });
+      await write(`${workDir}/packages/demo/README.md`, "@myorg/demo\n");
+      const targets = await collectScopeTargets(workDir);
+      expect(new Set(targets).size).toBe(targets.length);
+    });
+  });
 });
+
+interface ReconcileOutcome {
+  /** The edited manifest text — the assertions parse it. */
+  source: string;
+  droppedWorkspaces: string[];
+  droppedDependencies: string[];
+}
+
+/** `reconcileWorkspaces` is an implementation detail; the unit tests drive it directly. */
+async function callReconcile(s: MonorepoScaffolder, source: string): Promise<ReconcileOutcome> {
+  const target = s as unknown as { reconcileWorkspaces(s: string): Promise<ReconcileOutcome> };
+  return target.reconcileWorkspaces(source);
+}
 
 function setDisabledScopes(s: MonorepoScaffolder, scopes: string[]): void {
   (s as unknown as { disabledScopes: Set<string> }).disabledScopes = new Set(scopes);
@@ -770,3 +1095,46 @@ function setDisabledScopes(s: MonorepoScaffolder, scopes: string[]): void {
 async function pathExists(path: string): Promise<boolean> {
   return (await $`test -e ${path}`.nothrow().quiet()).exitCode === 0;
 }
+
+// ── scaffold metadata vocabulary ─────────────────
+
+describe("scaffold metadata", () => {
+  const repoRoot = join(import.meta.dir, "../../..");
+
+  test("the native select offers exactly the NATIVE_MODES values", async () => {
+    const configs = await discoverConfigs(repoRoot);
+    const native = configs.find((config) => config.meta.flag === "native");
+    expect(native).toBeDefined();
+
+    // Renaming a mode in one place and not the other is what this catches: the
+    // select would offer a value that has no removal set (or vice versa).
+    const modes = Object.values(NATIVE_MODES).sort();
+    expect((native?.meta.options ?? []).map((option) => option.value).sort()).toEqual(modes);
+    expect(Object.keys(native?.meta.removals ?? {}).sort()).toEqual(modes);
+  });
+
+  test("every select config defaults to one of its own options", async () => {
+    const configs = await discoverConfigs(repoRoot);
+    const selects = configs.filter((config) => config.meta.type === "select");
+    expect(selects.length).toBeGreaterThan(0);
+
+    for (const config of selects) {
+      const values = (config.meta.options ?? []).map((option) => String(option.value));
+      expect(values, config.name).toContain(String(config.meta.default));
+      expect(values.length, config.name).toBeGreaterThan(0);
+    }
+  });
+
+  test("a select config keys its removals by the values it offers", async () => {
+    const configs = await discoverConfigs(repoRoot);
+    const selects = configs.filter((config) => config.meta.type === "select");
+
+    for (const config of selects) {
+      const values = (config.meta.options ?? []).map((option) => String(option.value));
+      for (const key of Object.keys(config.meta.removals ?? {})) {
+        // A removal set keyed by a mode nobody can pick is dead configuration.
+        expect(values, `${config.name} → ${key}`).toContain(key);
+      }
+    }
+  });
+});

@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { spawnSync, which } from "bun";
-import { defineCommand, runMain } from "citty";
+import { defineCommand, runMain, spawnTool } from "@myorg/citty";
+import { which } from "bun";
 
 /**
  * The shared UnoCSS config lives in this package, so callers never pass
@@ -65,14 +65,7 @@ async function runUnocss(extraArgs: string[]): Promise<number> {
     );
     return 0;
   }
-  const result = spawnSync({
-    cmd: [...bin, "--config", CONFIG_PATH, ...extraArgs],
-    cwd: REPO_ROOT,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  return result.exitCode;
+  return spawnTool([...bin, "--config", CONFIG_PATH, ...extraArgs], { cwd: REPO_ROOT });
 }
 
 const buildCommand = defineCommand({

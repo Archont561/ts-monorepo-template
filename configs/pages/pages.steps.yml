@@ -3,10 +3,10 @@
       # Assets are built per package/app by `bun run build` — there is no global
       # CSS step here, apps own their own (e.g. apps/example's build:css).
       - name: Build static site for Pages
-        run: mpages build
+        run: bunx mpages build
         shell: bash
 
       - name: Configure base path for Pages (repo name)
-        run: mpages base
+        run: bunx mpages base
         shell: bash
       # TEMPLATE-ONLY:END(pages)

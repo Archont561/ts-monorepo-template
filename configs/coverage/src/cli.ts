@@ -2,36 +2,25 @@
 import { existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
 import { dirname } from "node:path";
 import { cp } from "node:fs/promises";
-import { spawnSync, which } from "bun";
-import { defineCommand, runMain } from "citty";
+import { which } from "bun";
+import { defineCommand, runMain, spawnTool } from "@myorg/citty";
 import { COVERAGE_HTML, COVERAGE_LCOV, COVERAGE_RUST_LCOV, COVERAGE_THRESHOLD } from "../index.ts";
 
 // Rendered here; `mpages build` folds it into the Pages artifact (see pages command).
 const COVERAGE_HTML_INDEX = `${COVERAGE_HTML}/index.html`;
 
-function run(cmd: string[], opts: { cwd?: string } = {}): number {
-  const result = spawnSync({
-    cmd,
-    cwd: opts.cwd,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  return result.exitCode;
-}
-
 function has(tool: string): boolean {
   return Boolean(which(tool));
 }
 
-type Totals = { hit: number; found: number; percent: number };
+export type Totals = { hit: number; found: number; percent: number };
 
 /**
  * Reads LF/LH records straight out of the COVERAGE_LCOV file. The previous shell
  * version shelled out to `lcov --summary | awk | bc`, which made the check
  * fail outright whenever lcov was not installed.
  */
-function totals(path: string = COVERAGE_LCOV): Totals | null {
+export function totals(path: string = COVERAGE_LCOV): Totals | null {
   if (!existsSync(path)) return null;
   let hit = 0;
   let found = 0;
@@ -43,6 +32,52 @@ function totals(path: string = COVERAGE_LCOV): Totals | null {
   return { hit, found, percent: (hit / found) * 100 };
 }
 
+/**
+ * Adds up the per-file totals. This is an approximation of `lcov --add-tracefile`
+ * — a source file measured in two reports would be counted twice — but the
+ * reports cover disjoint workspaces, which is what the merge relies on.
+ */
+export function sumTotals(paths: string[]): Totals | null {
+  let hit = 0;
+  let found = 0;
+  for (const path of paths) {
+    const report = totals(path);
+    if (!report) continue;
+    hit += report.hit;
+    found += report.found;
+  }
+  if (!found) return null;
+  return { hit, found, percent: (hit / found) * 100 };
+}
+
+/** The workspace kinds whose per-package reports feed the merged file. */
+export const REPORT_DIRS = ["packages", "apps"] as const;
+
+/**
+ * `{packages,apps}/*​/coverage/lcov.info`, optionally widened to `configs`.
+ *
+ * The pattern is built in one place because both the glob scan and the
+ * `lcov-result-merger` command line need exactly the same set.
+ */
+export function coveragePattern(includeConfigs = false): string {
+  const dirs = includeConfigs ? [...REPORT_DIRS, "configs"] : [...REPORT_DIRS];
+  return `{${dirs.join(",")}}/*/coverage/lcov.info`;
+}
+
+/** Every report the merge would consume, sorted for a stable log line. */
+export function coverageReports(root = ".", includeConfigs = false): string[] {
+  const glob = new Bun.Glob(coveragePattern(includeConfigs));
+  return Array.from(glob.scanSync({ cwd: root }))
+    .filter(Boolean)
+    .map((relative) => (root === "." ? relative : `${root}/${relative}`))
+    .sort();
+}
+
+/** The gate is met when the measured percent reaches the threshold. */
+export function meetsThreshold(percent: number, threshold: number): boolean {
+  return percent >= threshold;
+}
+
 /** Installs lcov (which ships genhtml) if it is missing. Never fails the job. */
 function installTools(): void {
   if (has("lcov") && has("genhtml")) {
@@ -51,10 +86,10 @@ function installTools(): void {
   }
   let code = 1;
   if (process.platform === "darwin") {
-    code = run(["brew", "install", "lcov"]);
+    code = spawnTool(["brew", "install", "lcov"]);
   } else {
     const apt = has("sudo") ? ["sudo", "apt-get"] : ["apt-get"];
-    code = run([...apt, "update"]) === 0 ? run([...apt, "install", "-y", "lcov"]) : 1;
+    code = spawnTool([...apt, "update"]) === 0 ? spawnTool([...apt, "install", "-y", "lcov"]) : 1;
   }
   if (code === 0) {
     console.log("✅ lcov installed");
@@ -73,7 +108,7 @@ function generateHtml(outDir: string = COVERAGE_HTML): void {
     return;
   }
   mkdirSync(outDir, { recursive: true });
-  const code = run([
+  const code = spawnTool([
     "genhtml",
     COVERAGE_LCOV,
     "--output-directory",
@@ -117,9 +152,18 @@ const htmlCommand = defineCommand({
 });
 
 const checkCommand = defineCommand({
-  meta: { name: "check", description: "Check coverage threshold (default 80%) against coverage/lcov.info" },
+  meta: {
+    name: "check",
+    description: `Check coverage threshold (default ${COVERAGE_THRESHOLD}%) against coverage/lcov.info`,
+  },
   args: {
-    threshold: { type: "string", description: "Threshold percent", default: "80" },
+    // The default comes from COVERAGE_THRESHOLD so the CLI and CI enforce the
+    // same number; hardcoding it here made the constant decorative.
+    threshold: {
+      type: "string",
+      description: "Threshold percent",
+      default: String(COVERAGE_THRESHOLD),
+    },
   },
   run({ args }) {
     const result = totals();
@@ -130,7 +174,7 @@ const checkCommand = defineCommand({
     const threshold = Number((args.threshold as string) ?? COVERAGE_THRESHOLD);
     const percent = Number(result.percent.toFixed(2));
     console.log(`Line coverage: ${percent}% (${result.hit}/${result.found} lines) — threshold ${threshold}%`);
-    if (percent < threshold) {
+    if (!meetsThreshold(percent, threshold)) {
       console.error(`::error::Coverage ${percent}% is below ${threshold}% threshold`);
       process.exit(1);
     }
@@ -145,7 +189,7 @@ const collectCommand = defineCommand({
     description: "Collect JS coverage (bun run coverage) + Rust coverage (mnative llvm-cov), then merge",
   },
   run() {
-    run(["bun", "run", "coverage"]);
+    spawnTool(["bun", "run", "coverage"]);
 
     const hasNative = existsSync("packages/native/Cargo.toml");
     if (!hasNative || !has("cargo-llvm-cov")) {
@@ -154,7 +198,7 @@ const collectCommand = defineCommand({
     }
 
     console.log("🦀 Collecting Rust coverage via mnative llvm-cov");
-    run(["mnative", "llvm-cov", "--lcov", "--output-path", `../../${COVERAGE_RUST_LCOV}`]);
+    spawnTool(["mnative", "llvm-cov", "--lcov", "--output-path", `../../${COVERAGE_RUST_LCOV}`]);
     if (!existsSync(COVERAGE_RUST_LCOV)) {
       process.exit(0);
     }
@@ -165,7 +209,7 @@ const collectCommand = defineCommand({
     }
     if (has("lcov")) {
       const merged = "coverage/merged.lcov";
-      const code = run([
+      const code = spawnTool([
         "lcov",
         "--add-tracefile",
         COVERAGE_LCOV,
@@ -192,7 +236,7 @@ const pagesCommand = defineCommand({
   async run() {
     if (!existsSync(COVERAGE_LCOV)) {
       console.log("ℹ️ No coverage data — collecting first");
-      run(["bun", "run", "coverage"]);
+      spawnTool(["bun", "run", "coverage"]);
     }
     if (!existsSync(COVERAGE_LCOV)) {
       console.warn("⚠️ Still no coverage/lcov.info — skipping Pages coverage");
@@ -216,7 +260,7 @@ const pagesCommand = defineCommand({
 const mergeCommand = defineCommand({
   meta: {
     name: "merge",
-    description: "Merge {packages,apps}/*/coverage/lcov.info into coverage/lcov.info",
+    description: "Merge per-package lcov.info reports into coverage/lcov.info",
   },
   args: {
     output: {
@@ -224,16 +268,56 @@ const mergeCommand = defineCommand({
       description: "Merged output file (default: coverage/lcov.info)",
       default: COVERAGE_LCOV,
     },
+    includeConfigs: {
+      type: "boolean",
+      description:
+        "Merge configs/*/coverage/lcov.info too (default: on — disable with --no-include-configs)",
+      default: true,
+    },
+    reportOnly: {
+      type: "boolean",
+      description: "Print the merged totals and the delta, write nothing",
+      default: false,
+    },
   },
   run({ args }) {
-    const glob = new Bun.Glob("{packages,apps}/*/coverage/lcov.info");
-    const files = Array.from(glob.scanSync()).filter(Boolean);
+    const includeConfigs = Boolean(args.includeConfigs);
+    const files = coverageReports(".", includeConfigs);
     if (files.length === 0) {
       console.warn("No per-package lcov.info found — nothing to merge");
       process.exit(0);
     }
 
     const output = (args.output as string) || COVERAGE_LCOV;
+    if (args.reportOnly) {
+      // Rollout aid: widening the gate must be shown to raise the number, never
+      // to hide a drop, so the dry run prints both sides before anything moves.
+      const wide = { paths: coverageReports(".", true), totals: sumTotals(coverageReports(".", true)) };
+      const narrow = {
+        paths: coverageReports(".", false),
+        totals: sumTotals(coverageReports(".", false)),
+      };
+      const line = (label: string, side: typeof wide) => {
+        const report = side.totals;
+        const formatted = report
+          ? `${report.percent.toFixed(2)}% (${report.hit}/${report.found} lines)`
+          : "no data";
+        console.log(`  ${label.padEnd(16)} ${side.paths.length} report(s) → ${formatted}`);
+      };
+
+      console.log("Report-only: the merge would measure");
+      line("with configs", wide);
+      line("without configs", narrow);
+      if (wide.totals && narrow.totals) {
+        console.log(
+          `  delta            +${(wide.totals.percent - narrow.totals.percent).toFixed(2)} points, +${
+            wide.totals.found - narrow.totals.found
+          } lines`,
+        );
+      }
+      process.exit(0);
+    }
+
     mkdirSync(dirname(output), { recursive: true });
     console.log(`Merging ${files.length} report(s) → ${output}`);
 
@@ -246,7 +330,13 @@ const mergeCommand = defineCommand({
       merger = null;
     }
     if (merger) {
-      const code = run(["bun", merger, "{packages,apps}/*/coverage/lcov.info", output, "--prepend-source-files"]);
+      const code = spawnTool([
+        "bun",
+        merger,
+        coveragePattern(includeConfigs),
+        output,
+        "--prepend-source-files",
+      ]);
       if (code === 0) {
         console.log(`✅ Merged: ${output}`);
         process.exit(0);
@@ -260,7 +350,7 @@ const mergeCommand = defineCommand({
     }
     const merged = "coverage/merged.lcov";
     const addArgs = files.flatMap((f) => ["--add-tracefile", f]).concat(["--output-file", merged]);
-    if (run(["lcov", ...addArgs]) !== 0) {
+    if (spawnTool(["lcov", ...addArgs]) !== 0) {
       console.error("❌ Coverage merge failed");
       process.exit(1);
     }
@@ -294,7 +384,7 @@ const summaryCommand = defineCommand({
       process.exit(0);
     }
     if (has("lcov") && existsSync(COVERAGE_LCOV)) {
-      process.exit(run(["lcov", "--summary", COVERAGE_LCOV]));
+      process.exit(spawnTool(["lcov", "--summary", COVERAGE_LCOV]));
     }
     if (!result) {
       console.warn(`⚠️ ${COVERAGE_LCOV} not found`);

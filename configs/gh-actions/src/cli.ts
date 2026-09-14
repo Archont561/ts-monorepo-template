@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
-import { spawnSync } from "bun";
-import { defineCommand, runMain } from "citty";
+import { defineCommand, defineSpawnSubcommand, runMain, spawnTool } from "@myorg/citty";
 
 const ACT_FLAGS = [
   "-P",
@@ -13,13 +12,12 @@ function runActionlint(args: string[]) {
   const actionlint = Bun.fileURLToPath(
     import.meta.resolve("github-actionlint/dist/bin/actionlint.js"),
   );
-  const result = spawnSync({
-    cmd: ["bun", actionlint, `-config-file=${import.meta.dir}/../actionlint.yaml`, ...args],
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  process.exit(result.exitCode);
+  return spawnTool([
+    "bun",
+    actionlint,
+    `-config-file=${import.meta.dir}/../actionlint.yaml`,
+    ...args,
+  ]);
 }
 
 function runAct(args: string[]) {
@@ -38,38 +36,24 @@ Install:
 
 Then ensure Docker is running and try again.
 `);
-    process.exit(1);
+    return 1;
   }
 
-  const result = spawnSync({
-    cmd: [actPath, ...ACT_FLAGS, ...args],
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  process.exit(result.exitCode);
+  return spawnTool([actPath, ...ACT_FLAGS, ...args]);
 }
 
-const lintCommand = defineCommand({
-  meta: { name: "lint", description: "Validate workflows via actionlint with shared config" },
-  args: {
-    args: { type: "positional", description: "Extra args for actionlint", required: false },
-  },
-  run() {
-    const raw = process.argv.slice(3);
-    runActionlint(raw);
-  },
+const lintCommand = defineSpawnSubcommand({
+  name: "lint",
+  description: "Validate workflows via actionlint with shared config",
+  argsDescription: "Extra args for actionlint",
+  spawn: runActionlint,
 });
 
-const actCommand = defineCommand({
-  meta: { name: "act", description: "Run GitHub Actions locally via act with baked-in flags" },
-  args: {
-    args: { type: "positional", description: "Extra args for act", required: false },
-  },
-  run() {
-    const raw = process.argv.slice(3);
-    runAct(raw);
-  },
+const actCommand = defineSpawnSubcommand({
+  name: "act",
+  description: "Run GitHub Actions locally via act with baked-in flags",
+  argsDescription: "Extra args for act",
+  spawn: runAct,
 });
 
 const main = defineCommand({

@@ -19,6 +19,7 @@
     "./turbo.json": "./turbo.base.json"
   },
   "devDependencies": {
+    "@myorg/citty": "workspace:*",
     "turbo": "^2.10.12"
   },
   "dependencies": {

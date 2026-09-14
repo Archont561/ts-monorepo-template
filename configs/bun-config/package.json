@@ -18,7 +18,9 @@
   "exports": {
     "./bunfig.toml": "./bunfig.toml"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@myorg/citty": "workspace:*"
+  },
   "dependencies": {
     "citty": "^0.2.2"
   }

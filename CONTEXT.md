@@ -58,34 +58,43 @@ not an npm package — the npm package is `packages/native/npm/native`.
 
 ### In-flight
 
-- Branch `arena/01a09c8b-ts-monorepo-template`, 32 commits, no PR (work is committed and pushed directly to the branch).
-- Documentation is being restructured to the three-document system: `README.md` (orientation), `AGENTS.md` (rules), `CONTEXT.md` (this snapshot). Every directory ends up with exactly those three; `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`, `CODE_OF_CONDUCT.md` were folded into `README.md` and deleted, `configs/*/AGENTS.md` was renamed to `AGENTS.md` for one consistent name, and `PLAN.md` retired.
+- Branch `arena/01a09f8a-ts-monorepo-template`. Toolchain installed (Bun 1.4.2 from npm — `bun.sh` is unreachable here), full suite run, then a bug pass over the paths that no test covered.
+- Bugs fixed: the demo app resolved `public/` one level too high (`apps/public/...`), so `/uno.css` always served the "not built" fallback and the feature log read `unocss=no`; `/api` looked for the UnoCSS config one level short and listed only half the native routes; `mnative add` could only ever use `@myorg` (dead `? undefined : undefined`); `mcoverage check` hardcoded `80` instead of `COVERAGE_THRESHOLD`; `mbadges check` / `mchangeset init` ran twice because citty falls through to the parent command.
+- New `apps/example/src/features.ts` owns the app's `public/` paths and feature detection — one source instead of a relative path per call site — with `tests/features.test.ts` (12 tests) covering it.
+- Scaffolds now match the picture the docs promised: the root manifest is reconciled with what survived a removal (`bun install` no longer fails on a deleted `packages/native`), scripts whose bin was removed are gone (`security:audit`, `skills`, `security:trivy`/`security:check`), and native-only test imports are wrapped in `TEMPLATE-ONLY` markers.
+- The marker stripper and the Turbo writer no longer hand the scaffolded project a file its own `biome check` rejects: marker lines take their indentation with them and JSON edits are text surgery, not `JSON.stringify`.
+- `mnative add` writes the package the shipped crate has — compact `tsconfig.json`, `turbo.json`, a structure test to typecheck — instead of a package that failed `typecheck`, lacked a test and broke `check`.
+- The E2E specs asserted the plain page only; `/` serves the UnoCSS page whenever that config is enabled, so the title/greeting/background assertions now accept both.
 
 ### Verified working (local, this sandbox)
 
 - `bun run check` / `typecheck` / `test` / `build` / `coverage` all exit 0
 - `bun run docs:sync` regenerates six workflows; all parse as YAML
-- Template suite: 84 tests over every opt-in combination, 0 fail
+- Template suite: 103 tests over every opt-in combination, 0 fail
 - `mnative list`, `mnative matrix --gha`, `mnative add <name>` (crate + npm package + sorted `members`)
 - `bun install` links `node_modules/@myorg/native` → `packages/native/npm/native`
+- Demo app served with `bun src/index.ts` and probed over HTTP: `/health`, `/`, `/api`, `/uno.css` (6068 B built bundle, not the fallback), `/api/native/*` — all 200 with the expected payloads
+- `mnative add` scope resolution checked against a throwaway `@acme` workspace: flag → existing package scope → `NATIVE_SCOPE` → `@myorg`
 
 ### Known gaps
 
 - Rust toolchain absent in this sandbox — cargo/napi builds no-op, so native bindings have never been compiled here.
 - Playwright browsers absent — `bun run test:e2e` skips by design.
-- `native.yml` (the build matrix) has never run on real GitHub Actions: container targets, WASI SDK download and the artifact fan-in are unverified.
+- `native.yml`'s build matrix is still unverified. It had never run on real GitHub Actions; with the m-bin `PATH` fix in place its `matrix` job now passes, but the container jobs cannot install bun (the Debian image has no `unzip`; the Alpine image cannot execute the glibc bun), the Windows binding build exits 1, and the WASI download plus the artifact fan-in have not completed a run yet.
+- Manifests are edited as text through the shared editor in `configs/manifest`, so adding or removing turbo tasks and workspace entries leaves the surrounding formatting alone; a manifest that does not parse is left untouched instead of being rewritten.
 - Publish ordering for the per-platform native npm packages is still unwired — `native.yml` uploads them as `native-npm-packages` but nothing consumes that artifact yet.
 
 ### Baseline — do not regress
 
 | Metric | Value |
 | :--- | :--- |
-| Tests | 130 pass / 0 fail (14 turbo tasks) |
+| Tests | 230 pass / 0 fail (19 turbo tasks) |
 | Typecheck | 14/14 |
 | Build | 19/19 |
-| Coverage | 96.7% lines (145/150) — gate 80% |
-| Biome | 0 errors; 19 warnings + 14 infos over 138 files |
+| Coverage | 99.52% lines (1037/1042) over apps+packages+configs — gate 80% |
+| Biome | 0 errors; 14 warnings + 10 infos over 152 files |
 | Workflows | 6 generated, all parse |
+| Scaffolds | `native=none` and `native=publish` variants: install + check + typecheck + test all clean |
 | E2E | skipped — browsers not installed |
 
 ## Recent significant changes

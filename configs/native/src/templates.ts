@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  DEFAULT_NATIVE_SCOPE,
   NATIVE_TARGET_TRIPLES,
   NATIVE_WASM_TARGET,
   type NativeCrateSpec,
@@ -24,7 +25,7 @@ export type TemplateOptions = {
   repository?: string;
 };
 
-const SCOPE = (options: TemplateOptions): string => options.scope ?? "@myorg";
+const SCOPE = (options: TemplateOptions): string => options.scope ?? DEFAULT_NATIVE_SCOPE;
 const REPO = (options: TemplateOptions): string =>
   options.repository ?? "https://github.com/OWNER/REPO";
 
@@ -74,7 +75,7 @@ export function workspaceCargoToml(crates: NativeCrateSpec[], options: TemplateO
 }
 
 /** A crate manifest — `cdylib` for bindings, plain lib for pure Rust. */
-export function crateCargoToml(spec: NativeCrateSpec, options: TemplateOptions): string {
+export function crateCargoToml(spec: NativeCrateSpec): string {
   const lines = [
     "[package]",
     `name    = "${spec.name}"`,
@@ -327,6 +328,8 @@ export function npmPackageJson(
       "build:wasm": `mnative napi:build:wasm --only ${spec.name}`,
       "create-npm-dirs": `mnative create-npm-dirs --only ${spec.name}`,
       artifacts: `mnative artifacts --only ${spec.name}`,
+      test: "mbun test",
+      "test:watch": "mbun test --watch",
       typecheck: "mtsc --noEmit",
       "cargo:check": "mnative check",
       "cargo:clippy": "mnative clippy",
@@ -343,13 +346,95 @@ export function npmPackageJson(
   };
 }
 
-export function npmTsConfig(scope: string): Record<string, unknown> {
-  return {
-    extends: `${scope}/ts/library.json`,
-    compilerOptions: { rootDir: ".", outDir: "./dist", types: ["bun"] },
-    include: ["index.d.ts", "src/**/*"],
-  };
+/**
+ * `tsconfig.json` for a binding package, written as text rather than
+ * serialized: `JSON.stringify(..., null, 2)` puts every array element on its
+ * own line, and the generated project's `biome check` rejects that.
+ *
+ * `index.d.ts` is produced by `napi build`, so the committed test file is what
+ * gives `mtsc` an input until the first build runs.
+ */
+export function npmTsConfig(scope: string): string {
+  return `{
+  "extends": "${scope}/ts/library.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist",
+    "types": ["bun"]
+  },
+  "include": ["index.d.ts", "tests/**/*"]
 }
+`;
+}
+
+/**
+ * Package-level Turbo config: builds are never cached (they call cargo) and
+ * their outputs are the napi artifacts, not `dist/`.
+ */
+export const npmTurboJson = (): string => `{
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "outputs": ["*.node", "index.js", "index.d.ts"],
+      "cache": false
+    },
+    "build:wasm": {
+      "outputs": ["*.wasi.cjs", "*.wasi-browser.js", "*.wasm"],
+      "cache": false
+    },
+    "cargo:check": {
+      "cache": false
+    },
+    "cargo:clippy": {
+      "cache": false
+    }
+  }
+}
+`;
+
+/**
+ * Structure test for a generated binding package — mirrors the one shipped
+ * with the first crate, so a fresh `mnative add` package has both a
+ * `typecheck` input and a `test` that runs without the Rust toolchain.
+ */
+export const npmPackageTest = (spec: NativeCrateSpec): string => {
+  const name = spec.name;
+  return `import { describe, expect, it } from "bun:test";
+
+// Structure tests: the workspace is the source of truth for where things live.
+// The Rust code itself is covered by \`cargo test\`, the JS fallback path by
+// packages/external.
+
+const NAME = "${name}";
+const CRATE = \`../../crates/\${NAME}\`;
+
+describe(\`\${NAME} crate\`, () => {
+  it("is listed in the workspace manifest", async () => {
+    const content = await Bun.file("../../Cargo.toml").text();
+    expect(content).toContain(\`"crates/\${NAME}"\`);
+  });
+
+  it("is a cdylib binding crate", async () => {
+    const content = await Bun.file(\`\${CRATE}/Cargo.toml\`).text();
+    expect(content).toContain(\`name    = "\${NAME}"\`);
+    expect(content).toContain("cdylib");
+    expect(content).toContain("napi-derive");
+  });
+
+  it("has a build.rs calling napi_build::setup", async () => {
+    const content = await Bun.file(\`\${CRATE}/build.rs\`).text();
+    expect(content).toContain("napi_build::setup");
+  });
+
+  it("declares the napi config for every target", async () => {
+    const pkg = await Bun.file("package.json").json();
+    expect(pkg.napi.binaryName).toBe(NAME);
+    expect(pkg.napi.targets).toContain("wasm32-wasip1-threads");
+    expect(pkg.napi.wasm).toBeDefined();
+  });
+});
+`;
+};
 
 export const rustToolchainToml = (): string => `[toolchain]
 channel = "stable"
@@ -395,7 +480,7 @@ export async function writeCrate(
 ): Promise<{ crate: string; package?: string }> {
   const crateDir = join(root, nativeCrateDir(spec.name));
   await mkdir(join(crateDir, "src"), { recursive: true });
-  await writeFile(join(crateDir, "Cargo.toml"), crateCargoToml(spec, options));
+  await writeFile(join(crateDir, "Cargo.toml"), crateCargoToml(spec));
   await writeFile(join(crateDir, "src", "lib.rs"), crateLibRs(spec));
   if (spec.binding) {
     await writeFile(join(crateDir, "build.rs"), crateBuildRs());
@@ -409,10 +494,10 @@ export async function writeCrate(
     join(packageDir, "package.json"),
     `${JSON.stringify(npmPackageJson(spec, options), null, 2)}\n`,
   );
-  await writeFile(
-    join(packageDir, "tsconfig.json"),
-    `${JSON.stringify(npmTsConfig(SCOPE(options)), null, 2)}\n`,
-  );
+  await writeFile(join(packageDir, "tsconfig.json"), npmTsConfig(SCOPE(options)));
+  await writeFile(join(packageDir, "turbo.json"), npmTurboJson());
+  await mkdir(join(packageDir, "tests"), { recursive: true });
+  await writeFile(join(packageDir, "tests", `${spec.name}.test.ts`), npmPackageTest(spec));
 
   return { crate: crateDir, package: packageDir };
 }
