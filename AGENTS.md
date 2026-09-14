@@ -174,7 +174,7 @@ Editing generated output is silent data loss: the next regeneration overwrites i
 - Biome `overrides` **replace** rule options rather than merging — restate every option you need inside each override block.
 - TS path aliases are `@src/*` and `@tests/*`. No cross-package `../../` imports.
 - `clippy -D warnings` is a CI flag only — never `#![deny(warnings)]` in Rust source.
-- Only one workflow may deploy to Pages. In the template repo that is `template-docs.yml`, so `docs:sync` deliberately skips `pages.yml` and `coverage.yml` while `docs/` exists.
+- Only one workflow may deploy to Pages. In the template repo that is `template-docs.yml`, so `docs:sync` deliberately skips `pages.yml` and `coverage.yml` while the docs app (`apps/template-docs`) exists.
 
 ## Package boundaries
 

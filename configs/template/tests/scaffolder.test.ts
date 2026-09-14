@@ -747,7 +747,7 @@ describe("MonorepoScaffolder (unit)", () => {
           scaffold: {
             default: "always",
             selfDestruct: true,
-            scriptsToRemove: ["docs:sync"],
+            scriptsToRemove: ["docs:sync", "docs:site", "docs:dev", "docs:build", "docs:preview"],
           },
         }),
       );
@@ -762,7 +762,11 @@ describe("MonorepoScaffolder (unit)", () => {
         `${workDir}/package.json`,
         JSON.stringify({
           name: "test",
-          scripts: { "docs:sync": "bun configs/template/src/aggregate.ts" },
+          scripts: {
+            "docs:sync": "bun configs/template/src/aggregate.ts",
+            "docs:site": "mdocs site",
+            "docs:dev": "mturbo dev --filter=@myorg/template-docs",
+          },
           devDependencies: { "@myorg/template": "workspace:*", "@myorg/biome": "workspace:*" },
         }),
       );
@@ -775,6 +779,8 @@ describe("MonorepoScaffolder (unit)", () => {
 
       const pkg = await file(`${workDir}/package.json`).json();
       expect(pkg.scripts["docs:sync"]).toBeUndefined();
+      expect(pkg.scripts["docs:site"]).toBeUndefined();
+      expect(pkg.scripts["docs:dev"]).toBeUndefined();
       expect(pkg.devDependencies["@myorg/template"]).toBeUndefined();
       expect(pkg.devDependencies["@myorg/biome"]).toBe("workspace:*");
     });

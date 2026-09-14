@@ -1,0 +1,2 @@
+# VitePress build cache (dist/ is covered by the root dist/ ignore)
+.vitepress/cache/

@@ -5,7 +5,7 @@
 ## Current state
 
 - Owns `ci.base.yml`, `release.base.yml`, its own `ci.steps.yml`, and `actionlint.yaml`. The `pages`, `coverage`, `native` and `dependabot` skeletons live with the configs that own them.
-- Six workflows are generated today: `ci.yml`, `release.yml`, `native.yml`, `dependabot-auto-merge.yml`, `stale.yml`, plus `template-docs.yml` (hand-written, template-only). `pages.yml` and `coverage.yml` are deliberately not generated while `docs/` exists.
+- Six workflows are generated today: `ci.yml`, `release.yml`, `native.yml`, `dependabot-auto-merge.yml`, `stale.yml`, plus `template-docs.yml` (hand-written, template-only). `pages.yml` and `coverage.yml` are deliberately not generated while the docs app exists.
 - Placeholders available: `BUN_VERSION`, `NATIVE_DIR`, `NATIVE_CARGO`, `NATIVE_NPM`, `NATIVE_WASI_SDK_VERSION`, `APP_DIR`, `APP_DOCKERFILE`.
 
 ## Decisions as outcomes

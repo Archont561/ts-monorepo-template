@@ -38,7 +38,7 @@ During scaffolding you are prompted for:
 <summary>What the scaffolder changes</summary>
 
 - Replaces `@myorg` with your scope across manifests, configs, sources and docs
-- Strips `TEMPLATE-ONLY` blocks and removes template-only files (`configs/template/`, `docs/`, `template-docs.yml`, the `docs:sync` script)
+- Strips `TEMPLATE-ONLY` blocks and removes template-only files (`configs/template/`, `apps/template-docs/`, `template-docs.yml`, the `docs:*` scripts)
 - Prunes every opt-in config you declined, and regenerates the workflows from the survivors
 - Rewrites repository identity in badges and manifest URLs
 

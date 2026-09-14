@@ -32,7 +32,6 @@
         "@myorg/ts": "workspace:*",
         "@myorg/turbo": "workspace:*",
         "@myorg/unocss": "workspace:*",
-        "vitepress": "^1.6.4",
       },
     },
     "apps/example": {
@@ -47,6 +46,14 @@
         "@myorg/ts": "workspace:*",
         "@myorg/unocss": "workspace:*",
         "@playwright/test": "^1.63.0",
+      },
+    },
+    "apps/template-docs": {
+      "name": "@myorg/template-docs",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@myorg/ts": "workspace:*",
+        "vitepress": "^1.6.4",
       },
     },
     "configs/badges": {
@@ -752,6 +759,8 @@
     "@myorg/stale": ["@myorg/stale@workspace:configs/stale"],
 
     "@myorg/template": ["@myorg/template@workspace:configs/template"],
+
+    "@myorg/template-docs": ["@myorg/template-docs@workspace:apps/template-docs"],
 
     "@myorg/trivy": ["@myorg/trivy@workspace:configs/trivy"],
 

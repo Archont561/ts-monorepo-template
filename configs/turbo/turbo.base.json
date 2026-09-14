@@ -24,6 +24,11 @@
       "persistent": true,
       "dependsOn": ["^build"]
     },
+    "preview": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "persistent": true
+    },
     "build:native": {
       "dependsOn": ["^build"],
       "outputs": ["*.node", "index.js", "index.d.ts"],

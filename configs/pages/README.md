@@ -25,7 +25,7 @@ A package opts in from its own manifest:
 `"pages": "public"` and `"pages": true` are also accepted. One package deploys to the site root; several are nested under `/<name>/`. CSS is **not** built here — the app that owns the UnoCSS config builds it in its own `build` script.
 
 > [!NOTE]
-> This repository is the exception: the template-only docs site owns Pages (`template-docs.yml` → `mdocs site`), so `docs:sync` does not generate `pages.yml` here — one site, one deployer. Generated monorepos have no `docs/`, so they get `pages.yml` whenever Pages is enabled.
+> This repository is the exception: the template-only docs app owns Pages (`template-docs.yml` → `mdocs site`), so `docs:sync` does not generate `pages.yml` here — one site, one deployer. Generated monorepos have no docs app, so they get `pages.yml` whenever Pages is enabled.
 
 ### One-time setup
 

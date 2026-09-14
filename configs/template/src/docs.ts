@@ -1,16 +1,17 @@
 #!/usr/bin/env bun
 import { existsSync } from "node:fs";
-import { cp } from "node:fs/promises";
+import { cp, rm } from "node:fs/promises";
 import { PAGES_STAGING_DIR } from "@myorg/pages";
 import { spawnSync } from "bun";
 import { defineCommand, runMain } from "citty";
 import { regenerateAll } from "./aggregate";
 
-/** VitePress output dir — also the Pages artifact root. */
-const SITE_OUT = "docs/.vitepress/dist";
-/** Coverage HTML copied into the site by VitePress (docs/public/** → dist root). */
-const COVERAGE_OUT = "docs/public/coverage";
-/** Pages staging dir assembled by `mpages build`, nested at /example/. */
+/** The template-only VitePress app — a workspace like any other. */
+const DOCS_APP = "apps/template-docs";
+/** The bundled static site — also the Pages artifact root. */
+const SITE_OUT = `${DOCS_APP}/dist`;
+/** genhtml report as rendered by `mcoverage html` (its default out dir). */
+const COVERAGE_HTML_DIR = "coverage/html";
 
 function run(cmd: string[]): number {
   console.log(`\n▸ ${cmd.join(" ")}`);
@@ -53,7 +54,8 @@ const main = defineCommand({
       },
       async run({ args }) {
         // 1. Coverage — the docs Status page reads coverage/lcov.info at build
-        //    time, and the HTML report is served at /coverage/ from docs/public.
+        //    time, and the HTML report is folded into the artifact after the
+        //    build (step 3).
         if (!args["skip-coverage"]) {
           const tests = run(["bun", "run", "coverage"]);
           if (tests !== 0) {
@@ -62,18 +64,33 @@ const main = defineCommand({
           }
         }
         run(["bun", "run", "mcoverage", "setup"]);
-        run(["bun", "run", "mcoverage", "html", "--out", COVERAGE_OUT]);
+        run(["bun", "run", "mcoverage", "html"]);
 
-        // 2. Docs — VitePress empties dist/, so this must run before the app is
-        //    copied in, and after the coverage report lands in docs/public.
+        // 2. Docs — the app builds through Turbo like any other package (the
+        //    root docs:build script is the filtered delegate), so the site
+        //    itself stays a deterministic, cacheable task. Everything that is
+        //    generated per run (coverage, the demo app) is assembled into the
+        //    artifact afterwards instead of being a build input — gitignored
+        //    files are invisible to Turbo's hash.
         const build = run(["bun", "run", "docs:build"]);
         if (build !== 0) {
-          console.error(`::error::docs:build failed (exit ${build})`);
+          console.error(`::error::${DOCS_APP} build failed (exit ${build})`);
           process.exit(build);
         }
 
-        // 3. Demo app at /example/ — the docs site is the single Pages artifact,
-        //    so the app artifact is nested instead of deployed separately.
+        // 3. Coverage report at /coverage/ — rendered before the build (the
+        //    Status page links it) and copied in after it.
+        if (existsSync(`${COVERAGE_HTML_DIR}/index.html`)) {
+          await rm(`${SITE_OUT}/coverage`, { recursive: true, force: true });
+          await cp(COVERAGE_HTML_DIR, `${SITE_OUT}/coverage`, { recursive: true });
+          console.log(`✅ Coverage report copied to ${SITE_OUT}/coverage`);
+        } else {
+          console.warn(`⚠️ ${COVERAGE_HTML_DIR}/ not found — skipping /coverage/`);
+        }
+
+        // 4. Demo app at /example/ — the docs site is the single Pages
+        //    artifact, so the app artifact is nested instead of deployed
+        //    separately.
         if (!args["skip-app"]) {
           const app = run(["bun", "run", "mpages", "build"]);
           if (app !== 0) {
@@ -81,6 +98,7 @@ const main = defineCommand({
             process.exit(app);
           }
           if (existsSync(PAGES_STAGING_DIR)) {
+            await rm(`${SITE_OUT}/example`, { recursive: true, force: true });
             await cp(PAGES_STAGING_DIR, `${SITE_OUT}/example`, { recursive: true });
             console.log(`✅ Pages artifact copied to ${SITE_OUT}/example`);
           } else {

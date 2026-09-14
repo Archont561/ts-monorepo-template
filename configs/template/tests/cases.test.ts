@@ -66,7 +66,7 @@ const COMMON_CASES: TemplateCase[] = [
         "configs/stale",
         "apps/example/src/pages/api/native",
         "apps/example/e2e",
-        "docs",
+        "apps/template-docs",
         ".github/workflows/template-docs.yml",
       ],
       hasFiles: [

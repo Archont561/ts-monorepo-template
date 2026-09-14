@@ -18,7 +18,7 @@ TypeScript monorepo, Bun workspaces + Turbo.
 
 <!-- TEMPLATE-ONLY:START(template) -->
 In template mode this repo is also the template: a scaffolder config that deletes
-itself and a `docs/` site that the scaffolder removes.
+itself and a docs app (`apps/template-docs`) that the scaffolder removes.
 <!-- TEMPLATE-ONLY:END(template) -->
 
 ## Packages
@@ -58,6 +58,7 @@ not an npm package — the npm package is `packages/native/npm/native`.
 
 ### In-flight
 
+- Branch `arena/01a0a0bf-ts-monorepo-template`. Coverage suite re-run after install; three warnings fixed (turbo's "globally installed" false positive via `TURBO_GLOBAL_WARNING_DISABLED` + a `spawnTool` env fix — Bun spawns children with the startup env snapshot; the d.ts TS9007 warning via an explicit `NativeBinding` type) and the pending-changeset leak in scaffolds plugged. Then the docs site moved from root `docs/` into `apps/template-docs`: a real workspace app (own `vitepress` dep, Turbo `build`/`dev`/`preview`, `outDir: "dist"`), removed on scaffold purely via package options, and `template-docs.yml` now uploads `apps/template-docs/dist` — the same dist/ convention as every app. `mdocs site` builds through the `docs:build` delegate and folds coverage (`dist/coverage`) and the demo app (`dist/example`) in after the build, so the cacheable docs build stays deterministic.
 - Branch `arena/01a0a048-ts-monorepo-template`. Coverage suite loaded and run end to end (test → coverage → merge → summary → check → html edge cases). Two bugs surfaced and were fixed:
   1. `mcoverage merge --report-only` hardcoded a `+` prefix on the delta, so a coverage *drop* from widening the gate printed as `+-15.00 points` — the dry run exists to show drops, so the sign is now computed via the exported `formatSigned` helper (`configs/coverage/src/cli.ts`), pinned by three regression tests in `tests/merge.test.ts`. Positive-delta output (`+2.05 points, +844 lines`) is byte-identical to before.
   2. `configs/biome/biome.json`'s `!**/coverage` ignore (for generated output dirs) also pruned the **tracked** `configs/coverage` source package — Biome prunes a directory the moment it matches and file-level re-includes cannot un-prune it. Result: the package was silently excluded from every `bun run check`/CI lint pass, and the pre-commit hook (`mbiome check --write {staged_files}`) rejected any commit touching `configs/coverage` with "No files were processed". The config now re-includes `configs/coverage` after the exclusion and re-excludes the package's own generated dirs (mirrors the `.gitignore` negation; rationale in `configs/biome/README.md`). Linting the package for the first time exposed three latent errors in `src/cli.ts` (dead `cp` import, unsorted imports, a 100+col line) — all fixed.

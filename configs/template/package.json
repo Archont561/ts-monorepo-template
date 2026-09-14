@@ -7,24 +7,25 @@
     "default": "always",
     "selfDestruct": true,
     "scriptsToRemove": [
-      "docs:sync"
+      "docs:sync",
+      "docs:site",
+      "docs:dev",
+      "docs:build",
+      "docs:preview"
     ],
     "removals": {
       "always": {
         "extraRemovals": [
-          "docs",
           ".github/workflows/template-docs.yml",
           "apps/template-docs"
         ],
         "filePatternsToRemove": [
           "**/template-docs.yml",
           "**/template-docs/**",
-          "**/docs/**",
           ".changeset/*.md"
         ],
         "fileRegexesToRemove": [
-          "template-docs",
-          "^docs/"
+          "template-docs"
         ]
       }
     }

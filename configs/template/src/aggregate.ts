@@ -232,7 +232,8 @@ async function syncWorkflow(
  *
  * `templateDocsSite` defaults to testing for the template's own docs site, so
  * `mdocs` (running inside the repo) keeps its behaviour; a scaffolder that has
- * already deleted `docs/` passes `false` instead of re-testing the pruned tree.
+ * already deleted `apps/template-docs/` passes `false` instead of re-testing
+ * the pruned tree.
  */
 export async function regenerateAll(
   targetDir: string,
@@ -243,7 +244,8 @@ export async function regenerateAll(
 
   const exists = (relative: string) => file(`${targetDir}/${relative}`).exists();
   const pages = await exists("configs/pages/package.json");
-  const templateDocsSite = options.templateDocsSite ?? (await exists("docs/.vitepress/config.mts"));
+  const templateDocsSite =
+    options.templateDocsSite ?? (await exists("apps/template-docs/.vitepress/config.mts"));
 
   const ctx: WorkflowContext = {
     pages,

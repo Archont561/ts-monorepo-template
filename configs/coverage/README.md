@@ -46,7 +46,7 @@ bun run coverage:summary
 | :--- | :--- | :--- |
 | With Pages enabled | `mcoverage pages` + `mpages build` | `/coverage/` on the Pages site |
 | Without Pages | standalone `coverage.yml` workflow | its own Pages site |
-| This template repo | `mdocs site` | `docs/public/coverage` |
+| This template repo | `mdocs site` | `/coverage/` on the docs site (`apps/template-docs/dist/coverage`) |
 
 > [!NOTE]
-> Exactly one workflow may deploy to Pages. In the template repo that is `template-docs.yml`, so `docs:sync` skips `pages.yml` and `coverage.yml` while `docs/` exists.
+> Exactly one workflow may deploy to Pages. In the template repo that is `template-docs.yml`, so `docs:sync` skips `pages.yml` and `coverage.yml` while the docs app exists.

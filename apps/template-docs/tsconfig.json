@@ -1,0 +1,9 @@
+{
+  "extends": "@myorg/ts/app.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "types": ["bun"]
+  },
+  "include": [".vitepress", "status.data.ts"],
+  "exclude": ["node_modules", "dist"]
+}
