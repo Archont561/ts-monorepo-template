@@ -24,12 +24,21 @@ Branch `arena/01a09f8a-ts-monorepo-template`.
 | R5 | `4b29934` | 158 (+1) | 96.95% (159/164) | One workflow table for both entry points: `regenerateCI()` delegates to `regenerateAll()`, which keeps its exact semantics behind a `templateDocsSite` option. Bundle rebuilt (42.10 KB). |
 | R6a | `e6d58da` | 167 (+9) | 96.95% (159/164) | Characterization tests for both setup scripts, committed **before** the refactor: fixture trees in the OS temp dir, byte-identical on a second run. Both config packages gained a `test` task — the suite is 16 turbo tasks from here on. |
 | R6b | `7f943c3` | 167 | 96.95% (159/164) | `main()` decomposed into named steps (native 217 → 22 lines, unocss 121 → 12). Proven identical against the pre-refactor scripts on four fixtures: trees and console output byte-for-byte equal. |
+| — | `01b1436` | 167 | 96.95% (159/164) | Phase 2 boundary: baselines + log. |
+| R7 | `bfc0b3c` | 176 (+9) | 96.95% (159/164) | Demo-app features behind `FeatureProvider` (`features/{index,paths,provider,unocss,native}.ts`); `/api` reports the flags it decided on. Markers untouched; the new native import sits inside the native scope so a native-free scaffold has no unused import. |
+| R8 | `2787e5d` | 179 (+3) | 96.95% (159/164) | Named vocabularies: `NATIVE_MODES`/`NativeMode`/`ScaffoldSelection`/`DEFAULT_SCOPE`, per-package default scopes, `DEFAULT_PORT`, `CSS_CACHE_MAX_AGE_SECONDS`, plus three scaffold-metadata drift tests. Bundle rebuilt (42.10 KB). |
 
 Phase 1 boundary: Scaffold Gate run on both variants and **green** — `native=none`
 (install, check 74 files/0 errors, typecheck 6/6, test 9+15+26 pass) and `native=publish`
 + unocss (install, check 97 files/0 errors, typecheck 11/11, test 9+15+6+28 pass, then
 `mnative add probe` → install → typecheck 12/12). Baselines updated in `CONTEXT.md`,
 `AGENTS.md`, `configs/biome/CONTEXT.md` and `configs/biome/AGENTS.md`.
+
+Phase 3 boundary: Scaffold Gate **green** — `native=none` (check 78 files/0 errors,
+typecheck 6/6, test 6/6 tasks) and `native=publish` + unocss (check 103 files/0 errors,
+typecheck 11/11, test 13/13 tasks, then `mnative add probe` → install → typecheck 12/12,
+which also proves the named scope constant resolves). Baselines moved: 179 tests, template
+suite 103.
 
 Phase 2 boundary: Scaffold Gate **green** again — `native=none` (check 74 files/0 errors,
 typecheck 6/6, test 6/6 tasks) and `native=publish` + unocss (check 99 files/0 errors,
