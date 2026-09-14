@@ -74,7 +74,7 @@ Every tool is reached through an `m`-prefixed bin that bakes in its config path.
 | `mdocs` | citty | Regenerates generated files from `configs/*` |
 | `mci` | actionlint + act | `lint` validates workflows, `act` runs them locally |
 | `mgitleaks` | gitleaks | `detect` + `protect --staged` |
-| `mcoverage` | genhtml/lcov | `merge`, `html`, `check`, `summary`, `pages` |
+| `mcoverage` | genhtml/lcov | `setup`, `collect`, `merge`, `html`, `check`, `summary`, `sync`, `pages` |
 | `mnative` | cargo + napi | `list`, `add`, `matrix`, cargo commands, napi per package (opt-in) |
 | `me2e` | playwright | Auto-skips when browsers are missing (opt-in) |
 | `mpages` | — | `build`, `base`, `list` (opt-in) |

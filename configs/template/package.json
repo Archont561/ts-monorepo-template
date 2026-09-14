@@ -17,7 +17,8 @@
       "always": {
         "extraRemovals": [
           ".github/workflows/template-docs.yml",
-          "apps/template-docs"
+          "apps/template-docs",
+          "codecov.yml"
         ],
         "filePatternsToRemove": [
           "**/template-docs.yml",

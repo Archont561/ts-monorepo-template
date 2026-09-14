@@ -31,3 +31,19 @@
           lcov-file: ./coverage/lcov.info
           github-token: ${{ secrets.GITHUB_TOKEN }}
           delete-old-comments: true
+
+      # Single merged upload (root-relative SF: paths) — the codecov.yml
+      # components provide per-package statuses from it. Store the token as
+      # CODECOV_TOKEN.
+      - name: Upload to Codecov (merged monorepo report)
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/lcov.info
+          name: monorepo
+          fail_ci_if_error: true
+
+      - name: Coverage summary
+        if: always()
+        run: bunx mcoverage summary --markdown >> $GITHUB_STEP_SUMMARY
+        shell: bash

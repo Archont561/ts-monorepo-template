@@ -17,7 +17,7 @@
     },
     "coverage": {
       "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "outputs": ["coverage/lcov.info"]
     },
     "dev": {
       "cache": false,
