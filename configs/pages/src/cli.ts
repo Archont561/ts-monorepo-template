@@ -2,8 +2,8 @@
 import { existsSync } from "node:fs";
 import { cp, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { defineCommand, runMain, spawnTool } from "@myorg/citty";
 import { Glob, spawnSync } from "bun";
-import { defineCommand, runMain } from "citty";
 import {
   discoverPages,
   PAGES_COVERAGE_SUBDIR,
@@ -11,11 +11,6 @@ import {
   type PagesTarget,
   pagesUrlPath,
 } from "../index.ts";
-
-function run(cmd: string[]): number {
-  const result = spawnSync({ cmd, stdout: "inherit", stderr: "inherit", stdin: "inherit" });
-  return result.exitCode;
-}
 
 /**
  * Repo name for a GitHub Pages project site, e.g. "org/my-app" -> "my-app".
@@ -118,7 +113,7 @@ const buildCommand = defineCommand({
 
     // Every package builds its own assets — apps own their CSS build
     // (e.g. apps/example's munocss build), so there is no global CSS step here.
-    const exitCode = run(["bun", "run", "build"]);
+    const exitCode = spawnTool(["bun", "run", "build"]);
     if (exitCode !== 0) {
       console.error(`::error::bun run build failed (exit ${exitCode})`);
       process.exit(exitCode);
