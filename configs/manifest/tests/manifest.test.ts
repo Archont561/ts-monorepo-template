@@ -184,11 +184,14 @@ describe("manifest editor", () => {
     expect(removeJsonArrayValue(FIXTURE, "name", "myorg")).toBe(FIXTURE);
   });
 
-  test("malformed or non-object documents are left alone", () => {
-    expect(removeJsonEntry("[1, 2, 3]", "a")).toBe("[1, 2, 3]");
-    expect(removeJsonEntry(`{ "a" 1 }`, "a")).toBe(`{ "a" 1 }`);
-    expect(removeJsonEntry(`{"a": "unterminated`, "a")).toBe(`{"a": "unterminated`);
-    expect(removeJsonEntry(`{"a": {"b": 1`, "a")).toBe(`{"a": {"b": 1`);
+  test.each(["[1, 2, 3]", `{ "a" 1 }`, `{"a": "unterminated`, `{"a": {"b": 1`])(
+    "malformed or non-object document %p is left alone by removeJsonEntry",
+    (doc) => {
+      expect(removeJsonEntry(doc, "a")).toBe(doc);
+    },
+  );
+
+  test("malformed document is left alone by setJsonValue", () => {
     expect(setJsonValue("not json", "a", 1)).toBe("not json");
   });
 

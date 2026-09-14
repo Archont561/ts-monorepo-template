@@ -62,31 +62,29 @@ describe("OptionsCollector (non-interactive)", () => {
 });
 
 describe("OptionsCollector overrides", () => {
-  test("respects scope override", async () => {
-    const collector = new OptionsCollector({
-      nonInteractive: true,
+  test.each([
+    {
+      field: "scope",
       defaults: { scope: "@acme" },
-    });
-    const options = await collector.collect();
-    expect(options.scope).toBe("@acme");
-  });
-
-  test("respects gitHooks override", async () => {
-    const collector = new OptionsCollector({
-      nonInteractive: true,
+      expectedKey: "scope" as const,
+      expectedVal: "@acme",
+    },
+    {
+      field: "gitHooks",
       defaults: { gitHooks: false },
-    });
-    const options = await collector.collect();
-    expect(options.gitHooks).toBe(false);
-  });
-
-  test("respects configs override", async () => {
-    const collector = new OptionsCollector({
-      nonInteractive: true,
+      expectedKey: "gitHooks" as const,
+      expectedVal: false,
+    },
+    {
+      field: "configs",
       defaults: { configs: { playwright: false, unocss: true } },
-    });
+      expectedKey: "configs" as const,
+      expectedVal: { playwright: false, unocss: true },
+    },
+  ])("respects $field override", async ({ defaults, expectedKey, expectedVal }) => {
+    const collector = new OptionsCollector({ nonInteractive: true, defaults });
     const options = await collector.collect();
-    expect(options.configs).toEqual({ playwright: false, unocss: true });
+    expect(options[expectedKey]).toEqual(expectedVal);
   });
 
   test("combines multiple overrides", async () => {

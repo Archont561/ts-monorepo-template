@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { removeJsonEntry } from "@myorg/manifest";
 import { $, file, write } from "bun";
+import fc from "fast-check";
 import { discoverConfigs, NATIVE_MODES } from "../src/configs";
 import { collectScopeTargets, MonorepoScaffolder, stripMarkerBlocks } from "../src/scaffolder";
 
@@ -996,6 +997,28 @@ describe("MonorepoScaffolder (unit)", () => {
       // When unocss is enabled, !unocss is stripped
       const enabledRes = stripMarkerBlocks(source, new Set([]));
       expect(enabledRes.content.trim()).toBe('<div class="flex">UnoCSS</div>');
+    });
+
+    test("property: stripMarkerBlocks is idempotent for arbitrary text", () => {
+      fc.assert(
+        fc.property(fc.string(), (source) => {
+          const first = stripMarkerBlocks(source, disabled);
+          const second = stripMarkerBlocks(first.content, disabled);
+          return second.changed === false && second.content === first.content;
+        }),
+      );
+    });
+
+    test("property: text without markers is unchanged", () => {
+      fc.assert(
+        fc.property(
+          fc.string().filter((s) => !s.includes("START") && !s.includes("END")),
+          (source) => {
+            const res = stripMarkerBlocks(source, disabled);
+            return res.changed === false && res.content === source;
+          },
+        ),
+      );
     });
   });
   // ── Manifest edits keep their formatting ─────────

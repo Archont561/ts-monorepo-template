@@ -19,18 +19,16 @@ describe("Server routes integration", () => {
     expect(data.message).toBe("Bun Monorepo Example");
   });
 
-  test("GET /api/greet/Alice extracts params correctly", async () => {
-    const res = await fetch(`http://localhost:${server.port}/api/greet/Alice`);
+  test.each([
+    { path: "/api/greet/Alice", key: "greeting", expected: "Hello, Alice!" },
+    { path: "/api/greet/Bob", key: "greeting", expected: "Hello, Bob!" },
+    { path: "/api/shout/bob", key: "shouted", expected: "HELLO, BOB!" },
+    { path: "/api/shout/alice", key: "shouted", expected: "HELLO, ALICE!" },
+  ])("GET $path extracts params and returns $expected", async ({ path, key, expected }) => {
+    const res = await fetch(`http://localhost:${server.port}${path}`);
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.greeting).toBe("Hello, Alice!");
-  });
-
-  test("GET /api/shout/bob extracts params correctly", async () => {
-    const res = await fetch(`http://localhost:${server.port}/api/shout/bob`);
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.shouted).toBe("HELLO, BOB!");
+    expect(data[key]).toBe(expected);
   });
 
   test("GET /unknown returns 404", async () => {

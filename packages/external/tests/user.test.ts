@@ -7,15 +7,11 @@ describe("greetUser", () => {
     name: "Alice",
   };
 
-  test("returns a greeting for the user", () => {
-    expect(greetUser(user)).toBe("Hello, Alice!");
-  });
-
-  test("shouts the greeting when shout is true", () => {
-    expect(greetUser(user, true)).toBe("HELLO, ALICE!");
-  });
-
-  test("defaults to non-shouted greeting", () => {
-    expect(greetUser(user, false)).toBe("Hello, Alice!");
+  test.each([
+    { shout: undefined, expected: "Hello, Alice!" },
+    { shout: false, expected: "Hello, Alice!" },
+    { shout: true, expected: "HELLO, ALICE!" },
+  ])("returns $expected when shout is $shout", ({ shout, expected }) => {
+    expect(greetUser(user, shout)).toBe(expected);
   });
 });

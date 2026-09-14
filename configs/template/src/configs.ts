@@ -89,3 +89,112 @@ export async function discoverConfigs(repoRoot: string): Promise<DiscoveredConfi
 
   return configs;
 }
+
+export interface RegisteredConfigInfo {
+  name: string;
+  dir: string;
+  flag: string;
+  type: "confirm" | "select" | "always";
+  default: ScaffoldSelection;
+  options: string[];
+  isOptIn: boolean;
+  selfDestruct?: boolean;
+}
+
+export interface RegisteredConfigsMetadata {
+  allConfigs: RegisteredConfigInfo[];
+  optInConfigs: RegisteredConfigInfo[];
+  alwaysConfigs: RegisteredConfigInfo[];
+  byFlag: Record<string, RegisteredConfigInfo>;
+  /** Creates a ConfigMap where every opt-in config is disabled (false or "none"). */
+  buildDisabledConfigs: () => Record<string, ScaffoldSelection>;
+  /** Creates a ConfigMap where every opt-in config is enabled (true or first non-none option). */
+  buildEnabledConfigs: () => Record<string, ScaffoldSelection>;
+  /** Creates a ConfigMap with the defaults declared in package.json metadata. */
+  buildDefaultConfigs: () => Record<string, ScaffoldSelection>;
+}
+
+/**
+ * Autoregisters and structures metadata from all discovered packages in the repo.
+ * Provides ready-to-use config maps and query helpers for testing and scaffolding.
+ */
+export function registerConfigsMetadata(discovered: DiscoveredConfig[]): RegisteredConfigsMetadata {
+  const allConfigs: RegisteredConfigInfo[] = discovered.map((c) => {
+    const flag = c.meta.flag ?? c.dir;
+    const isOptIn = c.meta.default !== "always" && !c.meta.selfDestruct;
+    const type: "confirm" | "select" | "always" =
+      c.meta.default === "always" ? "always" : c.meta.type === "select" ? "select" : "confirm";
+    const options =
+      c.meta.options?.map((o) => (typeof o === "string" ? o : String(o.value))) ??
+      (type === "confirm" ? ["false", "true"] : []);
+
+    return {
+      name: c.name,
+      dir: c.dir,
+      flag,
+      type,
+      default: c.meta.default,
+      options,
+      isOptIn,
+      selfDestruct: c.meta.selfDestruct,
+    };
+  });
+
+  const optInConfigs = allConfigs.filter((c) => c.isOptIn);
+  const alwaysConfigs = allConfigs.filter((c) => !c.isOptIn && !c.selfDestruct);
+  const byFlag: Record<string, RegisteredConfigInfo> = {};
+  for (const c of allConfigs) {
+    byFlag[c.flag] = c;
+  }
+
+  const buildDisabledConfigs = (): Record<string, ScaffoldSelection> => {
+    const map: Record<string, ScaffoldSelection> = {};
+    for (const c of optInConfigs) {
+      if (c.type === "select") {
+        map[c.flag] = "none";
+      } else {
+        map[c.flag] = false;
+      }
+    }
+    return map;
+  };
+
+  const buildEnabledConfigs = (): Record<string, ScaffoldSelection> => {
+    const map: Record<string, ScaffoldSelection> = {};
+    for (const c of optInConfigs) {
+      if (c.type === "select") {
+        const enabledOpt = c.options.find((o) => o !== "none") ?? c.options[0] ?? "publish";
+        map[c.flag] = enabledOpt as ScaffoldSelection;
+      } else {
+        map[c.flag] = true;
+      }
+    }
+    return map;
+  };
+
+  const buildDefaultConfigs = (): Record<string, ScaffoldSelection> => {
+    const map: Record<string, ScaffoldSelection> = {};
+    for (const c of optInConfigs) {
+      map[c.flag] = c.default;
+    }
+    return map;
+  };
+
+  return {
+    allConfigs,
+    optInConfigs,
+    alwaysConfigs,
+    byFlag,
+    buildDisabledConfigs,
+    buildEnabledConfigs,
+    buildDefaultConfigs,
+  };
+}
+
+/**
+ * Automatically discovers all package configs from repoRoot and registers their metadata.
+ */
+export async function getRegisteredConfigs(repoRoot: string): Promise<RegisteredConfigsMetadata> {
+  const discovered = await discoverConfigs(repoRoot);
+  return registerConfigsMetadata(discovered);
+}

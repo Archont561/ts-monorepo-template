@@ -44,7 +44,8 @@
     "@clack/prompts": "^1.8.0",
     "@myorg/manifest": "workspace:*",
     "@myorg/pages": "workspace:*",
-    "@myorg/ts": "workspace:*"
+    "@myorg/ts": "workspace:*",
+    "fast-check": "^4.10.0"
   },
   "dependencies": {
     "citty": "^0.2.2"

@@ -23,19 +23,14 @@ function readBunfigThresholds(): Record<string, number> {
 }
 
 describe("coverage threshold", () => {
-  test("the bunfig gate mirrors COVERAGE_THRESHOLD", () => {
-    const thresholds = readBunfigThresholds();
-    expect(Object.keys(thresholds).sort()).toContain("lines");
+  const thresholds = readBunfigThresholds();
 
-    // The percent constant and the fraction in the bunfig are the same floor.
-    expect(thresholds.lines * 100).toBeCloseTo(COVERAGE_THRESHOLD, 6);
-  });
-
-  test("one floor covers lines and functions", () => {
-    const thresholds = readBunfigThresholds();
-    expect(thresholds.functions).toBeCloseTo(thresholds.lines, 6);
-    expect(thresholds.functions * 100).toBeCloseTo(COVERAGE_THRESHOLD, 6);
-  });
+  test.each(["lines", "functions"] as const)(
+    "the bunfig gate for %s mirrors COVERAGE_THRESHOLD",
+    (metric) => {
+      expect(thresholds[metric] * 100).toBeCloseTo(COVERAGE_THRESHOLD, 6);
+    },
+  );
 
   test("the floor is a sane percent", () => {
     expect(Number.isInteger(COVERAGE_THRESHOLD)).toBe(true);

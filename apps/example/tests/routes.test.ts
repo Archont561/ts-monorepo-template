@@ -65,31 +65,28 @@ describe("handleApiIndex (page)", () => {
 });
 
 describe("handleGreet (page)", () => {
-  test("returns greeting for valid parameter", () => {
-    const response = handleGreet(mockReq, { name: "Alice" });
+  test.each([
+    { name: "Alice", expected: "Hello, Alice!" },
+    { name: "Bob", expected: "Hello, Bob!" },
+    { name: "", expected: "Hello, !" },
+  ])("returns 200 with expected greeting for name=$name", async ({ name, expected }) => {
+    const response = handleGreet(mockReq, { name });
     expect(response.status).toBe(200);
-  });
-
-  test("greeting content matches expected format", async () => {
-    const response = handleGreet(mockReq, { name: "Alice" });
     const data = await response.json();
-    expect(data.greeting).toBe("Hello, Alice!");
-  });
-
-  test("handles empty parameter cleanly", async () => {
-    const response = handleGreet(mockReq, { name: "" });
-    const data = await response.json();
-    expect(data.greeting).toBe("Hello, !");
+    expect(data.greeting).toBe(expected);
   });
 });
 
 describe("handleShout (page)", () => {
-  test("returns shouted greeting", async () => {
-    const response = handleShout(mockReq, { name: "bob" });
+  test.each([
+    { name: "bob", expected: "HELLO, BOB!" },
+    { name: "alice", expected: "HELLO, ALICE!" },
+  ])("returns shouted greeting for name=$name", async ({ name, expected }) => {
+    const response = handleShout(mockReq, { name });
     expect(response.status).toBe(200);
 
     const data = await response.json();
-    expect(data.shouted).toBe("HELLO, BOB!");
+    expect(data.shouted).toBe(expected);
   });
 });
 
