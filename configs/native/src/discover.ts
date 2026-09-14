@@ -67,20 +67,40 @@ function readDirs(path: string): string[] {
 /** Every crate in the workspace, pure-Rust ones included. */
 export function discoverCrates(root: string): NativeCrate[] {
   const cratesDir = join(root, "packages", "native", NATIVE_CRATES_DIR);
+  const workspaceManifest = join(root, "packages", "native", "Cargo.toml");
+  const workspaceContent = existsSync(workspaceManifest)
+    ? readFileSync(workspaceManifest, "utf8")
+    : "";
+  // [workspace.dependencies] entries that are path deps — the workspace-level
+  // spelling of a sibling-crate dependency (`shared = { path = "crates/shared" }`).
+  const workspacePathDeps = new Set(
+    [...workspaceContent.matchAll(/^\s*([\w-]+)\s*=\s*\{\s*path\s*=\s*"[^"]*"/gm)].map(
+      (m) => m[1] ?? "",
+    ),
+  );
+
   const crates: NativeCrate[] = [];
 
   for (const name of readDirs(cratesDir)) {
     const manifest = join(cratesDir, name, "Cargo.toml");
     if (!existsSync(manifest)) continue;
     const content = readFileSync(manifest, "utf8");
-    const uses = [...content.matchAll(/^\s*([\w-]+)\s*=\s*\{\s*path\s*=\s*"[^"]*"/gm)].map(
-      (m) => m[1] ?? "",
-    );
+    // Path deps resolve to sibling crates in two spellings:
+    //   direct:   shared = { path = "../shared" }
+    //   workspace: shared.workspace = true  (resolved via [workspace.dependencies])
+    const uses = [
+      ...content.matchAll(/^\s*([\w-]+)\s*=\s*\{\s*path\s*=\s*"[^"]*"/gm),
+      ...content.matchAll(/^\s*([\w-]+)\.workspace\s*=\s*true/gm),
+    ]
+      .map((m) => m[1] ?? "")
+      .filter(
+        (dep) => workspacePathDeps.has(dep) || existsSync(join(cratesDir, dep, "Cargo.toml")),
+      );
     crates.push({
       name,
       dir: nativeCrateDir(name),
       binding: /crate-type\s*=\s*\[[^\]]*cdylib/.test(content),
-      uses: uses.filter(Boolean),
+      uses,
     });
   }
 

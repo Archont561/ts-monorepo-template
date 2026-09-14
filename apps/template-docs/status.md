@@ -16,7 +16,7 @@ const npmBadge = (name) => `https://img.shields.io/npm/v/${name}?label=npm`
 # Status
 
 Numbers for this repository, collected at **build time** by
-[`docs/status.data.ts`](https://github.com/Archont561/ts-monorepo-template/blob/main/docs/status.data.ts)
+[`status.data.ts`](https://github.com/Archont561/ts-monorepo-template/blob/main/apps/template-docs/status.data.ts)
 — a VitePress data loader that shells out to the same `m*` CLIs the CI uses
 (`mcoverage summary --json`, `mpages base --json`).
 

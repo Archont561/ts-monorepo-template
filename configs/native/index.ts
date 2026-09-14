@@ -138,7 +138,13 @@ export type NativeCrateSpec = {
   sample?: "arithmetic" | "text" | "none";
 };
 
-/** What `mnative setup` creates: one binding crate, matching the old layout. */
+/**
+ * What `mnative setup` creates: one pure crate with the shared logic plus the
+ * thin binding crate that exposes it to JS. The pure crate has no npm package
+ * of its own — `packages/native/crates/package.json` (the bridge node) is the
+ * single Turbo package that represents every pure crate.
+ */
 export const DEFAULT_NATIVE_CRATES: readonly NativeCrateSpec[] = [
-  { name: "native", binding: true, sample: "arithmetic" },
+  { name: "native", binding: true, uses: ["shared"], sample: "arithmetic" },
+  { name: "shared", sample: "arithmetic" },
 ];

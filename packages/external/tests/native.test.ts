@@ -13,9 +13,13 @@ import {
 } from "@src/native";
 
 describe("native fallback", () => {
-  test("addFallback", () => {
-    expect(addFallback(1, 2)).toBe(3);
-    expect(addFallback(-1, 1)).toBe(0);
+  test.each([
+    [1, 2, 3],
+    [-1, 1, 0],
+    [0, 0, 0],
+    [10, 25, 35],
+  ])("addFallback(%p, %p) === %p", (a, b, expected) => {
+    expect(addFallback(a, b)).toBe(expected);
   });
 
   test("addSync uses fallback when native not loaded", () => {
@@ -27,10 +31,16 @@ describe("native fallback", () => {
     expect(await add(2, 3)).toBe(5);
   });
 
-  test("fibonacciFallback", () => {
-    expect(fibonacciFallback(0)).toBe(0);
-    expect(fibonacciFallback(1)).toBe(1);
-    expect(fibonacciFallback(10)).toBe(55);
+  test.each([
+    [0, 0],
+    [1, 1],
+    [2, 1],
+    [3, 2],
+    [4, 3],
+    [5, 5],
+    [10, 55],
+  ])("fibonacciFallback(%p) === %p", (n, expected) => {
+    expect(fibonacciFallback(n)).toBe(expected);
   });
 
   test("fibonacciSync fallback", () => {
@@ -41,9 +51,13 @@ describe("native fallback", () => {
     expect(await fibonacci(10)).toBe(55);
   });
 
-  test("reverseStringFallback", () => {
-    expect(reverseStringFallback("hello")).toBe("olleh");
-    expect(reverseStringFallback("")).toBe("");
+  test.each([
+    ["hello", "olleh"],
+    ["", ""],
+    ["racecar", "racecar"],
+    ["Bun monorepo", "operonom nuB"],
+  ])("reverseStringFallback(%p) === %p", (str, expected) => {
+    expect(reverseStringFallback(str)).toBe(expected);
   });
 
   test("reverseString async fallback", async () => {

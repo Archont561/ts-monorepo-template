@@ -12,7 +12,7 @@
 
 ## What it provides
 
-- A `cdylib` crate (`../../crates/native`) with `#[napi]` exports — `add`, `fibonacci`, `reverse_string`, `Counter`, `primes_up_to`
+- A thin `cdylib` crate (`../../crates/native`) whose `#[napi]` exports — `add`, `fibonacci`, `reverse_string`, `Counter`, `primes_up_to` — delegate to the pure Rust crate `../../crates/shared`
 - Cargo over the whole workspace via `mnative`: `check`, `clippy` (`-D warnings`), `fmt:check`, `test`, `build:release` (lto, strip)
 - napi-rs build for this package: `mnative napi:build --only native` → `native.<platform>.node`, loader and types
 - WASM fallback: `mnative napi:build:wasm --only native`
@@ -28,14 +28,23 @@ packages/native/
   Cargo.toml              # virtual workspace: resolver 3, members = crates/*
   rust-toolchain.toml     # stable + rustfmt, clippy, wasm32-wasip1-threads
   .cargo/config.toml
-  crates/native/
-    Cargo.toml            # this package's crate — crate-type = ["cdylib"]
-    build.rs              # napi_build::setup()
-    src/lib.rs            # #[napi] impl
+  crates/
+    package.json          # @myorg/native-crates — one Turbo package for all pure crates
+    native/               # this package's crate — crate-type = ["cdylib"]
+      Cargo.toml          # shared.workspace = true
+      build.rs            # napi_build::setup()
+      src/lib.rs          # #[napi] wrappers → shared::*
+    shared/               # pure Rust — the logic, tested with plain cargo test
   npm/native/             # ← this package
 ```
 
 There is no root `Cargo.toml`. Adding another binding is `mnative add <name>`, which creates `crates/<name>` + `npm/<name>` and syncs `members`.
+
+The `@myorg/native-crates` devDependency is not a JS dependency — it mirrors the
+crate's Cargo path dep on `shared` so Turbo orders pure Rust builds and tests
+before this package's napi build (`mnative sync` keeps the edge in step). The
+napi build itself is Turbo-cached: its inputs cover `../../crates/**` and the
+workspace manifests, so every Rust change invalidates the cache.
 
 ## Commands
 

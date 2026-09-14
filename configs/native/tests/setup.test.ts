@@ -119,17 +119,30 @@ describe("native setup — crates and packages", () => {
     expect(exists(root, "packages/native/crates/native/src/lib.rs")).toBe(true);
     expect(read(root, "packages/native/crates/native/Cargo.toml")).toMatch(/name\s*=\s*"native"/);
 
+    // The default scaffold ships a pure crate plus a thin binding that uses it.
+    expect(read(root, "packages/native/Cargo.toml")).toContain('"crates/shared"');
+    expect(read(root, "packages/native/crates/native/Cargo.toml")).toContain(
+      "shared.workspace      = true",
+    );
+    expect(read(root, "packages/native/crates/shared/Cargo.toml")).not.toMatch(/^crate-type/m);
+    expect(read(root, "packages/native/crates/shared/Cargo.toml")).not.toMatch(/^napi/m);
+    expect(read(root, "packages/native/crates/shared/src/lib.rs")).not.toContain("#[napi]");
+    expect(read(root, "packages/native/crates/native/src/lib.rs")).toContain("shared::add");
+
     const npmPackage = JSON.parse(read(root, "packages/native/npm/native/package.json")) as {
       name: string;
       private: boolean;
       napi: { binaryName: string; packageName: string };
       scripts: Record<string, string>;
+      devDependencies: Record<string, string>;
     };
     expect(npmPackage.name).toBe(`${SCOPE}/native`);
     expect(npmPackage.private).toBe(true);
     expect(npmPackage.napi.packageName).toBe(`${SCOPE}/native`);
     expect(npmPackage.napi.binaryName).toBe("native");
     expect(npmPackage.scripts.build).toBe("mnative napi:build --only native");
+    // The Cargo path dep is mirrored as the bridge workspace dependency.
+    expect(npmPackage.devDependencies[`${SCOPE}/native-crates`]).toBe("workspace:*");
 
     expect(read(root, "packages/native/rust-toolchain.toml")).toContain("stable");
     expect(read(root, "packages/native/rust-toolchain.toml")).toContain("wasm32-wasip1-threads");
@@ -146,7 +159,13 @@ describe("native setup — crates and packages", () => {
       scripts: Record<string, string>;
       private: boolean;
     };
-    expect(pkg.workspaces).toEqual(["apps/*", "packages/*", "configs/*", "packages/native/npm/*"]);
+    expect(pkg.workspaces).toEqual([
+      "apps/*",
+      "packages/*",
+      "configs/*",
+      "packages/native/npm/*",
+      "packages/native/crates",
+    ]);
     expect(pkg.scripts["build:native"]).toBe("mnative napi:build");
     expect(pkg.scripts["build:wasm"]).toBe("mnative napi:build:wasm");
     expect(pkg.scripts["test:native"]).toBe("mnative test");
@@ -171,6 +190,46 @@ describe("native setup — crates and packages", () => {
     expect(turbo.tasks["build:wasm"].dependsOn).toEqual(["build:native"]);
     expect(turbo.tasks["build:wasm"].cache).toBe(false);
     expect(turbo.$schema).toBe("./schema.json");
+  });
+
+  test("pure Rust crates are one bridge node; napi builds are cacheable", async () => {
+    const root = makeTree(baseTree());
+    await runSetup(root);
+
+    // The bridge package stands for every pure crate in the Turbo graph.
+    const bridge = JSON.parse(read(root, "packages/native/crates/package.json")) as {
+      name: string;
+      private: boolean;
+      scripts: Record<string, string>;
+    };
+    expect(bridge.name).toBe(`${SCOPE}/native-crates`);
+    expect(bridge.private).toBe(true);
+    expect(bridge.scripts.build).toBe("mnative build --pure");
+    expect(bridge.scripts.test).toBe("mnative test --pure");
+
+    // Cargo owns target/ — the bridge tasks are never Turbo-cached.
+    const bridgeTurbo = readJson(root, "packages/native/crates/turbo.json") as {
+      tasks: Record<string, { cache?: boolean; inputs?: string[]; outputs?: string[] }>;
+    };
+    expect(bridgeTurbo.tasks.build?.cache).toBe(false);
+    expect(bridgeTurbo.tasks.test?.cache).toBe(false);
+    expect(bridgeTurbo.tasks.build?.inputs).toContain("*/src/**/*.rs");
+
+    // The napi build IS cached, with inputs that reach the crate sources.
+    const npmTurbo = readJson(root, "packages/native/npm/native/turbo.json") as {
+      tasks: Record<string, { cache?: boolean; inputs?: string[]; outputs?: string[] }>;
+    };
+    expect(npmTurbo.tasks.build?.cache).toBe(true);
+    expect(npmTurbo.tasks.build?.outputs).toContain("*.node");
+    expect(npmTurbo.tasks.build?.inputs).toContain("../../crates/*/src/**/*.rs");
+    expect(npmTurbo.tasks.build?.inputs).toContain("../../Cargo.lock");
+    expect(npmTurbo.tasks["build:wasm"]?.cache).toBe(false);
+
+    // Release binaries are tuned once, in the workspace manifest.
+    const workspace = read(root, "packages/native/Cargo.toml");
+    expect(workspace).toContain("[profile.release]");
+    expect(workspace).toContain("lto           = true");
+    expect(workspace).toContain("strip         = true");
   });
 
   test("creates the example native routes", async () => {
@@ -235,6 +294,11 @@ describe("native setup — legacy single-crate layout", () => {
     expect(workspace).not.toMatch(/^\[package\]$/m);
     // A repository URL the scaffolder rewrites — asserted by shape, never by value.
     expect(workspace).toMatch(/repository\s*=\s*"https:\/\/github\.com\//);
+
+    // Migration lands on the current layout: shared pure crate + bridge node.
+    expect(exists(root, "packages/native/crates/shared/Cargo.toml")).toBe(true);
+    expect(exists(root, "packages/native/crates/package.json")).toBe(true);
+    expect(exists(root, "packages/native/crates/turbo.json")).toBe(true);
 
     // The npm package moved under npm/<name>/ and was regenerated there from the scope
     // (the moved manifest is overwritten, so the old `description` does not survive).

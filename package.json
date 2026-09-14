@@ -6,7 +6,8 @@
     "apps/*",
     "packages/*",
     "configs/*",
-    "packages/native/npm/*"
+    "packages/native/npm/*",
+    "packages/native/crates"
   ],
   "devDependencies": {
     "@myorg/badges": "workspace:*",
@@ -35,8 +36,7 @@
     "@myorg/trivy": "workspace:*",
     "@myorg/ts": "workspace:*",
     "@myorg/turbo": "workspace:*",
-    "@myorg/unocss": "workspace:*",
-    "vitepress": "^1.6.4"
+    "@myorg/unocss": "workspace:*"
   },
   "bun-create": {
     "preinstall": "bun configs/template/dist/index.js",
@@ -58,15 +58,16 @@
     "coverage:check": "mcoverage check",
     "coverage:html": "mcoverage html",
     "coverage:merge": "mcoverage merge",
+    "coverage:report": "bun run coverage && bun run coverage:html",
     "coverage:summary": "mcoverage summary",
     "dev": "mturbo dev",
-    "docs:build": "vitepress build docs",
-    "docs:dev": "vitepress dev docs",
-    "docs:preview": "vitepress preview docs",
+    "docs:build": "mturbo build --filter=@myorg/template-docs",
+    "docs:dev": "mturbo dev --filter=@myorg/template-docs",
+    "docs:preview": "mturbo preview --filter=@myorg/template-docs",
     "docs:site": "mdocs site",
-    "docs:sync": "mdocs",
+    "docs:sync": "mdocs && mcoverage sync",
     "preinstall": "node -e \"if(!process.env.npm_config_user_agent?.includes('bun')){console.error('\\\\n\u274c This project requires Bun. Run: bun install\\\\n');process.exit(1)}\"",
-    "prepare": "msetup lefthook && mchangeset init",
+    "prepare": "msetup lefthook && mchangeset init && mcoverage sync",
     "reinstall": "bun run clean:modules && bun install",
     "release": "mchangeset publish",
     "security:audit": "mnative audit || echo 'cargo audit not installed (cargo install cargo-audit)'",

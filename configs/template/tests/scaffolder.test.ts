@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { removeJsonEntry } from "@myorg/manifest";
 import { $, file, write } from "bun";
+import fc from "fast-check";
 import { discoverConfigs, NATIVE_MODES } from "../src/configs";
 import { collectScopeTargets, MonorepoScaffolder, stripMarkerBlocks } from "../src/scaffolder";
 
@@ -747,7 +748,7 @@ describe("MonorepoScaffolder (unit)", () => {
           scaffold: {
             default: "always",
             selfDestruct: true,
-            scriptsToRemove: ["docs:sync"],
+            scriptsToRemove: ["docs:sync", "docs:site", "docs:dev", "docs:build", "docs:preview"],
           },
         }),
       );
@@ -762,7 +763,11 @@ describe("MonorepoScaffolder (unit)", () => {
         `${workDir}/package.json`,
         JSON.stringify({
           name: "test",
-          scripts: { "docs:sync": "bun configs/template/src/aggregate.ts" },
+          scripts: {
+            "docs:sync": "bun configs/template/src/aggregate.ts",
+            "docs:site": "mdocs site",
+            "docs:dev": "mturbo dev --filter=@myorg/template-docs",
+          },
           devDependencies: { "@myorg/template": "workspace:*", "@myorg/biome": "workspace:*" },
         }),
       );
@@ -775,6 +780,8 @@ describe("MonorepoScaffolder (unit)", () => {
 
       const pkg = await file(`${workDir}/package.json`).json();
       expect(pkg.scripts["docs:sync"]).toBeUndefined();
+      expect(pkg.scripts["docs:site"]).toBeUndefined();
+      expect(pkg.scripts["docs:dev"]).toBeUndefined();
       expect(pkg.devDependencies["@myorg/template"]).toBeUndefined();
       expect(pkg.devDependencies["@myorg/biome"]).toBe("workspace:*");
     });
@@ -943,6 +950,75 @@ describe("MonorepoScaffolder (unit)", () => {
         disabled,
       ).content;
       expect(stripMarkerBlocks(once, disabled)).toEqual({ content: once, changed: false });
+    });
+
+    test("removes custom declared marker blocks when scope is disabled", () => {
+      const source = [
+        "start",
+        "<!-- unocss:START -->",
+        '<div class="flex">UnoCSS</div>',
+        "<!-- unocss:END -->",
+        "end",
+        "",
+      ].join("\n");
+      const { content, changed } = stripMarkerBlocks(source, new Set(["unocss"]));
+      expect(changed).toBe(true);
+      expect(content).toBe("start\nend\n");
+    });
+
+    test("keeps custom declared marker content when scope is enabled", () => {
+      const source = [
+        "start",
+        "// unocss:START",
+        'onSuccess: "munocss build",',
+        "// unocss:END",
+        "end",
+        "",
+      ].join("\n");
+      const { content, changed } = stripMarkerBlocks(source, new Set(["other"]));
+      expect(changed).toBe(true);
+      expect(content).toBe('start\nonSuccess: "munocss build",\nend\n');
+    });
+
+    test("handles inverted scope markers (!scope)", () => {
+      const source = [
+        "<!-- TEMPLATE-ONLY:START(unocss) -->",
+        '<div class="flex">UnoCSS</div>',
+        "<!-- TEMPLATE-ONLY:END(unocss) -->",
+        "<!-- TEMPLATE-ONLY:START(!unocss) -->",
+        '<div id="greeting">Plain</div>',
+        "<!-- TEMPLATE-ONLY:END(!unocss) -->",
+      ].join("\n");
+
+      // When unocss is disabled, !unocss is kept
+      const disabledRes = stripMarkerBlocks(source, new Set(["unocss"]));
+      expect(disabledRes.content.trim()).toBe('<div id="greeting">Plain</div>');
+
+      // When unocss is enabled, !unocss is stripped
+      const enabledRes = stripMarkerBlocks(source, new Set([]));
+      expect(enabledRes.content.trim()).toBe('<div class="flex">UnoCSS</div>');
+    });
+
+    test("property: stripMarkerBlocks is idempotent for arbitrary text", () => {
+      fc.assert(
+        fc.property(fc.string(), (source) => {
+          const first = stripMarkerBlocks(source, disabled);
+          const second = stripMarkerBlocks(first.content, disabled);
+          return second.changed === false && second.content === first.content;
+        }),
+      );
+    });
+
+    test("property: text without markers is unchanged", () => {
+      fc.assert(
+        fc.property(
+          fc.string().filter((s) => !s.includes("START") && !s.includes("END")),
+          (source) => {
+            const res = stripMarkerBlocks(source, disabled);
+            return res.changed === false && res.content === source;
+          },
+        ),
+      );
     });
   });
   // ── Manifest edits keep their formatting ─────────

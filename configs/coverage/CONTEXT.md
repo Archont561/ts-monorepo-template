@@ -21,3 +21,4 @@
 | :--- | :--- |
 | `c8024de` | coverage threshold centralised here; `bunfig.toml` mirrors it |
 | `fb3a47c` | per-package coverage offloaded to Turbo; root only merges |
+| this change | `mcoverage sync` generates the root `codecov.yml` (components from the package list, refreshed by `prepare`/`docs:sync`); `summary --markdown` feeds `$GITHUB_STEP_SUMMARY`; CI uploads the merged report via codecov-action@v5 with `fail_ci_if_error: true` |

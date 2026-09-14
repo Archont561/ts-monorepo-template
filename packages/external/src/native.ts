@@ -27,7 +27,7 @@ export function reverseStringFallback(s: string): string {
 }
 
 // Native bindings (optional, loaded dynamically)
-let nativeBinding: {
+export type NativeBinding = {
   add: (a: number, b: number) => number;
   fibonacci: (n: number) => number;
   reverse_string: (s: string) => string;
@@ -39,11 +39,13 @@ let nativeBinding: {
     get_count: () => number;
   };
   primes_up_to: (n: number) => number[];
-} | null = null;
+};
+
+let nativeBinding: NativeBinding | null = null;
 
 let nativeLoadAttempted = false;
 
-async function loadNative(): Promise<typeof nativeBinding> {
+async function loadNative(): Promise<NativeBinding | null> {
   if (nativeLoadAttempted) return nativeBinding;
   nativeLoadAttempted = true;
 
@@ -100,6 +102,6 @@ export function isNativeAvailable(): boolean {
   return nativeBinding !== null;
 }
 
-export async function getNativeBinding() {
+export async function getNativeBinding(): Promise<NativeBinding | null> {
   return loadNative();
 }

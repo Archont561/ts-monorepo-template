@@ -23,6 +23,10 @@ export function spawnTool(cmd: string[], opts: { cwd?: string } = {}): number {
   const result = spawnSync({
     cmd,
     ...(opts.cwd ? { cwd: opts.cwd } : {}),
+    // Bun spawns children with the env snapshot from process start, so
+    // runtime process.env mutations (e.g. a wrapper exporting a tool flag)
+    // never reach the child unless env is passed explicitly.
+    env: { ...process.env },
     stdout: "inherit",
     stderr: "inherit",
     stdin: "inherit",

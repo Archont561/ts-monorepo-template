@@ -249,18 +249,20 @@ describe("aggregate", () => {
       const pages = `${result.templateDir}/.github/workflows/pages.yml`;
       const coverage = `${result.templateDir}/.github/workflows/coverage.yml`;
 
-      // docs/ present (this repo): template-docs.yml is the single deployer and
-      // `mdocs site` publishes coverage at /coverage/ inside that artifact.
-      expect(await file(`${result.templateDir}/docs/.vitepress/config.mts`).exists()).toBe(true);
+      // Docs app present (this repo): template-docs.yml is the single deployer
+      // and `mdocs site` publishes coverage at /coverage/ inside that artifact.
+      expect(
+        await file(`${result.templateDir}/apps/template-docs/.vitepress/config.mts`).exists(),
+      ).toBe(true);
       await aggregate(result.templateDir);
       expect(await file(pages).exists(), "pages.yml would fight template-docs.yml").toBe(false);
       expect(await file(coverage).exists(), "coverage.yml would fight template-docs.yml").toBe(
         false,
       );
 
-      // No docs/ (a scaffolded monorepo): pages.yml is generated again, and
+      // No docs app (a scaffolded monorepo): pages.yml is generated again, and
       // coverage rides along as /coverage/ inside the Pages artifact.
-      await $`rm -rf ${result.templateDir}/docs`.quiet();
+      await $`rm -rf ${result.templateDir}/apps/template-docs`.quiet();
       await aggregate(result.templateDir);
       expect(await file(pages).exists(), "pages.yml must exist for a Pages opt-in").toBe(true);
       expect(await file(coverage).exists(), "coverage is included in pages.yml").toBe(false);

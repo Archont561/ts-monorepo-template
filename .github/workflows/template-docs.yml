@@ -1,18 +1,17 @@
 # TEMPLATE-ONLY:START(template)
-# Template-only docs Pages — deploys docs/ to GitHub Pages
+# Template-only docs Pages — deploys the docs app to GitHub Pages
 # Removed during scaffolding via configs/template extraRemovals
 # This is the ONLY Pages deployment for this repository: `mdocs site` assembles
-# docs + the coverage report (/coverage/) + the demo app (/example/) into one
-# artifact, so pages.yml and coverage.yml are not generated here (see
-# configs/template/src/aggregate.ts). Generated monorepos, which have no docs/,
-# get pages.yml (and coverage.yml when Pages is off) as usual.
+# the docs app + the coverage report (/coverage/) + the demo app (/example/)
+# into one artifact, so pages.yml and coverage.yml are not generated here (see
+# configs/template/src/aggregate.ts). Generated monorepos, which have no docs
+# app, get pages.yml (and coverage.yml when Pages is off) as usual.
 name: Template Docs
 
 on:
   push:
     branches: ["main"]
     paths:
-      - "docs/**"
       - "packages/**"
       - "apps/**"
       - "configs/**"
@@ -47,8 +46,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # Runs the suite with coverage, renders the HTML report into the site,
-      # builds the docs and nests the demo app under /example/.
+      # Runs the suite with coverage, builds the docs app (its bundled static
+      # site lands in apps/template-docs/dist) and nests the coverage report
+      # (/coverage/) and the demo app (/example/) into the same artifact.
       - name: Build the site (docs + coverage + demo app)
         run: bunx mdocs site
 
@@ -58,7 +58,9 @@ jobs:
       - name: Upload template docs artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "docs/.vitepress/dist"
+          # The docs app's bundled static site — same dist/ convention as every
+          # other app (see apps/template-docs/.vitepress/config.mts `outDir`).
+          path: "apps/template-docs/dist"
 
   deploy:
     environment:

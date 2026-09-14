@@ -20,6 +20,7 @@ Task orchestration. Package-level work — build, dev, test, coverage, typecheck
 | `test` | `^build` | `coverage/` | ✅ |
 | `coverage` | `^build` | `coverage/lcov.info` | ✅ |
 | `dev` | — | — | ❌ persistent |
+| `preview` | `build` | — | ❌ persistent |
 
 `^build` means "my dependencies have built", which is why `packages/internal` builds before `packages/external` and both before `apps/example`.
 

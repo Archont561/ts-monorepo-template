@@ -17,12 +17,17 @@
     },
     "coverage": {
       "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "outputs": ["coverage/lcov.info"]
     },
     "dev": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["^build"]
+    },
+    "preview": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "persistent": true
     },
     "build:native": {
       "dependsOn": ["^build"],

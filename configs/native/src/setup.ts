@@ -28,6 +28,7 @@ import {
   nativeGitignore,
   rustToolchainToml,
   workspaceCargoToml,
+  writeBridgeNode,
   writeCrate,
 } from "./templates.ts";
 
@@ -241,6 +242,15 @@ async function writeCrates(): Promise<NativeCrateSpec[]> {
   return crates;
 }
 
+/**
+ * Bridge node — the single Turbo package for every pure Rust crate. Refreshed
+ * from the templates on every setup so it can never drift.
+ */
+async function syncBridgeNode(): Promise<void> {
+  await writeBridgeNode(TARGET_DIR, { scope: SCOPE, repository: REPO_URL });
+  console.log("  ✓ packages/native/crates/ (pure-Rust bridge node)");
+}
+
 /** Virtual workspace manifest — members are re-synced, never clobbered. */
 async function syncWorkspaceManifest(crates: NativeCrateSpec[]): Promise<void> {
   if (await file(WORKSPACE_MANIFEST).exists()) {
@@ -311,6 +321,14 @@ async function linkNpmPackages(): Promise<void> {
     if (!(pkg.workspaces ?? []).includes(NATIVE_WORKSPACE_GLOB)) {
       console.log(`  ✓ Added workspace glob ${NATIVE_WORKSPACE_GLOB}`);
       next = addJsonArrayValue(next, "workspaces", NATIVE_WORKSPACE_GLOB);
+    }
+
+    // The bridge node is a single package (not a glob) so the crates dir
+    // itself is never treated as a workspace member.
+    const bridgeEntry = `${NATIVE_DIR}/crates`;
+    if (!(pkg.workspaces ?? []).includes(bridgeEntry)) {
+      console.log(`  ✓ Added workspace entry ${bridgeEntry} (pure-Rust bridge node)`);
+      next = addJsonArrayValue(next, "workspaces", bridgeEntry);
     }
 
     for (const [name, command] of Object.entries(ROOT_SCRIPTS)) {
@@ -388,6 +406,7 @@ async function main() {
   await migrateLegacyLayout();
   const crates = await writeCrates();
   await syncWorkspaceManifest(crates);
+  await syncBridgeNode();
   await setupToolchain();
   await setupCargoConfig();
   await ensureNativeGitignore();

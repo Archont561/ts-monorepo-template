@@ -59,6 +59,7 @@
     "@myorg/bunup": "workspace:*",
     "@myorg/native-config": "workspace:*",
     "@myorg/ts": "workspace:*",
+    "@myorg/native-crates": "workspace:*",
     "@napi-rs/cli": "^3.9.1"
   }
 }

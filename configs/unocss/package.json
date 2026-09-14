@@ -6,24 +6,22 @@
   "scaffold": {
     "default": false,
     "flag": "unocss",
+    "marker": "unocss",
     "prompt": "Include UnoCSS (atomic CSS engine)?",
     "type": "confirm",
     "removals": {
       "true": {},
       "false": {
+        "marker": "unocss",
         "extraRemovals": [
-          "apps/example/public/index-unocss.html",
           "apps/example/public/uno.css",
           "apps/example/uno.config.ts"
         ],
         "filePatternsToRemove": [
-          "**/index-unocss.html",
           "**/uno.css",
           "**/*.unocss.*"
         ],
-        "fileRegexesToRemove": [
-          "index-unocss"
-        ],
+        "fileRegexesToRemove": [],
         "appDepsToRemove": [
           "@unocss/reset",
           "unocss",

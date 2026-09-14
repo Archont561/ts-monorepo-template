@@ -25,3 +25,4 @@
 | :--- | :--- |
 | `71616ab` | native wrapper documented alongside the workspace layout |
 | `fb3a47c` | package build/test/typecheck moved behind Turbo |
+| this change | d.ts build warning (TS9007) fixed — binding shape exported as `NativeBinding`, `getNativeBinding()` return type annotated |

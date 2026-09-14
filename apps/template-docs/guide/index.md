@@ -1,6 +1,6 @@
 # Introduction
 
-This `docs/` folder is **template-only**. It is a [VitePress](https://vitepress.dev)
+This docs app (`apps/template-docs`) is **template-only**. It is a [VitePress](https://vitepress.dev)
 site deployed to GitHub Pages for `Archont561/ts-monorepo-template`, and it is
 deleted during scaffolding via `configs/template` self-destruct.
 
@@ -57,9 +57,9 @@ install, and superseded pull-request runs are cancelled automatically.
 
 ```bash
 bun run docs:dev         # dev server with HMR
-bun run docs:build       # -> docs/.vitepress/dist
+bun run docs:build       # -> apps/template-docs/dist
 bun run docs:preview     # preview the built output
 ```
 
 Built output and VitePress' cache are gitignored — never commit
-`docs/.vitepress/dist/`.
+`apps/template-docs/dist/`.

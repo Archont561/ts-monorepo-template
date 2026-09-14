@@ -70,7 +70,7 @@ export type Status = {
 function text(cmd: string[], cwd = ROOT): string | null {
   try {
     return (
-      execFileSync(cmd[0], cmd.slice(1), {
+      execFileSync(cmd[0] ?? "", cmd.slice(1), {
         cwd,
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
@@ -125,24 +125,27 @@ function manifests(dir: string, kind: string): Manifest[] {
 type Declared = { range: string; ownerDir: string };
 
 /**
- * Declared range for a tool plus the config package that owns it. Tools live in
- * `configs/*` workspaces, so their versions must be resolved from there too:
- * Bun installs into `node_modules/.bun/<pkg>@<ver>` and only symlinks into the
- * dependent package's own node_modules, so a root `node_modules/<tool>` usually
+ * Declared range for a tool plus the package that owns it. Tools live in
+ * `configs/*` workspaces, and the docs toolchain in `apps/template-docs`, so
+ * their versions must be resolved from there too: Bun installs into
+ * `node_modules/.bun/<pkg>@<ver>` and only symlinks into the dependent
+ * package's own node_modules, so a root `node_modules/<tool>` usually
  * does not exist.
  */
 function declaredRange(tool: string): Declared | null {
-  const configsDir = join(ROOT, "configs");
-  if (!existsSync(configsDir)) return null;
-  for (const entry of readdirSync(configsDir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const ownerDir = join(configsDir, entry.name);
-    const pkg = readJson<{
-      dependencies?: Record<string, string>;
-      devDependencies?: Record<string, string>;
-    }>(join(ownerDir, "package.json"));
-    const range = pkg?.dependencies?.[tool] ?? pkg?.devDependencies?.[tool];
-    if (range) return { range, ownerDir };
+  for (const base of ["configs", "apps"]) {
+    const baseDir = join(ROOT, base);
+    if (!existsSync(baseDir)) continue;
+    for (const entry of readdirSync(baseDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const ownerDir = join(baseDir, entry.name);
+      const pkg = readJson<{
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      }>(join(ownerDir, "package.json"));
+      const range = pkg?.dependencies?.[tool] ?? pkg?.devDependencies?.[tool];
+      if (range) return { range, ownerDir };
+    }
   }
   return null;
 }
@@ -191,12 +194,16 @@ function repo(): Repo {
   // Fallback for a checkout where the bins aren't linked yet.
   const remote = text(["git", "config", "--get", "remote.origin.url"]);
   const match = remote?.replace(/\.git$/, "").match(/[:/]([^/:]+)\/([^/]+)$/);
-  if (!match) return { owner: null, repo: null, base: null, url: null };
+  const owner = match?.[1];
+  const repo = match?.[2];
+  if (!owner || !repo) {
+    return { owner: null, repo: null, base: null, url: null };
+  }
   return {
-    owner: match[1],
-    repo: match[2],
-    base: `/${match[2]}`,
-    url: `https://${match[1].toLowerCase()}.github.io/${match[2]}`,
+    owner,
+    repo,
+    base: `/${repo}`,
+    url: `https://${owner.toLowerCase()}.github.io/${repo}`,
   };
 }
 
@@ -231,7 +238,7 @@ function coverage(): Coverage {
     "summary",
     "--json",
   ]);
-  const reportPath = join(ROOT, "docs", "public", "coverage", "index.html");
+  const reportPath = join(ROOT, "coverage", "html", "index.html");
   return {
     available: Boolean(raw?.available),
     percent: raw?.lines.percent ?? 0,

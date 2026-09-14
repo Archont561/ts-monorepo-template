@@ -5,7 +5,7 @@
 ## Current state
 
 - Opt-in (`confirm`, default `false`).
-- In this repo `pages.yml` is **not generated**: `template-docs.yml` deploys the docs site produced by `mdocs site` (docs + `/coverage/` + `/example/`). Generated monorepos get `pages.yml` because they have no `docs/`.
+- In this repo `pages.yml` is **not generated**: `template-docs.yml` deploys the docs site produced by `mdocs site` (docs + `/coverage/` + `/example/`). Generated monorepos get `pages.yml` because they have no docs app.
 - Official actions in use: `configure-pages@v5`, `upload-pages-artifact@v3`, `deploy-pages@v4`.
 - Discovery reads `apps/*` and `packages/*` manifests for a `pages` field (`"pages": { "dir": "public" }`, `"pages": "public"`, or `true`).
 

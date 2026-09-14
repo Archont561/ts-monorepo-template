@@ -24,6 +24,13 @@ describe("Scaffolder integration", () => {
       const result = await new TemplateHarness({ skipInstall: true }).prepare();
       cleanup = result.cleanup;
 
+      // A pending changeset is the template's release state — it must not
+      // reach the generated project (it would leak the placeholder scope and
+      // invent a changelog entry the project never authored).
+      await file(`${result.templateDir}/.changeset/pending-template-change.md`).write(
+        '---\n"@myorg/external": patch\n---\n\nUnreleased template work.\n',
+      );
+
       const scaffolder = new MonorepoScaffolder({
         targetDir: result.templateDir,
         scope: "@integration-test",
@@ -43,12 +50,14 @@ describe("Scaffolder integration", () => {
       expect(rootPkg.scripts?.["build:template"]).toBeUndefined();
       expect(rootPkg.scripts?.["docs:sync"]).toBeUndefined();
 
-      // docs/ is template-only, so the VitePress toolchain must not leak.
+      // The docs app is template-only, so the VitePress toolchain must not
+      // leak — neither the app directory nor its root script delegates.
       expect(rootPkg.devDependencies?.vitepress).toBeUndefined();
       expect(rootPkg.scripts?.["docs:dev"]).toBeUndefined();
       expect(rootPkg.scripts?.["docs:build"]).toBeUndefined();
       expect(rootPkg.scripts?.["docs:preview"]).toBeUndefined();
-      expect(await pathExists(`${result.templateDir}/docs`)).toBe(false);
+      expect(rootPkg.scripts?.["docs:site"]).toBeUndefined();
+      expect(await pathExists(`${result.templateDir}/apps/template-docs`)).toBe(false);
       expect(await pathExists(`${result.templateDir}/.github/workflows/template-docs.yml`)).toBe(
         false,
       );
@@ -71,6 +80,12 @@ describe("Scaffolder integration", () => {
         `${result.templateDir}/configs/changeset/config.json`,
       ).text();
       expect(changesetConfig).not.toContain("@myorg");
+
+      // 6b. Pending changesets are pruned — only the config survives them.
+      expect(await pathExists(`${result.templateDir}/.changeset/config.json`)).toBe(true);
+      expect(await pathExists(`${result.templateDir}/.changeset/pending-template-change.md`)).toBe(
+        false,
+      );
 
       // 7. Template markers are stripped from surviving documents (markers, not doc mentions).
       const agentsMd = await file(`${result.templateDir}/AGENTS.md`).text();

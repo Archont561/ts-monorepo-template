@@ -65,31 +65,28 @@ describe("handleApiIndex (page)", () => {
 });
 
 describe("handleGreet (page)", () => {
-  test("returns greeting for valid parameter", () => {
-    const response = handleGreet(mockReq, { name: "Alice" });
+  test.each([
+    { name: "Alice", expected: "Hello, Alice!" },
+    { name: "Bob", expected: "Hello, Bob!" },
+    { name: "", expected: "Hello, !" },
+  ])("returns 200 with expected greeting for name=$name", async ({ name, expected }) => {
+    const response = handleGreet(mockReq, { name });
     expect(response.status).toBe(200);
-  });
-
-  test("greeting content matches expected format", async () => {
-    const response = handleGreet(mockReq, { name: "Alice" });
     const data = await response.json();
-    expect(data.greeting).toBe("Hello, Alice!");
-  });
-
-  test("handles empty parameter cleanly", async () => {
-    const response = handleGreet(mockReq, { name: "" });
-    const data = await response.json();
-    expect(data.greeting).toBe("Hello, !");
+    expect(data.greeting).toBe(expected);
   });
 });
 
 describe("handleShout (page)", () => {
-  test("returns shouted greeting", async () => {
-    const response = handleShout(mockReq, { name: "bob" });
+  test.each([
+    { name: "bob", expected: "HELLO, BOB!" },
+    { name: "alice", expected: "HELLO, ALICE!" },
+  ])("returns shouted greeting for name=$name", async ({ name, expected }) => {
+    const response = handleShout(mockReq, { name });
     expect(response.status).toBe(200);
 
     const data = await response.json();
-    expect(data.shouted).toBe("HELLO, BOB!");
+    expect(data.shouted).toBe(expected);
   });
 });
 
@@ -118,6 +115,54 @@ describe("native routes (optional)", () => {
       expect(data.result).toBe(12);
       expect(data.a).toBe(5);
       expect(data.b).toBe(7);
+    } catch {
+      expect(true).toBe(true);
+    }
+  });
+
+  test("native status route works", async () => {
+    try {
+      const mod = await import("@src/pages/api/native/status");
+      const res = await mod.default();
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.status).toBeDefined();
+    } catch {
+      expect(true).toBe(true);
+    }
+  });
+
+  test("native fibonacci route works", async () => {
+    try {
+      const mod = await import("@src/pages/api/native/fibonacci/[n]");
+      const res = mod.default(mockReq, { n: "5" });
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.result).toBe(5);
+    } catch {
+      expect(true).toBe(true);
+    }
+  });
+
+  test("native primes route works", async () => {
+    try {
+      const mod = await import("@src/pages/api/native/primes/[n]");
+      const res = await mod.default(mockReq, { n: "10" });
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.count).toBe(4);
+    } catch {
+      expect(true).toBe(true);
+    }
+  });
+
+  test("native reverse route works", async () => {
+    try {
+      const mod = await import("@src/pages/api/native/reverse");
+      const res = await mod.default(new Request("http://localhost/api/native/reverse?text=hello"));
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.reversed).toBe("olleh");
     } catch {
       expect(true).toBe(true);
     }

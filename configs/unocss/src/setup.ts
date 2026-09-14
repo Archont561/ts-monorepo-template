@@ -116,10 +116,10 @@ async function wireExampleApp(): Promise<void> {
     }
     next = setJsonValue(next, "scripts.build:css", BUILD_CSS_SCRIPT);
 
-    if (pkg.scripts?.build !== BUILD_CSS_SCRIPT) {
+    if (pkg.scripts?.build !== "mbunup" && pkg.scripts?.build !== BUILD_CSS_SCRIPT) {
       console.log(`  ✓ Added build script to apps/example (per-app CSS build)`);
+      next = setJsonValue(next, "scripts.build", BUILD_CSS_SCRIPT);
     }
-    next = setJsonValue(next, "scripts.build", BUILD_CSS_SCRIPT);
 
     next = setJsonValue(next, "scripts.build:css:watch", WATCH_CSS_SCRIPT);
 

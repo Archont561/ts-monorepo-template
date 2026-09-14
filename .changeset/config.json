@@ -17,9 +17,11 @@
     "@myorg/internal",
     "@myorg/lefthook",
     "@myorg/native",
+    "@myorg/native-crates",
     "@myorg/playwright",
     "@myorg/skills",
     "@myorg/template",
+    "@myorg/template-docs",
     "@myorg/ts",
     "@myorg/turbo",
     "@myorg/unocss"

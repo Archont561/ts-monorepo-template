@@ -76,10 +76,5 @@ index.d.ts
 **/uno.css
 apps/example/public/uno.css
 
-# VitePress (template-only docs site)
-docs/.vitepress/dist/
-docs/.vitepress/cache/
-# Coverage HTML rendered into the docs site by `mdocs site` (served at /coverage/)
-docs/public/coverage/
 # Pages staging dir — assembled by `mpages build` from declared packages
 .pages/

@@ -7,23 +7,26 @@
     "default": "always",
     "selfDestruct": true,
     "scriptsToRemove": [
-      "docs:sync"
+      "docs:sync",
+      "docs:site",
+      "docs:dev",
+      "docs:build",
+      "docs:preview"
     ],
     "removals": {
       "always": {
         "extraRemovals": [
-          "docs",
           ".github/workflows/template-docs.yml",
-          "apps/template-docs"
+          "apps/template-docs",
+          "codecov.yml"
         ],
         "filePatternsToRemove": [
           "**/template-docs.yml",
           "**/template-docs/**",
-          "**/docs/**"
+          ".changeset/*.md"
         ],
         "fileRegexesToRemove": [
-          "template-docs",
-          "^docs/"
+          "template-docs"
         ]
       }
     }
@@ -41,7 +44,8 @@
     "@clack/prompts": "^1.8.0",
     "@myorg/manifest": "workspace:*",
     "@myorg/pages": "workspace:*",
-    "@myorg/ts": "workspace:*"
+    "@myorg/ts": "workspace:*",
+    "fast-check": "^4.10.0"
   },
   "dependencies": {
     "citty": "^0.2.2"

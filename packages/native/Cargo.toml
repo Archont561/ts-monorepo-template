@@ -4,6 +4,7 @@
 resolver = "3"
 members = [
   "crates/native",
+  "crates/shared",
 ]
 
 [workspace.package]
@@ -17,6 +18,7 @@ repository = "https://github.com/Archont561/ts-monorepo-template"
 napi         = { version = "3", features = ["napi4"] }
 napi-derive  = "3"
 napi-build   = "2"
+shared       = { path = "crates/shared" }
 
 [workspace.lints.rust]
 # pedantic is left off on purpose: #[napi] generates code that trips it,
@@ -25,3 +27,14 @@ unsafe_code = "forbid"
 
 [workspace.lints.clippy]
 all = "warn"
+
+# Release binaries — `mnative build:release` and every `napi build --release`.
+[profile.release]
+lto           = true
+codegen-units = 1
+strip         = true
+
+# CI builds — `mnative build:ci`: fast to produce, fast to run.
+[profile.ci]
+inherits   = "dev"
+opt-level  = 1

@@ -50,4 +50,68 @@ describe("native npm package", () => {
     expect(pkg.scripts.build).toBe("mnative napi:build --only native");
     expect(pkg.scripts["build:wasm"]).toBe("mnative napi:build:wasm --only native");
   });
+
+  it("depends on the pure-Rust bridge package", async () => {
+    const pkg = await Bun.file("package.json").json();
+    expect(pkg.devDependencies["@myorg/native-crates"]).toBe("workspace:*");
+  });
+
+  it("caches the napi build with the Cargo graph as inputs", async () => {
+    const turbo = await Bun.file("turbo.json").json();
+    expect(turbo.tasks.build.cache).toBe(true);
+    expect(turbo.tasks.build.outputs).toContain("*.node");
+    // The crate sources live OUTSIDE this package — the inputs must reach them.
+    expect(turbo.tasks.build.inputs).toContain("../../crates/*/src/**/*.rs");
+    expect(turbo.tasks.build.inputs).toContain("../../Cargo.lock");
+    // The wasm build shells out to the wasm32 target toolchain — never cached.
+    expect(turbo.tasks["build:wasm"].cache).toBe(false);
+  });
+});
+
+describe("pure Rust crates", () => {
+  it("keep the shared logic in crates/shared, napi-free", async () => {
+    const manifest = await Bun.file("../../crates/shared/Cargo.toml").text();
+    expect(manifest).toContain('name    = "shared"');
+    expect(manifest).not.toMatch(/^crate-type/m);
+    expect(manifest).not.toMatch(/^napi/m);
+
+    const lib = await Bun.file("../../crates/shared/src/lib.rs").text();
+    expect(lib).toContain("pub fn add");
+    expect(lib).toContain("pub fn fibonacci");
+    expect(lib).toContain("pub fn primes_up_to");
+    expect(lib).toContain("pub struct Counter");
+    expect(lib).not.toContain("#[napi]");
+  });
+
+  it("are wired into the binding via a Cargo path dependency", async () => {
+    const manifest = await Bun.file(`${CRATE}/Cargo.toml`).text();
+    expect(manifest).toContain("shared.workspace      = true");
+  });
+
+  it("are listed in the virtual workspace manifest", async () => {
+    const manifest = await Bun.file("../../Cargo.toml").text();
+    expect(manifest).toContain('"crates/shared"');
+  });
+
+  it("tune the release profile (lto, single codegen unit, stripped)", async () => {
+    const manifest = await Bun.file("../../Cargo.toml").text();
+    expect(manifest).toContain("[profile.release]");
+    expect(manifest).toContain("lto           = true");
+    expect(manifest).toContain("codegen-units = 1");
+    expect(manifest).toContain("strip         = true");
+  });
+
+  it("are one Turbo node — the bridge package runs mnative --pure", async () => {
+    const pkg = await Bun.file("../../crates/package.json").json();
+    expect(pkg.name).toBe("@myorg/native-crates");
+    expect(pkg.private).toBe(true);
+    expect(pkg.scripts.build).toBe("mnative build --pure");
+    expect(pkg.scripts.test).toBe("mnative test --pure");
+  });
+
+  it("never Turbo-cache the bridge tasks (cargo owns target/)", async () => {
+    const turbo = await Bun.file("../../crates/turbo.json").json();
+    expect(turbo.tasks.build.cache).toBe(false);
+    expect(turbo.tasks.test.cache).toBe(false);
+  });
 });

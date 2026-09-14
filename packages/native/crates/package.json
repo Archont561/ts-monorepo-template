@@ -1,0 +1,13 @@
+{
+  "name": "@myorg/native-crates",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "mnative build --pure",
+    "test": "mnative test --pure",
+    "cargo:check": "mnative check --pure",
+    "cargo:clippy": "mnative clippy --pure",
+    "cargo:fmt": "mnative fmt --pure",
+    "cargo:fmt:check": "mnative fmt:check --pure"
+  }
+}

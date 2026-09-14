@@ -1,5 +1,17 @@
-import { FileSystemRouter, serve } from "bun";
+import { serve } from "bun";
 import { appFile, detectFeatures, hasUnocss } from "./features";
+import handleGreet from "./pages/api/greet/[name]";
+import handleApiIndex from "./pages/api/index";
+// TEMPLATE-ONLY:START(native)
+import handleNativeAdd from "./pages/api/native/add";
+import handleNativeFibonacci from "./pages/api/native/fibonacci/[n]";
+import handleNativeIndex from "./pages/api/native/index";
+import handleNativePrimes from "./pages/api/native/primes/[n]";
+import handleNativeReverse from "./pages/api/native/reverse";
+import handleNativeStatus from "./pages/api/native/status";
+// TEMPLATE-ONLY:END(native)
+import handleShout from "./pages/api/shout/[name]";
+import handleHtml from "./pages/index";
 import { PORT } from "./port";
 
 /** How long the generated CSS may be cached — the build is deterministic. */
@@ -7,30 +19,35 @@ const CSS_CACHE_MAX_AGE_SECONDS = 60;
 
 // Detect opt-in features via file existence (handled via scaffold file deletion)
 const { native: nativeEnabled } = await detectFeatures();
-// The log line describes which page `/` serves, so it asks about the page itself
-// rather than the flag (a surviving config alone does not swap the page).
 const unocssEnabled = await hasUnocss();
 
 console.log(
   `🔍 Features: unocss=${unocssEnabled ? "yes" : "no"}, native=${nativeEnabled ? "yes" : "no"}`,
 );
 
-const router = new FileSystemRouter({
-  style: "nextjs",
-  dir: `${import.meta.dir}/pages`,
-});
-
-const server = serve({
+export const server = serve({
   port: PORT,
 
   routes: {
-    "/health": () => new Response("OK", { status: 200 }),
+    // Static HTML page
+    "/": () => handleHtml(),
 
-    // UnoCSS generated CSS — served always, but returns fallback when unocss not built/disabled
-    // Removed via scaffold file deletion (public/uno.css + index-unocss.html)
+    // Health check endpoint
+    "/health": new Response("OK", { status: 200 }),
+
+    // API index
+    "/api": () => handleApiIndex(),
+
+    // Dynamic greeting route
+    "/api/greet/:name": (req) => handleGreet(req, req.params),
+
+    // Dynamic shouting route
+    "/api/shout/:name": (req) => handleShout(req, req.params),
+
+    // UnoCSS generated CSS
+    // TEMPLATE-ONLY:START(unocss)
     "/uno.css": async () => {
       try {
-        // Try to serve generated uno.css if exists (built via `munocss build`)
         const unoCssFile = appFile("public/uno.css");
         if (await unoCssFile.exists()) {
           return new Response(await unoCssFile.text(), {
@@ -41,35 +58,43 @@ const server = serve({
           });
         }
       } catch {}
-      // Fallback: minimal reset + note — works even when unocss disabled
-      return new Response(
-        `/* UnoCSS not built — run: bunx unocss --out-file public/uno.css */
-/* Using CDN fallback via runtime in index-unocss.html when enabled */`,
-        { headers: { "Content-Type": "text/css" } },
-      );
+      return new Response("/* UnoCSS not built */", { headers: { "Content-Type": "text/css" } });
     },
+    // TEMPLATE-ONLY:END(unocss)
 
-    // Native status shortcut — also available via /api/native/status
+    // Native Node-API routes
     // TEMPLATE-ONLY:START(native)
+    "/api/native": () => handleNativeIndex(),
+    "/api/native/status": () => handleNativeStatus(),
+    "/api/native/add": (req) => handleNativeAdd(req),
+    "/api/native/fibonacci/:n": (req) => handleNativeFibonacci(req, req.params),
+    "/api/native/primes/:n": (req) => handleNativePrimes(req, req.params),
+    "/api/native/reverse": (req) => handleNativeReverse(req),
     "/api/native/health": async () => {
       try {
         // @ts-expect-error optional
-        const native = await import("@myorg/native").catch(() => null);
+        const nativeMod = await import("@myorg/native").catch(() => null);
         return Response.json({
-          native: native ? "available" : "fallback",
-          binding: native ? Object.keys(native) : null,
+          native: nativeMod ? "available" : "fallback",
+          binding: nativeMod ? Object.keys(nativeMod) : null,
         });
       } catch (e) {
         return Response.json({ native: "error", error: String(e) });
       }
     },
     // TEMPLATE-ONLY:END(native)
+
+    // Favicon
+    "/favicon.ico": appFile("public/favicon.ico"),
+
+    // Wildcard route for all unmatched API routes
+    "/api/*": Response.json({ message: "Not found" }, { status: 404 }),
   },
 
   async fetch(req) {
     const url = new URL(req.url);
 
-    // Serve static files from public/ for non-API routes (e.g. /favicon.ico)
+    // Serve static files from public/ for non-API routes
     if (!url.pathname.startsWith("/api/") && url.pathname !== "/") {
       try {
         const publicFile = appFile(`public${url.pathname}`);
@@ -90,18 +115,7 @@ const server = serve({
       } catch {}
     }
 
-    const match = router.match(req);
-    if (!match) {
-      return new Response("Not Found", { status: 404 });
-    }
-
-    try {
-      const mod = await import(match.filePath);
-      return await mod.default(req, match.params);
-    } catch (error) {
-      console.error(`Error executing route ${match.pathname}:`, error);
-      return new Response("Internal Server Error", { status: 500 });
-    }
+    return new Response("Not Found", { status: 404 });
   },
 });
 
