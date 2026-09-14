@@ -26,6 +26,7 @@ coveragePathIgnorePatterns = [
   # a `../manifest/src/index.ts` import would otherwise be judged by whichever
   # package happens to import it.
   "**/manifest/src/index.ts",
+  "**/citty/src/index.ts",
   "**/*.node",
   "**/*.wasi.cjs",
   "**/target/**",

@@ -2,23 +2,12 @@
 import { existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
 import { dirname } from "node:path";
 import { cp } from "node:fs/promises";
-import { spawnSync, which } from "bun";
-import { defineCommand, runMain } from "citty";
+import { which } from "bun";
+import { defineCommand, runMain, spawnTool } from "@myorg/citty";
 import { COVERAGE_HTML, COVERAGE_LCOV, COVERAGE_RUST_LCOV, COVERAGE_THRESHOLD } from "../index.ts";
 
 // Rendered here; `mpages build` folds it into the Pages artifact (see pages command).
 const COVERAGE_HTML_INDEX = `${COVERAGE_HTML}/index.html`;
-
-function run(cmd: string[], opts: { cwd?: string } = {}): number {
-  const result = spawnSync({
-    cmd,
-    cwd: opts.cwd,
-    stdout: "inherit",
-    stderr: "inherit",
-    stdin: "inherit",
-  });
-  return result.exitCode;
-}
 
 function has(tool: string): boolean {
   return Boolean(which(tool));
@@ -97,10 +86,10 @@ function installTools(): void {
   }
   let code = 1;
   if (process.platform === "darwin") {
-    code = run(["brew", "install", "lcov"]);
+    code = spawnTool(["brew", "install", "lcov"]);
   } else {
     const apt = has("sudo") ? ["sudo", "apt-get"] : ["apt-get"];
-    code = run([...apt, "update"]) === 0 ? run([...apt, "install", "-y", "lcov"]) : 1;
+    code = spawnTool([...apt, "update"]) === 0 ? spawnTool([...apt, "install", "-y", "lcov"]) : 1;
   }
   if (code === 0) {
     console.log("✅ lcov installed");
@@ -119,7 +108,7 @@ function generateHtml(outDir: string = COVERAGE_HTML): void {
     return;
   }
   mkdirSync(outDir, { recursive: true });
-  const code = run([
+  const code = spawnTool([
     "genhtml",
     COVERAGE_LCOV,
     "--output-directory",
@@ -200,7 +189,7 @@ const collectCommand = defineCommand({
     description: "Collect JS coverage (bun run coverage) + Rust coverage (mnative llvm-cov), then merge",
   },
   run() {
-    run(["bun", "run", "coverage"]);
+    spawnTool(["bun", "run", "coverage"]);
 
     const hasNative = existsSync("packages/native/Cargo.toml");
     if (!hasNative || !has("cargo-llvm-cov")) {
@@ -209,7 +198,7 @@ const collectCommand = defineCommand({
     }
 
     console.log("🦀 Collecting Rust coverage via mnative llvm-cov");
-    run(["mnative", "llvm-cov", "--lcov", "--output-path", `../../${COVERAGE_RUST_LCOV}`]);
+    spawnTool(["mnative", "llvm-cov", "--lcov", "--output-path", `../../${COVERAGE_RUST_LCOV}`]);
     if (!existsSync(COVERAGE_RUST_LCOV)) {
       process.exit(0);
     }
@@ -220,7 +209,7 @@ const collectCommand = defineCommand({
     }
     if (has("lcov")) {
       const merged = "coverage/merged.lcov";
-      const code = run([
+      const code = spawnTool([
         "lcov",
         "--add-tracefile",
         COVERAGE_LCOV,
@@ -247,7 +236,7 @@ const pagesCommand = defineCommand({
   async run() {
     if (!existsSync(COVERAGE_LCOV)) {
       console.log("ℹ️ No coverage data — collecting first");
-      run(["bun", "run", "coverage"]);
+      spawnTool(["bun", "run", "coverage"]);
     }
     if (!existsSync(COVERAGE_LCOV)) {
       console.warn("⚠️ Still no coverage/lcov.info — skipping Pages coverage");
@@ -341,7 +330,7 @@ const mergeCommand = defineCommand({
       merger = null;
     }
     if (merger) {
-      const code = run([
+      const code = spawnTool([
         "bun",
         merger,
         coveragePattern(includeConfigs),
@@ -361,7 +350,7 @@ const mergeCommand = defineCommand({
     }
     const merged = "coverage/merged.lcov";
     const addArgs = files.flatMap((f) => ["--add-tracefile", f]).concat(["--output-file", merged]);
-    if (run(["lcov", ...addArgs]) !== 0) {
+    if (spawnTool(["lcov", ...addArgs]) !== 0) {
       console.error("❌ Coverage merge failed");
       process.exit(1);
     }
@@ -395,7 +384,7 @@ const summaryCommand = defineCommand({
       process.exit(0);
     }
     if (has("lcov") && existsSync(COVERAGE_LCOV)) {
-      process.exit(run(["lcov", "--summary", COVERAGE_LCOV]));
+      process.exit(spawnTool(["lcov", "--summary", COVERAGE_LCOV]));
     }
     if (!result) {
       console.warn(`⚠️ ${COVERAGE_LCOV} not found`);
