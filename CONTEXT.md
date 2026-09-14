@@ -81,18 +81,18 @@ not an npm package — the npm package is `packages/native/npm/native`.
 - Rust toolchain absent in this sandbox — cargo/napi builds no-op, so native bindings have never been compiled here.
 - Playwright browsers absent — `bun run test:e2e` skips by design.
 - `native.yml` (the build matrix) has never run on real GitHub Actions: container targets, WASI SDK download and the artifact fan-in are unverified.
-- `mnative setup` still re-serializes `configs/turbo/turbo.base.json` when it has to add `build:native`/`build:wasm`; on a project that lacks those tasks the rewrite reflows the file (the scaffolder's removal path already preserves formatting).
+- Manifests are edited as text through the shared editor in `configs/manifest`, so adding or removing turbo tasks and workspace entries leaves the surrounding formatting alone; a manifest that does not parse is left untouched instead of being rewritten.
 - Publish ordering for the per-platform native npm packages is still unwired — `native.yml` uploads them as `native-npm-packages` but nothing consumes that artifact yet.
 
 ### Baseline — do not regress
 
 | Metric | Value |
 | :--- | :--- |
-| Tests | 190 pass / 0 fail (17 turbo tasks) |
+| Tests | 230 pass / 0 fail (19 turbo tasks) |
 | Typecheck | 14/14 |
 | Build | 19/19 |
-| Coverage | 99.37% lines (791/796) over apps+packages+configs — gate 80% |
-| Biome | 0 errors; 14 warnings + 10 infos over 142 files |
+| Coverage | 99.52% lines (1037/1042) over apps+packages+configs — gate 80% |
+| Biome | 0 errors; 14 warnings + 10 infos over 152 files |
 | Workflows | 6 generated, all parse |
 | Scaffolds | `native=none` and `native=publish` variants: install + check + typecheck + test all clean |
 | E2E | skipped — browsers not installed |

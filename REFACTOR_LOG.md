@@ -31,6 +31,25 @@ Branch `arena/01a09f8a-ts-monorepo-template`.
 | R9 | `1132d85` | 182 (+3) | 96.95% (159/164) | The coverage floor has two spellings (`COVERAGE_THRESHOLD = 80` and the bunfig's `lines = 0.80`); a drift test in the coverage package now requires them to agree, verified by mutating each side. Gate floor untouched. |
 | R10a | `86d4bae` | 190 (+8) | 97.47% (193/198) | Merge pattern built once (`coveragePattern`/`coverageReports`), threshold comparison named, `--report-only` dry run, and the gate's own parsing/discovery/globbing is now tested. Report-only: widening would measure 99.37% (791/796). |
 | R10b | `a8a3450` | 190 | **99.37% (791/796)** | Config packages included by default; `--no-include-configs` reproduces the narrow set. The measured floor rose 1.90 points / 598 lines; the 80% threshold was not touched. |
+| R11a | `8f237ac` | 191 (+1) | 99.37% (791/796) | CLI contract harness: one test drives all 20 `m*` bins through `--help` and `--version` against a checked-in fixture (refresh with `UPDATE_CLI_CONTRACT=1`). Wrapper work from here edits only `src/cli.ts`, which the coverage configuration excludes, so the measured set does not move until R12. |
+| R11b | `c69a43b` | 191 | 99.37% (791/796) | `mtsc`: the bin path and baked flags become arguments of `defineWrapperCommand`; the local spawn wrapper is gone. |
+| R11c | `5eb8e4e` | 191 | 99.37% (791/796) | `mbiome`: same shape, with the tool's own config flag appended **after** the caller's arguments. |
+| R11d | `1a53289` | 191 | 99.37% (791/796) | `mturbo`: passthrough mode drops the hand-rolled argv plumbing. |
+| R11e | `8041eec` | 191 | 99.37% (791/796) | `mbunup`: passthrough wrapper with its extra subcommands registered beside the run. |
+| R11f | `dedd78e` | 191 | 99.37% (791/796) | `mci`: `lint`/`act` move to `defineSpawnSubcommand` — `act -l` byte-identical, `lint --help` keeps its ARGS text. |
+| R11g | `705a341` | 191 | 99.37% (791/796) | `mgitleaks`: argv-identical `detect --source . --no-git --verbose`; a shim proves exit codes pass through (`SHIM_EXIT=3` → 3). |
+| R11h | `b910ced` | 191 | 99.37% (791/796) | `mtrivy`: `fs . --severity HIGH,CRITICAL` and the docker build arguments preserved. |
+| R11i | `e14e23e` | 191 | 99.37% (791/796) | `munocss`: a real build still writes the example app's `uno.css`; both spawn sites funnel through the helper. |
+| R11j | `78a9af0` | 191 | 99.37% (791/796) | `mnative`: four spawn sites moved, output byte-identical. |
+| R11k | `556030a` | 191 | 99.37% (791/796) | `mpages`: `list` and `base --json` identical (the two `git` captures stay). |
+| R11m | `ca7223b` | 191 | 99.37% (791/796) | `mbun` (bun-config): four spawn sites moved. |
+| R11n | `b9ff052` | 191 | 99.37% (791/796) | `mchangeset`: both spawn blocks moved; `init` exit 0 and `status` exit 1 stay byte-identical. |
+| R11o | `f4649c5` | 191 | 99.37% (791/796) | `mgithub-actions` and `mbunup`: the last two hand-rolled spawns (act / actionlint, bunup / publint / attw). |
+| R12a | `c8ffe35` | 212 (+21) | 99.41% (1011/1017) | New shared manifest editor: text-level insert/replace/remove that leaves every other byte alone, with its own `test` and `coverage` tasks. No bin, scaffold `always`. |
+| R12b | `e70c57e` | 212 | 99.41% (1011/1017) | The native and unocss setup scripts edit manifests through the editor. Old-vs-new fixtures: stdout identical, and the only tree diff is the reflow the old re-serialization caused. |
+| R12b-fix | `9c3575a` | 212 | 99.41% (1011/1017) | Setup scripts import the editor by path — inside a scaffold they run before `bun install`, where workspace names do not resolve. The bunfig change that attributes shared config code to its own run rides along. |
+| R12c | `f8c755e` | 214 (+2) | 99.49% (974/979) | TPL scaffolder edits the root manifest as text end-to-end; its private JSON surgery is deleted, so the totals shrink by the 38 lines that code cost — every remaining measured line is covered. |
+| R11l | `38f411a` | 230 (+16) | **99.52% (1037/1042)** | `mcoverage` spawns through the shared helper; the helper gains its first tests (100% of its 63 lines) and is measured by its own run instead of by its importers. |
 
 Phase 1 boundary: Scaffold Gate run on both variants and **green** — `native=none`
 (install, check 74 files/0 errors, typecheck 6/6, test 9+15+26 pass) and `native=publish`
@@ -56,6 +75,13 @@ typecheck 6/6, test 6/6 tasks) and `native=publish` + unocss (check 99 files/0 e
 typecheck 11/11, test 13/13 tasks including the two new config-package suites in the
 scaffolded tree, then `mnative add probe` → install → typecheck 12/12). Baselines moved:
 167 tests over 16 tasks, biome infos 14 → 10, template suite 99 → 100.
+
+Phase 5–7 boundary: Scaffold Gate **green** on both variants after R11 (install, check,
+typecheck and the full test task set clean), and re-run after R12c and again after R11l —
+the last run reports `native=none` 9/9 tasks and `native=publish` + unocss 16/16 tasks, no
+missing-module output, plus `mnative add probe` → install → typecheck on the publish variant.
+R11 kept "one CLI per commit" (13 commits: a–o plus the harness); the `coverage` slot was
+reverted once and re-landed last, after R12, which is why its commit follows the R12 ones.
 
 ## Deviations from the plan
 
@@ -94,16 +120,38 @@ scaffolded tree, then `mnative add probe` → install → typecheck 12/12). Base
    behaviour change, which R6 is not.
 8. **R1–R4 added tests the plan only implied.** R1 asked for direct tests of the pure
    stripper (6); R2's dedupe/discovery helper got 3; R3's reporting change got 1.
+9. **Shared config code is measured by the run that owns it.** From R12 on, config packages
+   import each other (the setup scripts use the manifest editor, `mcoverage` uses the shared
+   CLI helper). bun matches the coverage ignore patterns against the *importing* run's relative
+   paths, so an importer measured the shared module a second time, and the `..` path it saw
+   escaped the `**/configs/**` pattern. Both shared modules were given their own `test` and
+   `coverage` tasks and added to the bunfig's ignore list, so each is measured exactly once.
+   The 0.80 thresholds in that file were not touched; the measured floor rose to 99.52%.
+10. **R12b needed a follow-up commit.** Its setup scripts imported the editor by workspace
+   name, which does not resolve in a copied scaffold that has not been installed yet, so the
+   step silently did nothing. The fix (import by path) is `9c3575a`, committed right after
+   R12b rather than folded in, because R12b had already been verified byte-identical against
+   the pre-refactor scripts and that evidence stays usable.
+11. **R11l was reverted once and re-attempted differently.** The naive migration made the
+   coverage package's own run measure the shared helper at ~9% lines and sank its threshold.
+   The retry added the helper's tests plus the attribution rule from deviation 9 instead of
+   loosening any gate.
+12. **The R12 totals drop in the Coverage column for R12c.** That is deleted code, not a
+   narrower measurement: the scaffolder's private JSON parser (38 measured lines) is gone and
+   everything that remains is covered. The gate's floor (96.95%) and the bunfig's 0.80 are
+   unchanged throughout.
 
 ## Skipped / deferred
 
 | Proposal | Status | Reason |
 | :--- | :--- | :--- |
-| R7, R8 | deferred | Phase 3 — feature providers in the demo app and branded mode/scope types. |
-| R9, R10 | deferred | Phase 4 — threshold drift test; widen the coverage merge glob report-only first. |
-| R11, R12 | deferred | Phases 5–7. |
+| R7, R8 | landed | `bfc0b3c`, `2787e5d` — feature providers and the named mode/scope vocabulary. |
+| R9, R10 | landed | `1132d85`, `86d4bae`, `a8a3450` — threshold drift test, then the widened merge. |
+| R11, R12 | landed | R11 `8f237ac`…`f4649c5`; R12 `c8ffe35`, `e70c57e`, `9c3575a`, `f8c755e`; R11l `38f411a`. |
 
-Nothing in Phases 2–7 was started, so no proposal was left half-done.
+Every proposal in the plan has landed. The one known defect the plan's scope did not cover —
+the legacy-crate migration nesting a copied `src/` (deviation 7) — stays pinned by tests
+rather than fixed, because fixing it would change behaviour.
 
 ## Gate output (at the Phase 4 boundary)
 
@@ -115,3 +163,23 @@ bun run coverage:check # 99.37% (791/796) — threshold 80%
 ```
 
 Scaffold Gate, both variants: green (see the phase boundary notes above).
+
+## Gate output (final, at `38f411a`)
+
+```
+bun run install        # lockfile unchanged
+bun run test           # 230 pass / 0 fail, 19/19 tasks
+bun run check          # exit 0 — 152 files, 0 errors, 14 warnings + 10 infos
+bun run typecheck      # exit 0
+bun run build          # 19/19 tasks, no bundle drift
+bun run coverage       # merges 7 reports → 21 lcov records
+bun run coverage:check # 99.52% (1037/1042) — threshold 80%, floor 96.95% untouched
+```
+
+Scaffold Gate, both variants at the final commit:
+
+```
+native=none            # install, typecheck, test (9/9 tasks), check — all exit 0
+native=publish+unocss  # install, typecheck, test (16/16 tasks), check — all exit 0
+                       # then: mnative add probe → install → typecheck — all exit 0
+```

@@ -190,10 +190,10 @@ Enforced by Biome `noRestrictedImports` and the dependency graph:
 
 - [ ] `bun install` — lockfile unchanged (`--frozen-lockfile` in CI)
 - [ ] `bun run check` — 0 errors (14 warnings / 10 infos is the baseline)
-- [ ] `bun run test` — 17/17 turbo tasks, 190 pass / 0 fail
+- [ ] `bun run test` — 19/19 turbo tasks, 230 pass / 0 fail
 - [ ] `bun run typecheck` — 14/14
 - [ ] `bun run build` — 19/19
-- [ ] `bun run coverage` — line coverage ≥ 80% (currently 99.37%, config packages included)
+- [ ] `bun run coverage` — line coverage ≥ 80% (currently 99.52%, config packages included)
 - [ ] Any `configs/` change → `bun run docs:sync` run **and** generated files committed
 - [ ] Any published package change → `bun run changeset` with the right bump
 - [ ] Any published package change → `publint` + `attw --profile esm-only` clean (`mbunup health`)
