@@ -50,6 +50,9 @@ Branch `arena/01a09f8a-ts-monorepo-template`.
 | R12b-fix | `9c3575a` | 212 | 99.41% (1011/1017) | Setup scripts import the editor by path — inside a scaffold they run before `bun install`, where workspace names do not resolve. The bunfig change that attributes shared config code to its own run rides along. |
 | R12c | `f8c755e` | 214 (+2) | 99.49% (974/979) | TPL scaffolder edits the root manifest as text end-to-end; its private JSON surgery is deleted, so the totals shrink by the 38 lines that code cost — every remaining measured line is covered. |
 | R11l | `38f411a` | 230 (+16) | **99.52% (1037/1042)** | `mcoverage` spawns through the shared helper; the helper gains its first tests (100% of its 63 lines) and is measured by its own run instead of by its importers. |
+| — | `5e9c43d` | 190 | 99.37% (791/796) | Phase 4 boundary: baselines and log rows for R9-R10. |
+| — | `49868fe` | 230 | 99.52% (1037/1042) | Phase 5-7 boundary: baselines, the R11/R12 log rows, deviations 9-12 and the final gate output. |
+| — | `1949e6a` | 230 | 99.52% (1037/1042) | Post-plan fix found while opening the PR (deviation 13): the generated workflows could never resolve the workspace bins (exit 127). The call sites now use `bunx`, and the workflows are regenerated from the fragments. |
 
 Phase 1 boundary: Scaffold Gate run on both variants and **green** — `native=none`
 (install, check 74 files/0 errors, typecheck 6/6, test 9+15+26 pass) and `native=publish`
