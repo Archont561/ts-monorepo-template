@@ -1,29 +1,15 @@
-# AGENTS.md - @myorg/community
+# AGENTS.md — @myorg/community
 
-> Community health files for GitHub.
+## Rules
 
-## What it provides
+- Never delete these files — they are baseline health, surfaced in Insights → Community Standards.
+- Add new sensitive or specialised paths (auth, Rust, infrastructure) to `.github/CODEOWNERS` rather than relying on a global owner.
+- Issue templates are YAML forms; keep the fields required so reports arrive actionable.
+- Do not move vulnerability reporting, support or the code of conduct into standalone Markdown files — they are `README.md` sections by design.
+- The CODEOWNERS owner is **not** rewritten by the scaffolder; remind the user to set it after scaffolding.
 
-- `.github/CODEOWNERS` — auto-assign reviewers (replace @Archont561 with your org/team)
-- `.github/PULL_REQUEST_TEMPLATE.md` — PR checklist (Biome, typecheck, test, coverage, docs:sync, conventional commits)
-- `.github/ISSUE_TEMPLATE/bug_report.yml` — bug report form
-- `.github/ISSUE_TEMPLATE/feature_request.yml` — feature request form
-- Vulnerability reporting, support channels and the code of conduct are **sections of the root `README.md`**, not standalone files — this config owns no root Markdown of its own
-- `.github/FUNDING.yml` — sponsorship links (commented template)
+## Before marking a task done
 
-## For agents
-
-- Do not delete these files — they are baseline health (Insights → Community Standards).
-- When scaffolding, `@myorg` scope is replaced, but CODEOWNERS owner should be customized manually.
-- If you add new sensitive paths (e.g. `packages/auth`), add them to CODEOWNERS.
-- If you add new CI checks, update PR template checklist.
-- Always included (`default: always`).
-
-## Files
-
-- `.github/CODEOWNERS`
-- `.github/PULL_REQUEST_TEMPLATE.md`
-- `.github/ISSUE_TEMPLATE/*.yml`
-- `SECURITY.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`
-- `.github/FUNDING.yml`
-- `configs/community/package.json`
+- [ ] New protected path → CODEOWNERS entry
+- [ ] PR template checklist still matches what CI actually enforces
+- [ ] No root Markdown file was added for content that belongs in a README section

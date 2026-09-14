@@ -1,29 +1,16 @@
-## Changeset
+# AGENTS.md — @myorg/changeset
 
-> [!NOTE]
-> Versioning via Changesets — not manual bumps.
+## Rules
 
-- `mchangeset` (from `@myorg/changeset`) wraps `changeset` with config path `configs/changeset/config.json`
-- Config ignores `internal`, `example`, `configs/*` — only `external` is versioned/published
-- `mchangeset init` (run by root `prepare`) ensures `.changeset/config.json` exists from template
-- Run `bun run changeset` to create a changeset, `mchangeset version` to bump, `mchangeset publish` to publish
-- Each subpath export is a separate entry in `dist/` — minor bump for new subpaths
+- Never edit a `version` field by hand. Add a changeset instead.
+- Every change to a **published** package needs a changeset in the same PR — `@myorg/external`, `@myorg/native`.
+- Private packages and config packages are in `config.json`'s `ignore` list; do not add changesets for them.
+- A new private package belongs in that `ignore` list, otherwise Changesets will try to version it.
+- Do not commit `.changeset/*.md` files that are already consumed — the version bump deletes them.
+- Use `feat!:` or a `BREAKING CHANGE:` footer for breaking changes so the bump is major.
 
-| Command | Description |
-| :--- | :--- |
-| `bun run changeset` | Create `.changeset/*.md` |
-| `mchangeset version` | Apply changesets |
-| `mchangeset publish` | Publish |
+## Before marking a task done
 
-```mermaid
-graph LR
-    A[code change] --> B[changeset]
-    B --> C[.changeset/*.md]
-    C --> D[version]
-    D --> E[publish]
-
-    style B fill:#0969DA,color:#fff
-```
-
-> [!TIP]
-> Add `internal-<name>` packages to `.changeset/config.json` `ignore` list.
+- [ ] Published-package change → `bun run changeset` with the right bump type
+- [ ] New private package → added to `ignore` in `configs/changeset/config.json`
+- [ ] `bun run version` is left to CI, not run locally

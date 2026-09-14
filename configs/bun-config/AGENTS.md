@@ -1,28 +1,15 @@
-## Bun Config + Coverage Generation
+# AGENTS.md — @myorg/bun-config
 
-> [!NOTE]
-> Shared `bunfig.toml` — no per-package symlinks. Coverage reporting in `@myorg/coverage`.
+## Rules
 
-- `mbun` (from `@myorg/bun-config`) wraps `bun` and injects `--config=<configs/bun-config/bunfig.toml>` for `bun test`; other commands pass through
-- `mbun coverage` runs `mturbo coverage` (per-package); `bun run coverage` follows it with `mcoverage merge`, which writes the merged root `coverage/lcov.info` (lcov-result-merger, no lcov binary needed)
-- Config (`bunfig.toml`): LCOV + text reporters, 80% line/function threshold, ignores `*.test.ts`, `dist`, `node_modules`, `configs/*`, `cli.ts`, `e2e`, `aggregate.ts`, `*.node`, `target`, `apps/example/src/index.ts`, `pages/index.ts`
-- No per-package `bunfig.toml` — always passed explicitly for deterministic output
-- Reporting (HTML, artifact, Pages, threshold, PR comment) is in `@myorg/coverage` — see `configs/coverage/AGENTS.md`: `mcoverage setup` installs lcov, `mcoverage html` renders `coverage/html/`, `upload-artifact@v4` retention 14d, `mcoverage check` gates the build (threshold: `COVERAGE_THRESHOLD`), PR comment via `lcov-reporter-action`, Pages inclusion at `/coverage/` (via `mcoverage pages`) when pages enabled else standalone `coverage.yml` Pages deploy
+- Never add a `bunfig.toml` to a package. The shared config is the only one, and `mbun` passes it.
+- Never run bare `bun test` for package work — use `bun run test` (Turbo) or `bun --filter <pkg> run test`, which end up in `mbun test`.
+- The coverage **threshold** is owned by `@myorg/coverage` (`COVERAGE_THRESHOLD`); the value in `bunfig.toml` must stay in sync and is documented as a mirror, not the source.
+- Reporting — HTML, artifacts, Pages and the CI gate — belongs to `@myorg/coverage`, not here. Do not add coverage reporting to this config.
+- `mbun coverage` runs per-package reports only; the merge is a root concern (`bun run coverage`).
 
-| Command | Description |
-| :--- | :--- |
-| `bun run test` | Turbo → per-package `mbun test` |
-| `bun run coverage` | `mturbo coverage && mcoverage merge` → merged LCOV |
-| `mbun test` | Direct, injects config |
+## Before marking a task done
 
-```mermaid
-graph TD
-    A[mbun test] --> B[bunfig.toml]
-    B --> C[coverage/lcov.info]
-    C --> D[mturbo coverage<br/>then mcoverage merge]
-
-    style B fill:#0969DA,color:#fff
-```
-
-> [!WARNING]
-> JSC not V8 — don't use Node coverage APIs.
+- [ ] `bun run test` passes (Turbo runs `mbun test` per package)
+- [ ] `bun run coverage` produces `coverage/lcov.info`
+- [ ] Any threshold change is made in `configs/coverage/index.ts` **and** mirrored in `bunfig.toml`

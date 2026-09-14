@@ -1,29 +1,15 @@
-## Commitlint
+# AGENTS.md — @myorg/commitlint
 
-> [!IMPORTANT]
-> Conventional Commits enforced via Lefthook `commit-msg` hook.
+## Rules
 
-- Config (`commitlint.config.js`) extends `@commitlint/config-conventional`
-- Hook: `lefthook.yml` `commit-msg` → `commitlint --edit {1}`
-- Valid types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `perf`, `build`, `ci`, `revert`
-- Subject must be lowercase, no period, max 100 chars
-- Body max line 100 chars
+- Every commit subject is `<type>(<scope>): <lowercase subject>` — no period, imperative mood, under 100 characters.
+- The scope must be a workspace package name (unscoped) or one of the cross-cutting scopes: `config`, `repo`, `deps`, `release`, `ci`.
+- One concern per commit; do not bundle unrelated packages into a single message.
+- Breaking changes use `feat!:` or a `BREAKING CHANGE:` footer — not a `major` keyword.
+- Never bypass the `commit-msg` hook with `--no-verify` without saying why in the commit body.
 
-| Example | Valid | Bump |
-| :--- | :---: | :--- |
-| `feat(external): add http subpath` | ✅ | Minor |
-| `fix(internal): handle null` | ✅ | Patch |
-| `docs: update README` | ✅ | None |
-| `Add feature` | ❌ | — |
+## Before marking a task done
 
-```mermaid
-graph LR
-    A[commit msg] --> B[commitlint]
-    B -->|pass| C[commit]
-    B -->|fail| D[reject]
-
-    style B fill:#0969DA,color:#fff
-```
-
-> [!TIP]
-> Use `feat!:` or `BREAKING CHANGE:` footer for major bumps.
+- [ ] Commit subjects parse (the hook will reject them otherwise)
+- [ ] Scopes match real package names
+- [ ] `bun run check` and `bun run test` pass before the commit is made

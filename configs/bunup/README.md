@@ -1,29 +1,22 @@
 # @myorg/bunup
 
-> Bundling presets for library packages.
+Bundling presets for library packages, plus the package-health check CI runs before publish.
 
 ## What it provides
 
-- `bunup` as a shared devDependency
-- `baseConfig` + `defineConfig` helpers
-- `mbunup` — CLI alias that bakes in config resolution; `mbunup health` builds, then runs publint + arethetypeswrong over every non-private package
+- `bunup` as a shared workspace dependency
+- `baseConfig` and `defineConfig` — ESM + `.d.ts` output, dependencies externalized, `@myorg/internal` inlined
+- `mbunup` — the bin that resolves the preset; `mbunup health` builds, then runs `publint` + `arethetypeswrong` over every publishable package
 
 > [!IMPORTANT]
-> Library packages are bundled with Bunup. Apps are not bundled — Bun runs TypeScript directly.
-
-### Presets
-
-| Preset | Description |
-| :--- | :--- |
-| `baseConfig` | ESM + d.ts, externalize deps, inlined internal |
-| `defineConfig` | Helper to merge with base |
+> Library packages are bundled. Apps are **not** — Bun runs their TypeScript directly.
 
 ## Usage
 
 ```bash
 bun run build      # mturbo build → per-package mbunup
 bun run dev        # watch mode via Turbo
-mbunup health      # publint + arethetypeswrong over publishable packages
+mbunup health      # build + publint + arethetypeswrong
 ```
 
 ```typescript
@@ -36,23 +29,8 @@ export default defineConfig({
 });
 ```
 
-```mermaid
-graph LR
-    A[src/index.ts] --> B[mbunup]
-    B --> C[dist/index.js + .d.ts]
-    A -.-> D[@myorg/internal<br/>inlined]
-    D --> C
+A CLI package uses `...cliConfig` instead of `...baseConfig` when it ships a bin.
 
-    style B fill:#0969DA,color:#fff
-```
+## Internal inlining
 
-<details>
-<summary>Internal inlining</summary>
-
-- `external` declares `internal` as devDependency
-- Bunup inlines it — consumers see one bundle
-- `internal` must never depend on `external` (circular)
-
-</details>
-
-See [AGENTS.md](./AGENTS.md) for the agent-facing reference.
+`packages/external` declares `packages/internal` as a devDependency and Bunup inlines it, so consumers install one bundle. `internal` must never depend on `external` — that would be circular.

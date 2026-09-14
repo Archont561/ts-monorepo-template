@@ -1,39 +1,35 @@
 # @myorg/community
 
-> GitHub community health files — CODEOWNERS, PR/issue templates, SECURITY, CODE_OF_CONDUCT, SUPPORT, FUNDING.
+The GitHub community-health files that make a repository feel maintained — reviewers get assigned automatically, issues arrive structured.
 
 ## What it provides
 
 | File | Purpose | Location |
-| ---- | ------- | -------- |
+| --- | --- | --- |
 | `CODEOWNERS` | Auto-assign reviewers by path | `.github/CODEOWNERS` |
 | `PULL_REQUEST_TEMPLATE.md` | PR checklist | `.github/PULL_REQUEST_TEMPLATE.md` |
 | `ISSUE_TEMPLATE/bug_report.yml` | Structured bug reports | `.github/ISSUE_TEMPLATE/` |
 | `ISSUE_TEMPLATE/feature_request.yml` | Structured feature requests | `.github/ISSUE_TEMPLATE/` |
 | `FUNDING.yml` | Sponsorship links | `.github/FUNDING.yml` |
 
-GitHub surfaces these in **Insights → Community Standards** and uses them to prepopulate PRs/issues and assign reviewers.
+GitHub surfaces these under **Insights → Community Standards** and uses them to prepopulate issues and PRs.
+
+> [!NOTE]
+> Vulnerability reporting, support channels and the code of conduct are sections of the root `README.md`, not standalone files — this config owns no root Markdown of its own.
 
 ### CODEOWNERS example
 
 ```ini
 # .github/CODEOWNERS
-* @your-org/core-team
-/packages/auth/** @your-org/security-team
-*.rs @your-org/rust-team
+*                  @your-org/core-team
+/packages/auth/**  @your-org/security-team
+*.rs               @your-org/rust-team
 ```
 
-### PR template checklist
+### PR checklist
 
-- Biome lint, typecheck, tests, coverage 80%, conventional commits, docs:sync if needed.
+Biome lint, typecheck, tests, 80% coverage, Conventional Commits, and `docs:sync` when anything under `configs/` changed.
 
-### Issue templates (YAML forms)
+### Scaffold
 
-- Bug report: what happened, reproduction, environment, logs
-- Feature request: problem, proposal, area, context
-
-## Scaffold
-
-Always included — baseline repo health per GitHub's community checklist.
-
-See [AGENTS.md](./AGENTS.md).
+Always included — baseline repo health per GitHub's community checklist. The `@myorg` scope is rewritten on scaffold, but the CODEOWNERS **owner** is yours to set.

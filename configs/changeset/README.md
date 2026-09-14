@@ -1,30 +1,32 @@
 # @myorg/changeset
 
-> Versioning and releases with Changesets.
+Versioning and publishing with Changesets — release intent is recorded in the PR, not guessed at release time.
 
 ## What it provides
 
-- `@changesets/cli` as shared devDependency
-- `config.json` — shared Changeset config
-- `mchangeset` — CLI alias that bakes in config path
+- `@changesets/cli` as a shared workspace dependency
+- `config.json` — the shared Changesets config
+- `mchangeset` — the bin that bakes in that config path
 
 > [!NOTE]
-> Versioning is handled via Changesets — not manual `package.json` bumps.
+> Versions come from Changesets, never from manual `package.json` edits.
 
 ### Config highlights
 
 | Setting | Value |
 | :--- | :--- |
-| `linked` | External packages linked |
-| `ignore` | `internal`, `example`, `configs/*` ignored |
-| `changelog` | `@changesets/changelog-github` |
+| `access` | `public` |
+| `baseBranch` | `main` |
+| `changelog` | `@changesets/cli/changelog` |
+| `updateInternalDependencies` | `patch` |
+| `ignore` | Private and config packages — only published packages are versioned |
 
 ## Usage
 
 ```bash
-bun run changeset        # create a changeset
-bun run changeset:version # bump versions
-bun run changeset:publish # publish to npm
+bun run changeset   # record intent: pick packages, bump type, describe the change
+bun run version     # mchangeset version — apply pending changesets
+bun run release     # mchangeset publish — publish to npm
 ```
 
 ```mermaid
@@ -38,30 +40,15 @@ sequenceDiagram
     CS-->>Dev: .changeset/*.md
     Dev->>CI: push to main
     CI->>CS: version + publish
-    CS->>NPM: publish external
+    CS->>NPM: publish
 ```
 
-<details>
-<summary>Adding a changeset</summary>
+### Bump types
 
-```bash
-bun run changeset
-# Select packages, bump type (patch/minor/major), describe change
-```
-
-- Patch: bug fixes
-- Minor: new features (new exports, subpaths)
-- Major: breaking changes
-
-</details>
-
-## Commands
-
-| Command | Description |
+| Type | When |
 | :--- | :--- |
-| `bun run changeset` | Create changeset |
-| `mchangeset init` | Ensure config exists (run by `prepare`) |
-| `mchangeset version` | Bump versions from changesets |
-| `mchangeset publish` | Publish to npm |
+| patch | Bug fixes |
+| minor | New features, new exports or subpaths |
+| major | Breaking changes |
 
-See [AGENTS.md](./AGENTS.md) for the agent-facing reference.
+`mchangeset init` runs during `bun install` (`prepare`) and copies the shared config into `.changeset/config.json`.

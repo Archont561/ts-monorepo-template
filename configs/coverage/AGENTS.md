@@ -1,37 +1,15 @@
-## Coverage (LCOV + HTML + Pages + Threshold)
+# AGENTS.md — @myorg/coverage
 
-> Always config — provides coverage reporting via `gh-actions` skeletons. Data-driven via `package.json` `scaffold` metadata. No root Cargo.toml needed.
+## Rules
 
-- `configs/coverage` (`@myorg/coverage`) always enabled — LCOV reporting: HTML via `genhtml`, artifact `coverage-report` (14d), Pages deployment, 80% threshold, PR comment via `lcov-reporter-action`
-- `configs/bun-config/bunfig.toml` generates `coverage/lcov.info` per package (text+lcov, threshold 80% lines/functions, ignores *.test.ts, dist, configs, cli.ts, etc), `mturbo coverage` + `mcoverage merge` produce root `coverage/lcov.info`
-- Fragments:
-  - `ci.steps.yml`: one-liners only — `mcoverage setup` (installs lcov) → `mcoverage html` (genhtml) → `upload-artifact@v4` path `coverage/html/` → `mcoverage check` → `romeovs/lcov-reporter-action@v0.3.1` on PR. All logic lives in `configs/coverage/src/cli.ts`
-  - `pages.steps.yml` (TEMPLATE-ONLY pages): when Pages enabled, `mcoverage pages` collects + renders HTML and copies it into `apps/example/public/coverage/` → served at `/coverage/` alongside example app (avoids Pages conflict)
-  - `mcoverage pages` renders `coverage/html`; `mpages build` copies it into `.pages/coverage`, so step order in the workflow does not matter
-  - Template repo: no `pages.yml` and no `coverage.yml` — `mdocs site` renders the report into the docs artifact (`mcoverage html --out docs/public/coverage`) so `/coverage/` has exactly one publisher
-  - `coverage.steps.yml` + `coverage.base.yml` skeleton → `.github/workflows/coverage.yml` standalone coverage Pages site when Pages **disabled** (if Pages enabled, coverage.yml removed, coverage included in pages.yml)
-- `configs/gh-actions/coverage.base.yml` skeleton: on push main/PR/workflow_dispatch, permissions contents:read pages:write id-token:write, concurrency group pages cancel-in-progress false, jobs build (checkout, setup-bun, install, {{STEPS}}, configure-pages, upload-pages-artifact path coverage/html) + deploy (needs build, if main, pages:write id-token:write, environment github-pages, deploy-pages)
-- Rust coverage optional: `mcoverage collect` runs `mnative llvm-cov` when `packages/native/Cargo.toml` exists and merges `coverage/rust-lcov.info` into the main LCOV
-- Monorepo merging: current uses `lcov-result-merger`, alternative `lcov --add-tracefile packages/*/coverage/lcov.info --output-file merged.lcov`
-- Threshold enforcement: `mcoverage check` (default `COVERAGE_THRESHOLD`) parses the `LF:`/`LH:` records itself — no `lcov`/`bc` binary needed locally, and it emits `::error::` on failure
-- Badge: via gist + shields.io endpoint (dynamic-badges-action) or codecov
+- The threshold lives in `configs/coverage/index.ts` as `COVERAGE_THRESHOLD`. `bunfig.toml` mirrors it as a fraction — change both, or the local run and the CI gate disagree.
+- All logic lives in `configs/coverage/src/cli.ts`. Workflow fragments must stay one-liners that call `mcoverage`; never inline shell for coverage.
+- Never edit generated workflows — edit `coverage.base.yml` / `*.steps.yml` and run `bun run docs:sync`.
+- `mcoverage check` parses the LCOV itself (no `lcov`/`bc` dependency) and emits `::error::` on failure — do not reimplement the threshold in a shell step.
+- Coverage artifacts (`coverage/`, `coverage/html/`) are generated; never commit them.
 
-```mermaid
-graph TD
-    A["mbun coverage<br/>mturbo + merger"] --> B["coverage/lcov.info"]
-    B --> C["genhtml → coverage/html/"]
-    C --> D["upload-artifact coverage-report"]
-    C --> E{pages?}
-    E -->|yes| F["pages.yml<br/>public/coverage/ → /coverage/"]
-    E -->|no| G["coverage.yml<br/>standalone Pages"]
-    B --> H["threshold 80%<br/>mcoverage check"]
-    B --> I["PR comment<br/>lcov-reporter-action"]
+## Before marking a task done
 
-    style B fill:#0969DA,color:#fff
-    style C fill:#f6f8fa,stroke:#0969DA
-```
-
-> [!IMPORTANT]
-> Always output LCOV, install lcov+bc, genhtml before upload, set retention-days 14, gate Pages on main, merge via add-tracefile or merger, threshold fail, PR comment on pull_request, avoid Pages conflict by including coverage at /coverage/ when pages enabled else standalone coverage.yml.
-
-See [README.md](./README.md) and [bun-config README](../bun-config/README.md) for full guide.
+- [ ] `bun run coverage` produces `coverage/lcov.info`
+- [ ] `bun run coverage:check` passes at the current threshold
+- [ ] Any threshold change updates `index.ts` **and** the `bunfig.toml` mirror

@@ -1,24 +1,26 @@
-## Lint & Format
+# AGENTS.md — @myorg/biome
+
+## Rules
 
 > [!CAUTION]
-> Biome is the only lint/format tool. Never use ESLint, Prettier, or `lint-staged`.
+> Biome is the only lint and format tool. Never add or invoke `eslint`, `prettier`, or `lint-staged`.
 
-- `mbiome` (from `@myorg/biome`, `configs/biome`) bakes in `--config-path=<configs/biome>`; there is no root `biome.json`
-- Config (`configs/biome/biome.json`): `recommended` rule preset, unused imports as errors, space indentation (2), 100 column width, double quotes, semicolons, trailing commas, import organizing on
-- Run `bun run check` to lint+format without writing; `bun run check:fix` to auto-fix. Run `check:fix` before committing
-- The pre-commit hook reformats staged files automatically (`mbiome check --write {staged_files}`)
+- Never create a root `biome.json`. The shared config lives at `configs/biome/biome.json` and is reached through `mbiome`.
+- Never edit files under `dist/` to satisfy a lint rule — regenerate instead.
+- Run `bun run check:fix` before committing; the pre-commit hook will reformat staged files anyway, so an unformatted diff means you skipped it.
+- **Overrides replace, they do not merge.** Each `overrides[]` entry restates its own rule set; adding an override without restating the shared rules silently drops them.
+- Adding a lint suppression (`// biome-ignore`) is a last resort — fix the code or narrow the config.
+- Ignore *generated* directories in `files.includes`, never individual files.
 
-| Command | Description |
-| :--- | :--- |
-| `bun run check` | Check without writes |
-| `bun run check:fix` | Auto-fix |
-| `mbiome check --write {files}` | Direct fix |
+## Boundaries enforced here
 
-```mermaid
-graph LR
-    A[edit] --> B[check:fix]
-    B --> C[commit]
-    C --> D[pre-commit: mbiome]
+| Import | Where | Why |
+| :--- | :--- | :--- |
+| `bunup` | everywhere | Use `@myorg/bunup` so presets apply |
+| `@myorg/example` | `packages/**`, `configs/**` | Apps consume packages, never the reverse |
 
-    style D fill:#0969DA,color:#fff
-```
+## Before marking a task done
+
+- [ ] `bun run check` exits 0 (baseline: 19 warnings + 14 infos over 138 files — warnings are not errors)
+- [ ] No new `// biome-ignore` comments without a reason
+- [ ] Any new override restates the rules it needs
