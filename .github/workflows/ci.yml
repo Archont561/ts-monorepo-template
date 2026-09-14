@@ -15,7 +15,7 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -23,7 +23,7 @@ jobs:
 
       # Restored before install; saved automatically at the end of the job.
       - name: Cache Bun + Turbo
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.bun/install/cache
@@ -44,7 +44,7 @@ jobs:
         run: bun run coverage
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           files: coverage/lcov.info
           fail_ci_if_error: false
@@ -61,16 +61,16 @@ jobs:
       # TEMPLATE-ONLY:START(codeql)
       # CodeQL — SAST for JS/TS (opt-in, default true)
       - name: Initialize CodeQL (JS/TS)
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
           queries: security-and-quality
 
       - name: Autobuild (CodeQL)
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:javascript-typescript"
       # TEMPLATE-ONLY:END(codeql)
@@ -87,7 +87,7 @@ jobs:
         shell: bash
 
       - name: Upload coverage HTML artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage/html/
@@ -100,7 +100,7 @@ jobs:
 
       - name: Report coverage to PR
         if: github.event_name == 'pull_request'
-        uses: romeovs/lcov-reporter-action@v0.3.1
+        uses: romeovs/lcov-reporter-action@v0.4.0
         with:
           lcov-file: ./coverage/lcov.info
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -111,7 +111,7 @@ jobs:
 
       # Gitleaks — secret scanning in CI (always, security baseline)
       - name: Gitleaks — secret scanning (mgitleaks via action)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -166,7 +166,7 @@ jobs:
       # TEMPLATE-ONLY:START(trivy)
       # Trivy — filesystem + container vulnerability scanning (opt-in)
       - name: Run Trivy FS scan (HIGH, CRITICAL)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -175,7 +175,7 @@ jobs:
           output: trivy-fs-results.sarif
 
       - name: Upload Trivy FS SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: trivy-fs-results.sarif
@@ -186,7 +186,7 @@ jobs:
 
       - name: Trivy image scan (if Dockerfile)
         if: hashFiles('apps/example/Dockerfile') != ''
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: app:trivy-scan
           severity: HIGH,CRITICAL
@@ -195,7 +195,7 @@ jobs:
 
       - name: Upload Trivy image SARIF to GitHub Security
         if: always() && hashFiles('apps/example/Dockerfile') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-image-results.sarif
       # TEMPLATE-ONLY:END(trivy)
