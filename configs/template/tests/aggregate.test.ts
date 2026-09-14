@@ -1,12 +1,25 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { readdirSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import { $, file } from "bun";
 
 /** Minimal shape of a generated workflow, used to assert YAML validity. */
 type WorkflowFile = { jobs?: Record<string, { steps?: unknown[] }> };
 
+import { regenerateAll } from "../src/aggregate";
 import { TemplateHarness } from "../src/harness";
 import { MonorepoScaffolder } from "../src/scaffolder";
+
+/** Reads every file under `dir` into a sorted `{ relativePath: contents }` map. */
+async function snapshotTree(dir: string): Promise<Record<string, string>> {
+  const snapshot: Record<string, string> = {};
+  for (const entry of readdirSync(dir, { recursive: true }).map(String).sort()) {
+    const path = `${dir}/${entry}`;
+    if (statSync(path).isFile()) {
+      snapshot[entry] = await file(path).text();
+    }
+  }
+  return snapshot;
+}
 
 /**
  * Tests for `src/aggregate.ts` (`bun run docs:sync`), which regenerates
@@ -22,6 +35,35 @@ describe("aggregate", () => {
       cleanup = null;
     }
   });
+
+  test(
+    "regenerateCI and docs:sync are the same generator — a second pass must be a no-op",
+    async () => {
+      // `MonorepoScaffolder.regenerateCI()` and `mdocs`'s `regenerateAll()` used to be two
+      // hand-maintained copies, and had already drifted apart: a scaffolded repo whose owner
+      // later ran `mdocs` could get workflows that differ from the ones it shipped with.
+      // Both callers now delegate to `regenerateAll`; this locks the wiring in place by
+      // running the *other* entry point over a scaffolded tree and demanding identical bytes.
+      const result = await new TemplateHarness({ skipInstall: true }).prepare();
+      cleanup = result.cleanup;
+
+      await new MonorepoScaffolder({
+        targetDir: result.templateDir,
+        scope: "@agent-test",
+        gitHooks: false,
+        configs: { playwright: true, unocss: false },
+      }).execute();
+
+      const githubDir = `${result.templateDir}/.github`;
+      const before = await snapshotTree(githubDir);
+      expect(Object.keys(before).length).toBeGreaterThan(0);
+
+      await regenerateAll(result.templateDir);
+
+      expect(await snapshotTree(githubDir)).toEqual(before);
+    },
+    { timeout: 60_000 },
+  );
 
   test(
     "generates both workflows from configs",

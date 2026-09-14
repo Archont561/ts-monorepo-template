@@ -1,6 +1,5 @@
-import { mkdir } from "node:fs/promises";
 import { $, file, Glob, spawnSync, write } from "bun";
-import { aggregateWorkflow } from "./aggregate";
+import { regenerateAll } from "./aggregate";
 import type { DiscoveredConfig, ScaffoldMeta, ScaffoldRemovals } from "./configs";
 import { discoverConfigs } from "./configs";
 
@@ -810,74 +809,15 @@ export class MonorepoScaffolder {
    * Regenerates `.github/workflows/*.yml` + `.github/dependabot.yml` from the
    * gh-actions base skeletons and the surviving configs' step fragments.
    */
+  /**
+   * Regenerates `.github/workflows/*.yml` + `.github/dependabot.yml` from the
+   * surviving configs' step fragments.
+   *
+   * The template's docs site is deleted earlier in the pipeline, so the
+   * docs-site guard is switched off explicitly rather than re-tested.
+   */
   async regenerateCI(): Promise<void> {
-    await mkdir(`${this.targetDir}/.github/workflows`, { recursive: true });
-    await mkdir(`${this.targetDir}/.github`, { recursive: true });
-    await aggregateWorkflow(this.targetDir, "ci.base.yml", "ci.steps.yml");
-    await aggregateWorkflow(this.targetDir, "release.base.yml", "release.steps.yml");
-    // Only generate pages.yml if pages config is enabled (exists)
-    const pagesConfigExists = await file(`${this.targetDir}/configs/pages/package.json`).exists();
-    if (pagesConfigExists) {
-      await aggregateWorkflow(this.targetDir, "pages.base.yml", "pages.steps.yml");
-    } else {
-      const pagesWorkflow = `${this.targetDir}/.github/workflows/pages.yml`;
-      if (await file(pagesWorkflow).exists()) {
-        await $`rm -rf ${pagesWorkflow}`.quiet();
-        console.log(`🗑️ Removed ${pagesWorkflow} (pages disabled)`);
-      }
-    }
-    // Coverage: standalone coverage.yml when pages disabled, otherwise included in pages.yml
-    const coverageConfigExists = await file(
-      `${this.targetDir}/configs/coverage/package.json`,
-    ).exists();
-    if (coverageConfigExists) {
-      if (!pagesConfigExists) {
-        await aggregateWorkflow(this.targetDir, "coverage.base.yml", "coverage.steps.yml");
-      } else {
-        const coverageWorkflow = `${this.targetDir}/.github/workflows/coverage.yml`;
-        if (await file(coverageWorkflow).exists()) {
-          await $`rm -rf ${coverageWorkflow}`.quiet();
-          console.log(`🗑️ Removed ${coverageWorkflow} (coverage included in pages.yml)`);
-        }
-      }
-    }
-    // Native build matrix: one job per target triple, then a fan-in job that
-    // assembles the per-platform npm packages. Generated with configs/native so
-    // choosing `none` deletes the workflow along with the config.
-    if (await file(`${this.targetDir}/configs/native/package.json`).exists()) {
-      await aggregateWorkflow(this.targetDir, "native.base.yml", "native.steps.yml");
-    } else {
-      const nativeWorkflow = `${this.targetDir}/.github/workflows/native.yml`;
-      if (await file(nativeWorkflow).exists()) {
-        await $`rm -rf ${nativeWorkflow}`.quiet();
-        console.log(`🗑️ Removed ${nativeWorkflow} (native disabled)`);
-      }
-    }
-    // Dependabot is always generated (always config), but check existence for safety
-    const dependabotConfigExists = await file(
-      `${this.targetDir}/configs/dependabot/package.json`,
-    ).exists();
-    const ghActionsExists = await file(
-      `${this.targetDir}/configs/gh-actions/package.json`,
-    ).exists();
-    if (dependabotConfigExists || ghActionsExists) {
-      await aggregateWorkflow(this.targetDir, "dependabot.base.yml", "dependabot.yml");
-      await aggregateWorkflow(
-        this.targetDir,
-        "dependabot-auto-merge.base.yml",
-        "dependabot-auto-merge.steps.yml",
-      );
-    }
-    // Stale workflow — only when stale config is enabled
-    const staleConfigExists = await file(`${this.targetDir}/configs/stale/package.json`).exists();
-    if (staleConfigExists) {
-      await aggregateWorkflow(this.targetDir, "stale.base.yml", "stale.steps.yml");
-    } else {
-      const staleWorkflow = `${this.targetDir}/.github/workflows/stale.yml`;
-      if (await file(staleWorkflow).exists()) {
-        await $`rm -rf ${staleWorkflow}`.quiet();
-      }
-    }
+    await regenerateAll(this.targetDir, { templateDocsSite: false });
   }
 
   /**
