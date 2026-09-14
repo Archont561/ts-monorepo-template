@@ -11,10 +11,13 @@ import { file } from "bun";
  */
 
 /** `apps/example/` — the app root that owns `public/` and `src/`. */
-const APP_ROOT = new URL("../../", import.meta.url);
+const APP_ROOT = new URL(import.meta.url.includes("/dist/") ? "../" : "../../", import.meta.url);
 
 /** Repository root — the monorepo that owns `configs/`. */
-const REPO_ROOT = new URL("../../../../", import.meta.url);
+const REPO_ROOT = new URL(
+  import.meta.url.includes("/dist/") ? "../../../" : "../../../../",
+  import.meta.url,
+);
 
 /** A file inside the app, e.g. `appFile("public/uno.css")`. */
 export function appFile(path: string): ReturnType<typeof file> {

@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { FileSystemRouter, serve } from "bun";
 import { appFile, detectFeatures, hasUnocss } from "./features";
 import { PORT } from "./port";
@@ -17,7 +18,7 @@ console.log(
 
 const router = new FileSystemRouter({
   style: "nextjs",
-  dir: `${import.meta.dir}/pages`,
+  dir: resolve(import.meta.dir, import.meta.dir.endsWith("/dist") ? "../src/pages" : "pages"),
 });
 
 const server = serve({

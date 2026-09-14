@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "mbun --hot src/index.ts",
-    "build": "munocss build",
-    "start": "mbun src/index.ts",
+    "build": "mbunup",
+    "start": "mbun dist/index.js",
     "typecheck": "mtsc --noEmit",
     "test": "mbun test tests/",
     "test:watch": "mbun test tests/ --watch",
@@ -22,6 +22,7 @@
     "@myorg/external": "workspace:*"
   },
   "devDependencies": {
+    "@myorg/bunup": "workspace:*",
     "@myorg/ts": "workspace:*",
     "@myorg/playwright": "workspace:*",
     "@myorg/unocss": "workspace:*",

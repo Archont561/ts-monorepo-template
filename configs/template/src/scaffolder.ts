@@ -64,6 +64,33 @@ export const MARKER_PATTERNS: readonly RegExp[] = [
   /[ \t]*<!--[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[ \t]*-->([\s\S]*?)<!--[ \t]*TEMPLATE-ONLY:END\([^)]*\)[ \t]*-->[ \t]*\n?/g,
 ];
 
+/**
+ * Custom declared marker patterns, supporting e.g.:
+ * `<!-- unocss:START --> ... <!-- unocss:END -->`
+ * `// unocss:START ... // unocss:END`
+ * `<!-- UNOCSS:START --> ... <!-- UNOCSS:END -->`
+ */
+export const CUSTOM_MARKER_PATTERNS: readonly RegExp[] = [
+  // YAML/TOML/shell
+  /[ \t]*#[ \t]*([A-Za-z0-9_!-]+):START[^\n]*\n([\s\S]*?)[ \t]*#[ \t]*\1:END[^\n]*\n?/g,
+  // TS/JS
+  /[ \t]*\/\/[ \t]*([A-Za-z0-9_!-]+):START[^\n]*\n([\s\S]*?)[ \t]*\/\/[ \t]*\1:END[^\n]*\n?/g,
+  // HTML/MD
+  /[ \t]*<!--[ \t]*([A-Za-z0-9_!-]+):START[ \t]*-->([\s\S]*?)<!--[ \t]*\1:END[ \t]*-->[ \t]*\n?/g,
+];
+
+/**
+ * Checks whether a scope is disabled.
+ * Supports inverted scopes prefix `!` (e.g. `!unocss` is active when `unocss` is disabled).
+ */
+export function isScopeDisabled(scope: string, disabledScopes: ReadonlySet<string>): boolean {
+  if (scope.startsWith("!")) {
+    const base = scope.slice(1).trim();
+    return !disabledScopes.has(base) && !disabledScopes.has(base.toLowerCase());
+  }
+  return disabledScopes.has(scope) || disabledScopes.has(scope.toLowerCase());
+}
+
 /** `find` argv for every marker-carrying file under `root`. */
 export function markerFindArgs(root: string): string[] {
   // Bun's shell does not word-split interpolated strings, so the find
@@ -106,7 +133,17 @@ export function stripMarkerBlocks(
     next = next.replace(regex, (_match, scopesStr: string, innerContent: string) => {
       const scopes = scopesStr.split(",").map((s) => s.trim());
       changed = true;
-      return scopes.every((s) => disabledScopes.has(s)) ? "" : innerContent;
+      const allDisabled = scopes.every((s) => isScopeDisabled(s, disabledScopes));
+      return allDisabled ? "" : innerContent;
+    });
+  }
+
+  for (const regex of CUSTOM_MARKER_PATTERNS) {
+    next = next.replace(regex, (_match, marker: string, innerContent: string) => {
+      if (marker.toUpperCase() === "TEMPLATE-ONLY") return _match;
+      changed = true;
+      const disabled = isScopeDisabled(marker, disabledScopes);
+      return disabled ? "" : innerContent;
     });
   }
 
@@ -165,6 +202,7 @@ const STATIC_SCOPE_TARGETS: readonly string[] = [
   // Example app
   "apps/example/package.json",
   "apps/example/tsconfig.json",
+  "apps/example/bunup.config.ts",
   "apps/example/src/index.ts",
   "apps/example/src/pages/index.ts",
   "apps/example/src/pages/api/index.ts",
@@ -494,8 +532,34 @@ export class MonorepoScaffolder {
     for (const config of configs) {
       if (config.meta.default === "always") continue;
       const selected = this.selectedFor(config.meta);
-      if (this.isDisabled(config.meta, selected)) {
+      const disabled = this.isDisabled(config.meta, selected);
+
+      if (disabled) {
         scopes.add(config.dir);
+        if (config.meta.flag) scopes.add(config.meta.flag);
+        if (config.meta.marker) scopes.add(config.meta.marker);
+        if (config.meta.templateMarker) scopes.add(config.meta.templateMarker);
+        for (const m of config.meta.markers ?? []) scopes.add(m);
+      }
+
+      if (config.meta.options) {
+        for (const opt of config.meta.options) {
+          if (opt.value !== selected) {
+            if (opt.marker) scopes.add(opt.marker);
+            if (opt.templateMarker) scopes.add(opt.templateMarker);
+            for (const m of opt.markers ?? []) scopes.add(m);
+          }
+        }
+      }
+
+      if (config.meta.removals) {
+        const removal = config.meta.removals[String(selected)];
+        if (removal) {
+          if (removal.marker) scopes.add(removal.marker);
+          if (removal.templateMarker) scopes.add(removal.templateMarker);
+          for (const m of removal.markers ?? []) scopes.add(m);
+          for (const m of removal.markersToRemove ?? []) scopes.add(m);
+        }
       }
     }
 

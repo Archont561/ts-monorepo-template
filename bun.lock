@@ -41,6 +41,7 @@
         "@myorg/external": "workspace:*",
       },
       "devDependencies": {
+        "@myorg/bunup": "workspace:*",
         "@myorg/native": "workspace:*",
         "@myorg/playwright": "workspace:*",
         "@myorg/ts": "workspace:*",

@@ -24,6 +24,19 @@ export interface ScaffoldRemovals {
   filePatternsToRemove?: string[];
   /** Regex patterns (matched against relative paths) for files to remove when config is disabled. */
   fileRegexesToRemove?: string[];
+  /** Custom template marker(s) declared for this removal */
+  marker?: string;
+  templateMarker?: string;
+  markers?: string[];
+  markersToRemove?: string[];
+}
+
+export interface ScaffoldOption {
+  value: NativeMode | string;
+  label: string;
+  marker?: string;
+  templateMarker?: string;
+  markers?: string[];
 }
 
 export interface ScaffoldMeta extends ScaffoldRemovals {
@@ -35,9 +48,13 @@ export interface ScaffoldMeta extends ScaffoldRemovals {
   prompt?: string;
   type?: "confirm" | "select";
   /** Select values — the typed vocabulary, so a typo cannot fall through. */
-  options?: Array<{ value: NativeMode; label: string }>;
+  options?: ScaffoldOption[];
   setup?: string;
   removals?: Record<string, ScaffoldRemovals>;
+  /** Custom template marker(s) declared by this package */
+  marker?: string;
+  templateMarker?: string;
+  markers?: string[];
 }
 
 export interface DiscoveredConfig {

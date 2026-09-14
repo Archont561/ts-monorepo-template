@@ -950,6 +950,53 @@ describe("MonorepoScaffolder (unit)", () => {
       ).content;
       expect(stripMarkerBlocks(once, disabled)).toEqual({ content: once, changed: false });
     });
+
+    test("removes custom declared marker blocks when scope is disabled", () => {
+      const source = [
+        "start",
+        "<!-- unocss:START -->",
+        '<div class="flex">UnoCSS</div>',
+        "<!-- unocss:END -->",
+        "end",
+        "",
+      ].join("\n");
+      const { content, changed } = stripMarkerBlocks(source, new Set(["unocss"]));
+      expect(changed).toBe(true);
+      expect(content).toBe("start\nend\n");
+    });
+
+    test("keeps custom declared marker content when scope is enabled", () => {
+      const source = [
+        "start",
+        "// unocss:START",
+        'onSuccess: "munocss build",',
+        "// unocss:END",
+        "end",
+        "",
+      ].join("\n");
+      const { content, changed } = stripMarkerBlocks(source, new Set(["other"]));
+      expect(changed).toBe(true);
+      expect(content).toBe('start\nonSuccess: "munocss build",\nend\n');
+    });
+
+    test("handles inverted scope markers (!scope)", () => {
+      const source = [
+        "<!-- TEMPLATE-ONLY:START(unocss) -->",
+        '<div class="flex">UnoCSS</div>',
+        "<!-- TEMPLATE-ONLY:END(unocss) -->",
+        "<!-- TEMPLATE-ONLY:START(!unocss) -->",
+        '<div id="greeting">Plain</div>',
+        "<!-- TEMPLATE-ONLY:END(!unocss) -->",
+      ].join("\n");
+
+      // When unocss is disabled, !unocss is kept
+      const disabledRes = stripMarkerBlocks(source, new Set(["unocss"]));
+      expect(disabledRes.content.trim()).toBe('<div id="greeting">Plain</div>');
+
+      // When unocss is enabled, !unocss is stripped
+      const enabledRes = stripMarkerBlocks(source, new Set([]));
+      expect(enabledRes.content.trim()).toBe('<div class="flex">UnoCSS</div>');
+    });
   });
   // ── Manifest edits keep their formatting ─────────
 
