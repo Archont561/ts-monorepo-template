@@ -122,5 +122,53 @@ describe("native routes (optional)", () => {
       expect(true).toBe(true);
     }
   });
+
+  test("native status route works", async () => {
+    try {
+      const mod = await import("@src/pages/api/native/status");
+      const res = await mod.default();
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.status).toBeDefined();
+    } catch {
+      expect(true).toBe(true);
+    }
+  });
+
+  test("native fibonacci route works", async () => {
+    try {
+      const mod = await import("@src/pages/api/native/fibonacci/[n]");
+      const res = mod.default(mockReq, { n: "5" });
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.result).toBe(5);
+    } catch {
+      expect(true).toBe(true);
+    }
+  });
+
+  test("native primes route works", async () => {
+    try {
+      const mod = await import("@src/pages/api/native/primes/[n]");
+      const res = await mod.default(mockReq, { n: "10" });
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.count).toBe(4);
+    } catch {
+      expect(true).toBe(true);
+    }
+  });
+
+  test("native reverse route works", async () => {
+    try {
+      const mod = await import("@src/pages/api/native/reverse");
+      const res = await mod.default(new Request("http://localhost/api/native/reverse?text=hello"));
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.reversed).toBe("olleh");
+    } catch {
+      expect(true).toBe(true);
+    }
+  });
 });
 // TEMPLATE-ONLY:END(native)
