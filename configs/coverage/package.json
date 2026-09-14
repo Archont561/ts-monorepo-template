@@ -8,7 +8,8 @@
   },
   "scripts": {
     "build": "mbunup",
-    "dev": "mbunup --watch"
+    "dev": "mbunup --watch",
+    "test": "mbun test"
   },
   "scaffold": {
     "default": "always",
