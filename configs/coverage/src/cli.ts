@@ -281,8 +281,9 @@ const mergeCommand = defineCommand({
     },
     includeConfigs: {
       type: "boolean",
-      description: "Also merge configs/*/coverage/lcov.info (widens what the gate measures)",
-      default: false,
+      description:
+        "Merge configs/*/coverage/lcov.info too (default: on — disable with --no-include-configs)",
+      default: true,
     },
     reportOnly: {
       type: "boolean",
