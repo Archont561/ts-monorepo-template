@@ -5,4 +5,4 @@
       # attw runs with --profile esm-only: the template ships ESM-only
       # packages, so the strict profile's CJS resolutions are intentional.
       - name: Package health (publint + arethetypeswrong, via mbunup)
-        run: mbunup health
+        run: bunx mbunup health

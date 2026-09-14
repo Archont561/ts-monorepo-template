@@ -2,11 +2,11 @@
       # (configs/coverage/src/cli.ts): setup installs genhtml, html renders the
       # report, check enforces the threshold by parsing LCOV directly.
       - name: Setup coverage tooling
-        run: mcoverage setup
+        run: bunx mcoverage setup
         shell: bash
 
       - name: Generate coverage HTML
-        run: mcoverage html
+        run: bunx mcoverage html
         shell: bash
 
       - name: Upload coverage HTML artifact
@@ -18,7 +18,7 @@
 
       # Threshold comes from COVERAGE_THRESHOLD in configs/coverage/index.ts.
       - name: Check coverage threshold (mcoverage)
-        run: mcoverage check
+        run: bunx mcoverage check
         shell: bash
 
       - name: Report coverage to PR

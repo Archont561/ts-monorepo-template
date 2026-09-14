@@ -17,7 +17,7 @@
 
       - name: Build image for Trivy scan (if Dockerfile exists)
         if: hashFiles('{{APP_DOCKERFILE}}') != ''
-        run: mtrivy build
+        run: bunx mtrivy build
 
       - name: Trivy image scan (if Dockerfile)
         if: hashFiles('{{APP_DOCKERFILE}}') != ''

@@ -141,6 +141,16 @@ reverted once and re-landed last, after R12, which is why its commit follows the
    everything that remains is covered. The gate's floor (96.95%) and the bunfig's 0.80 are
    unchanged throughout.
 
+13. **A post-plan fix rides on the branch: the generated workflows could never find the
+   workspace bins.** Opening the PR ran the native workflow for the first time (it triggers on
+   changes under the native package) and its matrix step exited 127 — a bare `mnative` is not
+   on `PATH` in a `run:` step. The same held for about two dozen call sites (`mcoverage`,
+   `mbunup`, `mpages`, `mtrivy`, `mdocs`) across the four workflows. The fragments now invoke
+   them through `bunx`, the root workflows are regenerated from those fragments so the fix
+   survives the next regeneration, and the one static workflow is fixed in place. Nothing in
+   the refactor changed; the scaffold gate was re-run because the fragments ship into
+   generated projects (their workflows now resolve the bins too).
+
 ## Skipped / deferred
 
 | Proposal | Status | Reason |
@@ -175,6 +185,9 @@ bun run build          # 19/19 tasks, no bundle drift
 bun run coverage       # merges 7 reports → 21 lcov records
 bun run coverage:check # 99.52% (1037/1042) — threshold 80%, floor 96.95% untouched
 ```
+
+The branch tip additionally carries the CI fix from deviation 13 (workspace bins invoked through
+`bunx`), which leaves every figure above unchanged.
 
 Scaffold Gate, both variants at the final commit:
 

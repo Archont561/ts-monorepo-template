@@ -56,7 +56,7 @@ jobs:
       # attw runs with --profile esm-only: the template ships ESM-only
       # packages, so the strict profile's CJS resolutions are intentional.
       - name: Package health (publint + arethetypeswrong, via mbunup)
-        run: mbunup health
+        run: bunx mbunup health
 
       # TEMPLATE-ONLY:START(codeql)
       # CodeQL — SAST for JS/TS (opt-in, default true)
@@ -79,11 +79,11 @@ jobs:
       # (configs/coverage/src/cli.ts): setup installs genhtml, html renders the
       # report, check enforces the threshold by parsing LCOV directly.
       - name: Setup coverage tooling
-        run: mcoverage setup
+        run: bunx mcoverage setup
         shell: bash
 
       - name: Generate coverage HTML
-        run: mcoverage html
+        run: bunx mcoverage html
         shell: bash
 
       - name: Upload coverage HTML artifact
@@ -95,7 +95,7 @@ jobs:
 
       # Threshold comes from COVERAGE_THRESHOLD in configs/coverage/index.ts.
       - name: Check coverage threshold (mcoverage)
-        run: mcoverage check
+        run: bunx mcoverage check
         shell: bash
 
       - name: Report coverage to PR
@@ -131,32 +131,32 @@ jobs:
 
       - name: Cargo fmt check (mnative)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: mnative fmt:check
+        run: bunx mnative fmt:check
         shell: bash
 
       - name: Cargo clippy (deny warnings, mnative)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: mnative clippy
+        run: bunx mnative clippy
         shell: bash
 
       - name: Cargo check (fast, mnative)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: mnative check
+        run: bunx mnative check
         shell: bash
 
       - name: Cargo test (mnative)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: mnative test
+        run: bunx mnative test
         shell: bash
 
       - name: Build native bindings (host, mnative)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: mnative napi:build
+        run: bunx mnative napi:build
         shell: bash
 
       - name: Check native package types
         if: hashFiles('packages/native/npm/*/package.json') != ''
-        run: mnative typecheck
+        run: bunx mnative typecheck
         shell: bash
       # TEMPLATE-ONLY:END(native)
 
@@ -182,7 +182,7 @@ jobs:
 
       - name: Build image for Trivy scan (if Dockerfile exists)
         if: hashFiles('apps/example/Dockerfile') != ''
-        run: mtrivy build
+        run: bunx mtrivy build
 
       - name: Trivy image scan (if Dockerfile)
         if: hashFiles('apps/example/Dockerfile') != ''

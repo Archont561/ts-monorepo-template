@@ -46,7 +46,7 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - id: matrix
-        run: mnative matrix --gha >> "$GITHUB_OUTPUT"
+        run: bunx mnative matrix --gha >> "$GITHUB_OUTPUT"
 
   # Compile the bindings. Each job uploads its .node/.wasm; nothing here is
   # published — the fan-in job assembles the platform packages.
@@ -87,10 +87,10 @@ jobs:
           merge-multiple: true
 
       - name: Create platform package dirs
-        run: mnative create-npm-dirs
+        run: bunx mnative create-npm-dirs
 
       - name: Move binaries into their platform packages
-        run: mnative artifacts --dir {{NATIVE_DIR}}/npm/.artifacts
+        run: bunx mnative artifacts --dir {{NATIVE_DIR}}/npm/.artifacts
 
       - name: Upload npm packages
         uses: actions/upload-artifact@v4

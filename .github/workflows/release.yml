@@ -57,11 +57,11 @@ jobs:
 
       - name: Cargo build release (mnative)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: mnative build:release
+        run: bunx mnative build:release
         shell: bash
 
       - name: Build native bindings for release (napi via mnative)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: mnative napi:build
+        run: bunx mnative napi:build
         shell: bash
       # TEMPLATE-ONLY:END(native)

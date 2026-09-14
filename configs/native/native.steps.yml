@@ -31,7 +31,7 @@
 
       # One triple per job — `napi build` cannot cross-compile them all at once.
       - name: Build bindings
-        run: mnative napi:build --target ${{ matrix.target }}
+        run: bunx mnative napi:build --target ${{ matrix.target }}
         shell: bash
 
       - name: Upload bindings
