@@ -150,9 +150,8 @@ export class MonorepoScaffolder {
       "AGENTS.md",
       "CONTEXT.md",
       "LICENSE.md",
-      "packages/external/README.md",
-      "packages/internal/README.md",
-      "apps/example/README.md",
+      // The per-package and per-app docs are discovered below — every package
+      // and app directory carries its own README/AGENTS/CONTEXT.
 
       // Changesets
       ".changeset/config.json",
@@ -206,6 +205,17 @@ export class MonorepoScaffolder {
       ".editorconfig",
       ".gitattributes",
     ];
+
+    // Package and app documentation: README/AGENTS/CONTEXT live in every
+    // package and app directory, including the native workspace root, so they
+    // are discovered rather than enumerated.
+    const docsFiles =
+      await $`find ${this.targetDir}/packages ${this.targetDir}/apps -type f -name "*.md" -not -path "*/node_modules/*" -not -path "*/dist/*" -not -path "*/target/*" -not -path "*/.turbo/*"`
+        .text()
+        .catch(() => "");
+    for (const absolutePath of docsFiles.trim().split("\n").filter(Boolean)) {
+      files.push(absolutePath.replace(`${this.targetDir}/`, ""));
+    }
 
     // Native npm packages: one per binding crate (`crates/*` → `npm/*`), so
     // they are discovered rather than enumerated.
