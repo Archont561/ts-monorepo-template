@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { server } from "@src/index";
+import { server } from "@/src/index";
 
 describe("Server routes integration", () => {
   afterAll(async () => {

@@ -2,7 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import type { FeatureFiles } from "@src/features";
+import { file } from "bun";
+import type { FeatureFiles } from "@/src/features";
 import {
   appFile,
   detectFeatures,
@@ -11,8 +12,7 @@ import {
   nativeProvider,
   PROVIDERS,
   repoFile,
-} from "@src/features";
-import { file } from "bun";
+} from "@/src/features";
 
 /**
  * These live next to the app deliberately: the paths in `src/features.ts` are

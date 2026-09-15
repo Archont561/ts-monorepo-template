@@ -10,11 +10,20 @@ import { file } from "bun";
  * silently missed and the feature flags were always reported as off.
  */
 
-/** `apps/example/` — the app root that owns `public/` and `src/`. */
-const APP_ROOT = new URL(import.meta.url.includes("/dist/") ? "../" : "../../", import.meta.url);
+/**
+ * `apps/example/` — the app root that owns `public/` and `src/`.
+ *
+ * Exported so nothing else in the app has to spell a `../../` chain to reach it.
+ * The `/dist/` branch matters: the built bundle sits one level shallower than
+ * the source, so a single relative path is wrong in one of the two.
+ */
+export const APP_ROOT = new URL(
+  import.meta.url.includes("/dist/") ? "../" : "../../",
+  import.meta.url,
+);
 
 /** Repository root — the monorepo that owns `packages/` and `apps/`. */
-const REPO_ROOT = new URL(
+export const REPO_ROOT = new URL(
   import.meta.url.includes("/dist/") ? "../../../" : "../../../../",
   import.meta.url,
 );

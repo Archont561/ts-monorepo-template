@@ -4,8 +4,7 @@
     "rootDir": ".",
     "outDir": "./dist",
     "paths": {
-      "@src/*": ["./src/*"],
-      "@tests/*": ["./tests/*"]
+      "@/*": ["./*"]
     },
     "types": ["bun"]
   },

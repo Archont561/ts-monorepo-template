@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { resolve, sep } from "node:path";
+import { sep } from "node:path";
 import { $, file } from "bun";
 import fc from "fast-check";
 import {
@@ -9,6 +9,7 @@ import {
 } from "../../src/scaffold/features";
 import { TemplateHarness } from "../../src/scaffold/harness";
 import { MonorepoScaffolder } from "../../src/scaffold/pipeline";
+import { REPO_ROOT } from "../helpers";
 
 /**
  * Template combination tests — simulates common scaffolding flows
@@ -18,7 +19,6 @@ import { MonorepoScaffolder } from "../../src/scaffold/pipeline";
  * configs/package.json rather than hardcoded.
  */
 
-const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 const registry = await getRegisteredConfigs(REPO_ROOT);
 const { optInConfigs, buildDisabledConfigs, buildEnabledConfigs, buildDefaultConfigs } = registry;
 

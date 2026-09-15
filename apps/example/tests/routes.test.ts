@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import handleGreet from "@src/pages/api/greet/[name]";
-import handleApiIndex from "@src/pages/api/index";
-import handleShout from "@src/pages/api/shout/[name]";
-import handleHtml from "@src/pages/index";
+import handleGreet from "@/src/pages/api/greet/[name]";
+import handleApiIndex from "@/src/pages/api/index";
+import handleShout from "@/src/pages/api/shout/[name]";
+import handleHtml from "@/src/pages/index";
 
 const mockReq = new Request("http://localhost/");
 
@@ -80,7 +80,7 @@ describe("handleShout (page)", () => {
 describe("native routes (optional)", () => {
   test("native routes exist when native enabled", async () => {
     try {
-      const mod = await import("@src/pages/api/native/index");
+      const mod = await import("@/src/pages/api/native/index");
       const res = mod.default();
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -93,7 +93,7 @@ describe("native routes (optional)", () => {
 
   test("native add route works with fallback", async () => {
     try {
-      const mod = await import("@src/pages/api/native/add");
+      const mod = await import("@/src/pages/api/native/add");
       const req = new Request("http://localhost/api/native/add?a=5&b=7");
       const res = await mod.default(req);
       expect(res.status).toBe(200);
@@ -108,7 +108,7 @@ describe("native routes (optional)", () => {
 
   test("native status route works", async () => {
     try {
-      const mod = await import("@src/pages/api/native/status");
+      const mod = await import("@/src/pages/api/native/status");
       const res = await mod.default();
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -120,7 +120,7 @@ describe("native routes (optional)", () => {
 
   test("native fibonacci route works", async () => {
     try {
-      const mod = await import("@src/pages/api/native/fibonacci/[n]");
+      const mod = await import("@/src/pages/api/native/fibonacci/[n]");
       const res = mod.default(mockReq, { n: "5" });
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -132,7 +132,7 @@ describe("native routes (optional)", () => {
 
   test("native primes route works", async () => {
     try {
-      const mod = await import("@src/pages/api/native/primes/[n]");
+      const mod = await import("@/src/pages/api/native/primes/[n]");
       const res = await mod.default(mockReq, { n: "10" });
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -144,7 +144,7 @@ describe("native routes (optional)", () => {
 
   test("native reverse route works", async () => {
     try {
-      const mod = await import("@src/pages/api/native/reverse");
+      const mod = await import("@/src/pages/api/native/reverse");
       const res = await mod.default(new Request("http://localhost/api/native/reverse?text=hello"));
       expect(res.status).toBe(200);
       const data = await res.json();

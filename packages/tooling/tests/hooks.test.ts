@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { $ } from "bun";
 import { TOOLS, withOptionalTool } from "../src/utils/tools";
+import { REPO_ROOT } from "./helpers";
 
-const REPO_ROOT = join(import.meta.dir, "../../..");
 const BASE = join(REPO_ROOT, "packages/tooling/src/configs/lefthook.base.yml");
 
 interface HookCommand {

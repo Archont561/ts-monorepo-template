@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatLowercase, formatUppercase } from "@src/format";
+import { formatLowercase, formatUppercase } from "@/src/format";
 
 describe("formatUppercase", () => {
   test.each([

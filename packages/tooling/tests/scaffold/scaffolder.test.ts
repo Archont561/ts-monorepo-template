@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
 import { $, file, write } from "bun";
 import fc from "fast-check";
 import { removeJsonEntry } from "../../src/manifest/editor";
@@ -15,6 +14,7 @@ import {
   MonorepoScaffolder,
   stripMarkerBlocks,
 } from "../../src/scaffold/pipeline";
+import { REPO_ROOT } from "../helpers";
 
 /**
  * Reads the synthetic `scaffold` blocks a test wrote into its fixture and hands
@@ -1253,7 +1253,7 @@ async function pathExists(path: string): Promise<boolean> {
 // ── scaffold metadata vocabulary ─────────────────
 
 describe("scaffold metadata", () => {
-  const repoRoot = join(import.meta.dir, "../../../..");
+  const repoRoot = REPO_ROOT;
 
   test("the native select offers exactly the NATIVE_MODES values", async () => {
     const configs = await discoverConfigs(repoRoot);

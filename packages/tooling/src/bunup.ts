@@ -66,6 +66,10 @@ export const baseConfig: Preset = bunupDefineConfig({
   target: "node",
   minify: false,
   sourcemap: false,
+  // bunup would pick up the nearest tsconfig anyway; naming it keeps `@/*`
+  // resolution deterministic instead of depending on where the build is run
+  // from or on a tsconfig.build.json turning up later.
+  preferredTsconfig: "tsconfig.json",
 });
 
 /**

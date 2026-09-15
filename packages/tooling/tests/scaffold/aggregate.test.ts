@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { readdirSync, statSync } from "node:fs";
-import { resolve, sep } from "node:path";
+import { sep } from "node:path";
 import { $, file, Glob } from "bun";
+import { REPO_ROOT } from "../helpers";
 
 /** Minimal shape of a generated workflow, used to assert YAML validity. */
 type WorkflowFile = { jobs?: Record<string, { steps?: unknown[] }> };
@@ -20,7 +21,7 @@ import { getRegisteredConfigs } from "../../src/scaffold/features";
 import { TemplateHarness } from "../../src/scaffold/harness";
 import { MonorepoScaffolder } from "../../src/scaffold/pipeline";
 
-const registry = await getRegisteredConfigs(resolve(import.meta.dir, "../../../.."));
+const registry = await getRegisteredConfigs(REPO_ROOT);
 
 /** A job the generated CI must contain — throws so the failure names the job. */
 function jobOf(ci: CIWorkflow, name: string): CIJob {

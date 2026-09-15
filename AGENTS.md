@@ -58,6 +58,32 @@ State the tool, not the category — every one of these replaces a more common d
 - **Never run `bun test` at the repo root** for package work — use `bun run test` (Turbo) or `--filter <pkg>`.
 - **Never hand-write a workflow.** Edit `packages/tooling/src/ci/`, then run `bun run docs:sync`.
 
+## Imports
+
+Exactly three import forms are allowed. Anything else is a bug waiting for a
+directory move.
+
+| Form | Use it for | Example |
+| :--- | :--- | :--- |
+| `./relative` | A sibling or child in the same directory tree | `./features/paths` |
+| `@/path` | Anything else inside the **same** package or app | `@/src/features/paths` |
+| `@npm-package` | A dependency, workspace or third-party | `@myorg/external`, `citty` |
+
+`@` is the package or app root, mapped by `"paths": { "@/*": ["./*"] }` in that
+package's own `tsconfig.json`. bunup resolves it through `preferredTsconfig`, so
+the alias works in the build as well as in the editor.
+
+**Never write a `../../../` chain.** It is silently wrong the moment a file
+moves one level, and the failure is a missed lookup rather than an error. For
+filesystem paths (as opposed to module imports) use the exported root constant
+instead — `APP_ROOT` / `REPO_ROOT` from `apps/example/src/features/paths.ts`, or
+`pkgRoot()` / `repoRoot()` from `packages/tooling/src/utils/paths.ts`.
+
+The runtime constants matter for a second reason: the bundler moves files, so a
+path derived from `import.meta.dir` in shipped code resolves differently before
+and after the build. Tests are never bundled, which is why `tests/helpers.ts`
+can derive `REPO_ROOT` from `import.meta.dir` safely.
+
 ## Command conventions
 
 Every tool is reached through an `m`-prefixed bin that bakes in its config path. Bins are linked into `node_modules/.bin` on install — the root ships zero `devDependencies`.

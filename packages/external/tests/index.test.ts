@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatUppercase, greetUser, type UserProfile } from "@src/index";
+import { formatUppercase, greetUser, type UserProfile } from "@/src/index";
 
 describe("external package public API", () => {
   test("exports greetUser", () => {

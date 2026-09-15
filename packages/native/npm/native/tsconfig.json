@@ -1,6 +1,9 @@
 {
   "extends": "@myorg/tooling/library.json",
   "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"]
+    },
     "rootDir": ".",
     "outDir": "./dist",
     "types": ["bun"]
