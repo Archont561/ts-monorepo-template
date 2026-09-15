@@ -14,8 +14,12 @@ license    = "MIT"
 repository = "https://github.com/Archont561/ts-monorepo-template"
 
 [workspace.dependencies]
-# napi crates — pinned together
-napi         = { version = "3", features = ["napi4"] }
+# napi crates — pinned together.
+# `async` is required, not optional: `#[napi] pub async fn` expands to
+# `napi::bindgen_prelude::execute_tokio_future_with_finalize_callback`, which
+# only exists when the `async` feature is on. Without it the crate fails with
+# E0425 "cannot find function ... in module napi::bindgen_prelude".
+napi         = { version = "3", features = ["napi4", "async"] }
 napi-derive  = "3"
 napi-build   = "2"
 shared       = { path = "crates/shared" }
