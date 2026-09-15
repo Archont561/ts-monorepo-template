@@ -206,10 +206,13 @@ post-checkout:
   commands:
     install:
       run: |
-        # $1 = previous HEAD, $2 = new HEAD, $3 = 1 for a branch checkout.
-        # A file checkout ($3 = 0) cannot change a lockfile, so skip it.
-        [ "$3" = "1" ] || exit 0
-        if ! git diff --quiet "$1" "$2" -- bun.lock Cargo.lock packages/native/Cargo.lock 2>/dev/null; then
+        # Lefthook substitutes hook arguments as {1}/{2}/{3} templates — it does
+        # not pass them as shell positional parameters, so `$1`/`$3` would be
+        # empty here and the hook would silently skip every time.
+        #   {1} = previous HEAD, {2} = new HEAD, {3} = 1 for a branch checkout.
+        # A file checkout ({3} = 0) cannot move a lockfile, so skip it.
+        [ "{3}" = "1" ] || exit 0
+        if ! git diff --quiet "{1}" "{2}" -- bun.lock Cargo.lock packages/native/Cargo.lock 2>/dev/null; then
           echo "🔒 Lockfile changed — running bun install"
           bun install
         fi

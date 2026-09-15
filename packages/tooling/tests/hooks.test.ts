@@ -127,7 +127,25 @@ describe("hook design rules", () => {
   });
 
   test("post-checkout ignores file checkouts, which cannot move a lockfile", () => {
-    expect(run("post-checkout", "install")).toContain('[ "$3" = "1" ]');
+    expect(run("post-checkout", "install")).toContain('[ "{3}" = "1" ]');
+  });
+
+  // Lefthook substitutes hook arguments as {n} templates; it does not pass them
+  // as shell positional parameters. Using $1/$2/$3 compiles and runs, and then
+  // silently skips on every invocation — which looks identical to a pass.
+  test("hook arguments use lefthook templates, never shell positionals", () => {
+    for (const { hook, name, run: block } of runBlocks()) {
+      // Only executable lines count — the comments in this file discuss $1/$3
+      // precisely to explain why they must not be used.
+      const code = block
+        .split("\n")
+        .filter((line) => !line.trim().startsWith("#"))
+        .join("\n");
+      expect(
+        /\$[1-9]/.test(code),
+        `${hook}.${name} reads $1..$9, which lefthook leaves empty`,
+      ).toBe(false);
+    }
   });
 
   // `m test` / `m typecheck` run a bare tool at the repo root, where there is no
