@@ -1,0 +1,72 @@
+      - uses: actions/checkout@v7
+
+      # The napi-rs images are Debian-based but ship neither `unzip` nor a musl
+      # libc toolchain, and both are needed before anything else can run:
+      #   * `oven-sh/setup-bun` downloads Bun as a .zip and extracts it by
+      #     shelling out to `unzip` — without it the step dies with "Unable to
+      #     locate executable file: unzip" before a single crate is compiled.
+      #   * the musl target needs `musl-gcc`; napi runs a plain
+      #     `cargo build --target <triple>`, so cargo takes the linker from the
+      #     standard CARGO_TARGET_*_LINKER variable set just below.
+      # Runs before setup-bun on purpose — it is the step that needs unzip.
+      - name: Install container prerequisites
+        if: matrix.container != ''
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends unzip ca-certificates musl-tools
+        shell: bash
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: {{BUN_VERSION}}
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "{{NATIVE_DIR}}"
+          key: ${{ matrix.target }}
+
+      # `rust-toolchain.toml` pins the channel only, so a non-host target has to
+      # be added by the job that builds it — the step above does that. musl
+      # additionally needs its linker named, because the host linker produces
+      # glibc binaries.
+      - name: Use musl-gcc as the linker
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc" >> "$GITHUB_ENV"
+        shell: bash
+
+      # The WASI SDK provides the clang that links wasm32-wasip1-threads.
+      - name: Install WASI SDK
+        if: matrix.wasi
+        run: |
+          set -euo pipefail
+          curl -fsSL -o wasi-sdk.tar.gz \
+            "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VERSION}/wasi-sdk-${WASI_SDK_VERSION}.0-x86_64-linux.tar.gz"
+          mkdir -p "${RUNNER_TEMP}/wasi-sdk"
+          tar -xzf wasi-sdk.tar.gz -C "${RUNNER_TEMP}/wasi-sdk" --strip-components=1
+          echo "WASI_SDK_PATH=${RUNNER_TEMP}/wasi-sdk" >> "$GITHUB_ENV"
+        shell: bash
+
+      - run: bun install --frozen-lockfile
+
+      # One triple per job — `napi build` cannot cross-compile them all at once.
+      - name: Build bindings
+        run: bunx m native napi:build --target ${{ matrix.target }}
+        shell: bash
+
+      - name: Upload bindings
+        uses: actions/upload-artifact@v6
+        with:
+          name: bindings-${{ matrix.target }}
+          path: |
+            {{NATIVE_DIR}}/npm/*/*.node
+            {{NATIVE_DIR}}/npm/*/*.wasm
+            {{NATIVE_DIR}}/npm/*/*.mjs
+            {{NATIVE_DIR}}/npm/*/*.cjs
+          if-no-files-found: error

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { greetUser, type UserProfile } from "@src/user";
+import { greetUser, type UserProfile } from "@/src/user";
 
 describe("greetUser", () => {
   const user: UserProfile = {

@@ -1,2 +1,0 @@
-      - name: E2E tests
-        run: bun run test:e2e

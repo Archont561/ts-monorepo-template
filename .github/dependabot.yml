@@ -1,5 +1,5 @@
-# AUTO-GENERATED from configs/*/dependabot.yml — do not edit directly
-# Edit fragments in configs/*/dependabot.yml then run bun run docs:sync (mdocs)
+# AUTO-GENERATED from packages/tooling/src/ci/fragments/dependabot/ — do not edit directly
+# Edit those fragments then run bun run docs:sync (m docs)
 version: 2
 updates:
   # npm — Bun workspaces (package.json / bun.lock)
@@ -23,7 +23,6 @@ updates:
           - "biome*"
           - "turbo"
           - "playwright*"
-          - "unocss*"
         update-types:
           - "minor"
           - "patch"
@@ -33,7 +32,6 @@ updates:
           - "biome*"
           - "turbo"
           - "playwright*"
-          - "unocss*"
           - "typescript"
           - "@myorg/*"
         update-types:

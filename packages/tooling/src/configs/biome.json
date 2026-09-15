@@ -1,0 +1,116 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "noNonNullAssertion": "warn",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "bunup": "Use @myorg/bunup instead of bunup directly. Import defineConfig from @myorg/bunup."
+            }
+          }
+        }
+      },
+      "correctness": {
+        "noUnusedVariables": "warn",
+        "noUnusedImports": "error"
+      }
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/packages/tooling/src/configs",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.vitepress/cache",
+      "!**/.turbo",
+      "!**/coverage",
+      "!**/test-results",
+      "!**/playwright-report",
+      "!**/.pages"
+    ]
+  },
+  "overrides": [
+    {
+      "includes": [
+        "packages/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "bunup": "Use @myorg/bunup instead of bunup directly. Import defineConfig from @myorg/bunup.",
+                  "@myorg/example": "Packages and configs must not depend on apps \u2014 apps consume packages, never the reverse."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/internal/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "bunup": "Use @myorg/bunup instead of bunup directly. Import defineConfig from @myorg/bunup.",
+                  "@myorg/external": "internal must not depend on external \u2014 it is inlined into external at build time, so this would be circular.",
+                  "@myorg/example": "Packages and configs must not depend on apps \u2014 apps consume packages, never the reverse."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "packages/tooling/src/bunup.ts",
+        "packages/tooling/bunup.config.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    }
+  ]
+}

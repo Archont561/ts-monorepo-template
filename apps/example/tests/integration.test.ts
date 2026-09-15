@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { server } from "@src/index";
+import { server } from "@/src/index";
 
 describe("Server routes integration", () => {
   afterAll(async () => {
@@ -40,12 +40,6 @@ describe("Server routes integration", () => {
     const res = await fetch(`http://localhost:${server.port}/health`);
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("OK");
-  });
-
-  test("GET /uno.css returns CSS", async () => {
-    const res = await fetch(`http://localhost:${server.port}/uno.css`);
-    expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toContain("text/css");
   });
 
   test("GET /favicon.ico handles static asset", async () => {

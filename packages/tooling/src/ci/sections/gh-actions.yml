@@ -1,0 +1,3 @@
+# SECTION: quality
+      - name: Validate workflows
+        run: bun run ci:lint

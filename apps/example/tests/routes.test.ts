@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import handleGreet from "@src/pages/api/greet/[name]";
-import handleApiIndex from "@src/pages/api/index";
-import handleShout from "@src/pages/api/shout/[name]";
-import handleHtml from "@src/pages/index";
+import handleGreet from "@/src/pages/api/greet/[name]";
+import handleApiIndex from "@/src/pages/api/index";
+import handleShout from "@/src/pages/api/shout/[name]";
+import handleHtml from "@/src/pages/index";
 
 const mockReq = new Request("http://localhost/");
 
@@ -13,25 +13,11 @@ describe("handleHtml (page)", () => {
     expect(response.headers.get("content-type")).toContain("text/html");
   });
 
-  test("contains greeting div (plain or unocss)", async () => {
+  test("serves the greeting page", async () => {
     const response = await handleHtml();
     const html = await response.text();
-    // Plain version has <div id="greeting">Hello, World!</div>
-    // UnoCSS version has more complex structure but still has greeting
-    expect(html).toMatch(/greeting/i);
     expect(html).toContain("<!doctype html>");
-  });
-
-  test("unocss version has utility classes when enabled", async () => {
-    const response = await handleHtml();
-    const html = await response.text();
-    // If unocss file exists, it should contain utility classes
-    // Otherwise plain version is ok
-    if (html.includes("UnoCSS") || html.includes("unocss")) {
-      expect(html).toMatch(/class=.*flex/);
-    } else {
-      expect(html).toContain("Hello, World!");
-    }
+    expect(html).toContain('<div id="greeting">Hello, World!</div>');
   });
 });
 
@@ -60,7 +46,7 @@ describe("handleApiIndex (page)", () => {
     const data = await response.json();
     // `features` comes from the providers; the endpoint list is built from the
     // same providers, so the two must agree in every checkout.
-    expect(data.features.unocss).toBe(data.endpoints.includes("/uno.css"));
+    expect(data.features.native).toBe(data.endpoints.includes("/api/native"));
   });
 });
 
@@ -94,7 +80,7 @@ describe("handleShout (page)", () => {
 describe("native routes (optional)", () => {
   test("native routes exist when native enabled", async () => {
     try {
-      const mod = await import("@src/pages/api/native/index");
+      const mod = await import("@/src/pages/api/native/index");
       const res = mod.default();
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -107,7 +93,7 @@ describe("native routes (optional)", () => {
 
   test("native add route works with fallback", async () => {
     try {
-      const mod = await import("@src/pages/api/native/add");
+      const mod = await import("@/src/pages/api/native/add");
       const req = new Request("http://localhost/api/native/add?a=5&b=7");
       const res = await mod.default(req);
       expect(res.status).toBe(200);
@@ -122,7 +108,7 @@ describe("native routes (optional)", () => {
 
   test("native status route works", async () => {
     try {
-      const mod = await import("@src/pages/api/native/status");
+      const mod = await import("@/src/pages/api/native/status");
       const res = await mod.default();
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -134,7 +120,7 @@ describe("native routes (optional)", () => {
 
   test("native fibonacci route works", async () => {
     try {
-      const mod = await import("@src/pages/api/native/fibonacci/[n]");
+      const mod = await import("@/src/pages/api/native/fibonacci/[n]");
       const res = mod.default(mockReq, { n: "5" });
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -146,7 +132,7 @@ describe("native routes (optional)", () => {
 
   test("native primes route works", async () => {
     try {
-      const mod = await import("@src/pages/api/native/primes/[n]");
+      const mod = await import("@/src/pages/api/native/primes/[n]");
       const res = await mod.default(mockReq, { n: "10" });
       expect(res.status).toBe(200);
       const data = await res.json();
@@ -158,7 +144,7 @@ describe("native routes (optional)", () => {
 
   test("native reverse route works", async () => {
     try {
-      const mod = await import("@src/pages/api/native/reverse");
+      const mod = await import("@/src/pages/api/native/reverse");
       const res = await mod.default(new Request("http://localhost/api/native/reverse?text=hello"));
       expect(res.status).toBe(200);
       const data = await res.json();

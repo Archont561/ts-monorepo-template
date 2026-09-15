@@ -1,0 +1,40 @@
+[test]
+coverage = true
+coverageReporter = ["text", "lcov"]
+coverageDir = "./coverage"
+coverageSkipTestFiles = true
+# Mirrors COVERAGE_THRESHOLD (80%) in configs/coverage/index.ts, which
+# mcoverage check enforces in CI — expressed as a fraction here.
+coverageThreshold = { lines = 0.80, functions = 0.80 }
+coveragePathIgnorePatterns = [
+  "**/*.test.ts",
+  "**/*.spec.ts",
+  "**/e2e/**",
+  "**/dist/**",
+  "**/node_modules/**",
+  "**/bunup.config.ts",
+  "**/playwright.config.ts",
+  # Entry points and the scaffolder's own plumbing: they only ever run against
+  # a temporary copy of the repo, so a package's own test run cannot reach them.
+  # These were spelled `**/src/<name>.ts` when they lived in configs/template/src/;
+  # R27 moved them into the tooling package, so the paths are updated to match.
+  "**/src/cli.ts",
+  "**/src/run.ts",
+  "**/commands/e2e.ts",
+  "**/commands/docs.ts",
+  "**/commands/setup.ts",
+  "**/scaffold/collector.ts",
+  "**/scaffold/harness.ts",
+  "**/scaffold/aggregator.ts",
+  # Shared code is covered by the package that owns it: an import of the
+  # manifest editor would otherwise be judged by whichever package happens to
+  # import it.
+  "**/manifest/editor.ts",
+  "**/utils/spawn.ts",
+  "**/*.node",
+  "**/*.wasi.cjs",
+  "**/target/**",
+  "**/.devcontainer/**",
+  "**/apps/example/src/index.ts",
+  "**/pages/index.ts",
+]

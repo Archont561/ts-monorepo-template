@@ -14,7 +14,7 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: ${{ !env.ACT }}
         with:
           fetch-depth: 0
@@ -55,13 +55,13 @@ jobs:
         with:
           workspaces: "packages/native"
 
-      - name: Cargo build release (mnative)
+      - name: Cargo build release (m native)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: bunx mnative build:release
+        run: bunx m native build:release
         shell: bash
 
-      - name: Build native bindings for release (napi via mnative)
+      - name: Build native bindings for release (napi via m native)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: bunx mnative napi:build
+        run: bunx m native napi:build
         shell: bash
       # TEMPLATE-ONLY:END(native)

@@ -1,12 +1,11 @@
 {
-  "extends": "@myorg/ts/app.json",
+  "extends": "@myorg/tooling/app.json",
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "./dist",
     "types": ["bun"],
     "paths": {
-      "@src/*": ["./src/*"],
-      "@tests/*": ["./tests/*"]
+      "@/*": ["./*"]
     }
   },
   "include": ["src", "tests", "e2e"],

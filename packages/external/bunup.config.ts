@@ -1,4 +1,4 @@
-import { baseConfig, defineConfig } from "@myorg/bunup";
+import { baseConfig, defineConfig } from "@myorg/tooling/bunup";
 
 export default defineConfig({
   ...baseConfig,

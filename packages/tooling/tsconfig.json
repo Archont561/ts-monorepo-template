@@ -1,0 +1,15 @@
+{
+  "extends": "./src/configs/library.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "rootDir": ".",
+    "outDir": "./dist",
+    "types": ["bun"]
+  },
+  "include": ["src", "tests"],
+  // src/configs holds config *assets* the tools load themselves at runtime
+  // not part of this package's typechecked sources.
+  "exclude": ["node_modules", "dist", "src/configs"]
+}

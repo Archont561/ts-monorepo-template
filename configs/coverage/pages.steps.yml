@@ -1,7 +1,0 @@
-      # TEMPLATE-ONLY:START(pages)
-      # Runs after `mpages build`: that wipes and rebuilds .pages/ from the
-      # packages that declare one, so coverage has to be copied in afterwards.
-      - name: Publish coverage to Pages (mcoverage)
-        run: bunx mcoverage pages
-        shell: bash
-      # TEMPLATE-ONLY:END(pages)

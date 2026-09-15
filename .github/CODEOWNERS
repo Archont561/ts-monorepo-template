@@ -9,5 +9,5 @@
 # /packages/auth/** @myorg/security-team
 # *.rs @myorg/rust-team
 # /apps/** @myorg/frontend-team
-# /configs/** @myorg/platform-team
+# /packages/tooling/** @myorg/platform-team
 # *.md @myorg/docs-team

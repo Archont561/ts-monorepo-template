@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createGreeting } from "@src/greeting";
+import { createGreeting } from "@/src/greeting";
 
 describe("createGreeting", () => {
   test.each([

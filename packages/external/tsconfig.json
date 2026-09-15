@@ -1,11 +1,10 @@
 {
-  "extends": "@myorg/ts/library.json",
+  "extends": "@myorg/tooling/library.json",
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "./dist",
     "paths": {
-      "@src/*": ["./src/*"],
-      "@tests/*": ["./tests/*"]
+      "@/*": ["./*"]
     },
     "types": ["bun"]
   },

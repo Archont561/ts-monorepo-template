@@ -13,5 +13,5 @@ export {
   type NativeBinding,
   reverseString,
   reverseStringFallback,
-} from "@src/native";
-export { greetUser, type UserProfile } from "@src/user";
+} from "@/src/native";
+export { greetUser, type UserProfile } from "@/src/user";

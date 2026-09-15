@@ -10,7 +10,7 @@ import {
   isNativeAvailable,
   reverseString,
   reverseStringFallback,
-} from "@src/native";
+} from "@/src/native";
 
 describe("native fallback", () => {
   test.each([

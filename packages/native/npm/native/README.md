@@ -127,6 +127,6 @@ bun run build:wasm
 
 ## References
 
-- [configs/native](../../../configs/native/README.md) — the config that owns this layout and the CI matrix
+- `packages/tooling` — the CLI and CI matrix that own this layout
 - [napi-rs](https://napi.rs)
 - [Cargo Book — workspaces](https://doc.rust-lang.org/cargo/reference/workspaces.html)

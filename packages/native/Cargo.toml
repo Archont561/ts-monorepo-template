@@ -14,8 +14,12 @@ license    = "MIT"
 repository = "https://github.com/Archont561/ts-monorepo-template"
 
 [workspace.dependencies]
-# napi crates — pinned together
-napi         = { version = "3", features = ["napi4"] }
+# napi crates — pinned together.
+# `async` is required, not optional: `#[napi] pub async fn` expands to
+# `napi::bindgen_prelude::execute_tokio_future_with_finalize_callback`, which
+# only exists when the `async` feature is on. Without it the crate fails with
+# E0425 "cannot find function ... in module napi::bindgen_prelude".
+napi         = { version = "3", features = ["napi4", "async"] }
 napi-derive  = "3"
 napi-build   = "2"
 shared       = { path = "crates/shared" }
@@ -23,7 +27,15 @@ shared       = { path = "crates/shared" }
 [workspace.lints.rust]
 # pedantic is left off on purpose: #[napi] generates code that trips it,
 # and CI runs clippy with -D warnings.
-unsafe_code = "forbid"
+#
+# deny, NOT forbid. `#[napi]` expands to `unsafe` code wrapped in its own
+# `#[allow(unsafe_code)]`, and `forbid` is by definition unoverruled by an inner
+# `allow` — so with `forbid` every `#[napi]` attribute fails to compile with
+# E0453 "allow(unsafe_code) incompatible with previous forbid", which then
+# cascades into E0425 for everything the aborted expansion never generated.
+# `deny` keeps the guarantee we actually want (any `unsafe` we write is a hard
+# error) while letting a proc macro relax it for the code it emits.
+unsafe_code = "deny"
 
 [workspace.lints.clippy]
 all = "warn"

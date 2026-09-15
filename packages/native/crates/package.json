@@ -3,11 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "mnative build --pure",
-    "test": "mnative test --pure",
-    "cargo:check": "mnative check --pure",
-    "cargo:clippy": "mnative clippy --pure",
-    "cargo:fmt": "mnative fmt --pure",
-    "cargo:fmt:check": "mnative fmt:check --pure"
+    "build": "m native build --pure",
+    "test": "m native test --pure",
+    "cargo:check": "m native check --pure",
+    "cargo:clippy": "m native clippy --pure",
+    "cargo:fmt": "m native fmt --pure",
+    "cargo:fmt:check": "m native fmt:check --pure"
   }
 }

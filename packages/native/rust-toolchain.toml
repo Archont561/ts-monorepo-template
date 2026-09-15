@@ -1,4 +1,19 @@
+# The channel only.
+#
+# Components and targets are deliberately NOT pinned here: a `rust-toolchain.toml`
+# override applies to *every* cargo/rustc/rustfmt invocation under this
+# directory, and rustup refuses to run at all when the installed toolchain is
+# missing a component or target the file demands. That turns "I don't have the
+# wasm target" into "no cargo command in this repo works" — including the plain
+# `cargo build`/`cargo test` that `m native build|test` run and that the CI
+# quality job invokes with nothing but the runner's preinstalled toolchain.
+#
+# What actually needs the extra pieces installs them explicitly:
+#   * CI's native job — `dtolnay/rust-toolchain@stable` with
+#     `components: clippy, rustfmt` and `targets: wasm32-wasip1-threads`.
+#   * CI's per-target build matrix — the same action with `targets:` set to the
+#     triple that job builds.
+#   * a laptop, on demand — `rustup component add clippy rustfmt` and
+#     `rustup target add wasm32-wasip1-threads`.
 [toolchain]
 channel = "stable"
-components = ["rustfmt", "clippy"]
-targets = ["wasm32-wasip1-threads"]

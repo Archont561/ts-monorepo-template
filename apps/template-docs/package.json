@@ -7,10 +7,10 @@
     "build": "vitepress build",
     "dev": "vitepress dev",
     "preview": "vitepress preview",
-    "typecheck": "mtsc --noEmit"
+    "typecheck": "m typecheck --noEmit"
   },
   "devDependencies": {
-    "@myorg/ts": "workspace:*",
+    "@myorg/tooling": "workspace:*",
     "vitepress": "^1.6.4"
   }
 }

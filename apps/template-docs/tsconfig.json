@@ -1,6 +1,9 @@
 {
-  "extends": "@myorg/ts/app.json",
+  "extends": "@myorg/tooling/app.json",
   "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"]
+    },
     "rootDir": ".",
     "types": ["bun"]
   },

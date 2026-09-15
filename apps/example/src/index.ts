@@ -1,5 +1,5 @@
 import { serve } from "bun";
-import { appFile, detectFeatures, hasUnocss } from "./features";
+import { appFile, detectFeatures } from "./features";
 import handleGreet from "./pages/api/greet/[name]";
 import handleApiIndex from "./pages/api/index";
 // TEMPLATE-ONLY:START(native)
@@ -14,16 +14,10 @@ import handleShout from "./pages/api/shout/[name]";
 import handleHtml from "./pages/index";
 import { PORT } from "./port";
 
-/** How long the generated CSS may be cached — the build is deterministic. */
-const CSS_CACHE_MAX_AGE_SECONDS = 60;
-
 // Detect opt-in features via file existence (handled via scaffold file deletion)
 const { native: nativeEnabled } = await detectFeatures();
-const unocssEnabled = await hasUnocss();
 
-console.log(
-  `🔍 Features: unocss=${unocssEnabled ? "yes" : "no"}, native=${nativeEnabled ? "yes" : "no"}`,
-);
+console.log(`🔍 Features: native=${nativeEnabled ? "yes" : "no"}`);
 
 export const server = serve({
   port: PORT,
@@ -43,24 +37,6 @@ export const server = serve({
 
     // Dynamic shouting route
     "/api/shout/:name": (req) => handleShout(req, req.params),
-
-    // UnoCSS generated CSS
-    // TEMPLATE-ONLY:START(unocss)
-    "/uno.css": async () => {
-      try {
-        const unoCssFile = appFile("public/uno.css");
-        if (await unoCssFile.exists()) {
-          return new Response(await unoCssFile.text(), {
-            headers: {
-              "Content-Type": "text/css; charset=utf-8",
-              "Cache-Control": `public, max-age=${CSS_CACHE_MAX_AGE_SECONDS}`,
-            },
-          });
-        }
-      } catch {}
-      return new Response("/* UnoCSS not built */", { headers: { "Content-Type": "text/css" } });
-    },
-    // TEMPLATE-ONLY:END(unocss)
 
     // Native Node-API routes
     // TEMPLATE-ONLY:START(native)
@@ -120,5 +96,4 @@ export const server = serve({
 });
 
 console.log(`🚀 http://localhost:${server.port}`);
-console.log(`   / → ${unocssEnabled ? "UnoCSS version" : "plain"} index.html`);
 if (nativeEnabled) console.log(`   /api/native → Rust bindings (with JS fallback)`);

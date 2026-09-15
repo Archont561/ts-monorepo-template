@@ -7,26 +7,21 @@
     "dir": "public"
   },
   "scripts": {
-    "dev": "mbun --hot src/index.ts",
-    "build": "mbunup",
-    "start": "mbun dist/index.js",
-    "typecheck": "mtsc --noEmit",
-    "test": "mbun test tests/",
-    "test:watch": "mbun test tests/ --watch",
-    "coverage": "mbun test tests/ --coverage",
-    "test:e2e": "me2e",
-    "build:css": "munocss build",
-    "build:css:watch": "munocss watch"
+    "dev": "m bun --hot src/index.ts",
+    "build": "m build",
+    "start": "m bun dist/index.js",
+    "typecheck": "m typecheck --noEmit",
+    "test": "m bun test tests/",
+    "test:watch": "m bun test tests/ --watch",
+    "coverage": "m bun test tests/ --coverage",
+    "test:e2e": "m e2e"
   },
   "dependencies": {
     "@myorg/external": "workspace:*"
   },
   "devDependencies": {
-    "@myorg/bunup": "workspace:*",
-    "@myorg/ts": "workspace:*",
-    "@myorg/playwright": "workspace:*",
-    "@myorg/unocss": "workspace:*",
     "@myorg/native": "workspace:*",
+    "@myorg/tooling": "workspace:*",
     "@playwright/test": "^1.63.0"
   }
 }
