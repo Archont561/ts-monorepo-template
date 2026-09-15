@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { readdirSync, statSync } from "node:fs";
 import { sep } from "node:path";
 import { $, file, Glob } from "bun";
-import { REPO_ROOT } from "../helpers";
+import { REPO_ROOT } from "@/tests/helpers";
 
 /** Minimal shape of a generated workflow, used to assert YAML validity. */
 type WorkflowFile = { jobs?: Record<string, { steps?: unknown[] }> };
@@ -16,10 +16,10 @@ type CIJob = {
 };
 type CIWorkflow = { jobs: Record<string, CIJob> };
 
-import { regenerateAll } from "../../src/scaffold/aggregator";
-import { getRegisteredConfigs } from "../../src/scaffold/features";
-import { TemplateHarness } from "../../src/scaffold/harness";
-import { MonorepoScaffolder } from "../../src/scaffold/pipeline";
+import { regenerateAll } from "@/src/scaffold/aggregator";
+import { getRegisteredConfigs } from "@/src/scaffold/features";
+import { TemplateHarness } from "@/src/scaffold/harness";
+import { MonorepoScaffolder } from "@/src/scaffold/pipeline";
 
 const registry = await getRegisteredConfigs(REPO_ROOT);
 

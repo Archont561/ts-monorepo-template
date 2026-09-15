@@ -1,4 +1,4 @@
-import { defineCommand, rawArgsAfter } from "../utils/spawn";
+import { defineCommand, rawArgsAfter } from "@/src/utils/spawn";
 import { runActionlint } from "./ci";
 
 /** `m ci:lint` — shorthand for `m ci lint`. The `mci lint` equivalent. */

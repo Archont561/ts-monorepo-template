@@ -8,11 +8,11 @@ import {
   setJsonBlock,
   setJsonValue,
   updateManifestFile,
-} from "../manifest/editor";
+} from "@/src/manifest/editor";
 // Setup scripts run inside a freshly copied project, before `bun install`, so
 // they cannot resolve workspace packages by name — the shared editor and the
 // path helpers are imported by relative path instead.
-import { CONFIGS_RELATIVE } from "../utils/paths";
+import { CONFIGS_RELATIVE } from "@/src/utils/paths";
 import {
   DEFAULT_NATIVE_CRATES,
   DEFAULT_NATIVE_SCOPE,

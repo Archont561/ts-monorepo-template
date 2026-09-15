@@ -1,15 +1,15 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { resolveConfig } from "../utils/paths";
+import { resolveConfig } from "@/src/utils/paths";
 import {
   defineCommand,
   defineSpawnSubcommand,
   rawArgsAfter,
   runMain,
   spawnTool,
-} from "../utils/spawn";
-import { skipMissingTool, TOOLS, withOptionalTool } from "../utils/tools";
+} from "@/src/utils/spawn";
+import { skipMissingTool, TOOLS, withOptionalTool } from "@/src/utils/tools";
 
 const ACT_FLAGS = [
   "-P",

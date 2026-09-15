@@ -2,7 +2,7 @@ import { mkdir, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { $, file, write } from "bun";
 import { defineCommand, runCommand } from "citty";
-import { curatedSkillsDir, pkgRoot } from "../utils/paths";
+import { curatedSkillsDir, pkgRoot } from "@/src/utils/paths";
 
 /** Scope the curated skills are written with — rewritten by the scaffolder. */
 const DEFAULT_SKILLS_SCOPE = "@myorg";

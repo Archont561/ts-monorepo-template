@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { file, write } from "bun";
-import { resolveConfig } from "../utils/paths";
-import { defineCommand, rawArgsAfter, runMain, spawnTool } from "../utils/spawn";
+import { resolveConfig } from "@/src/utils/paths";
+import { defineCommand, rawArgsAfter, runMain, spawnTool } from "@/src/utils/spawn";
 
 export async function minit(target = "changeset"): Promise<void> {
   if (target !== "changeset") {

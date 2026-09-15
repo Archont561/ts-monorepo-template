@@ -1,4 +1,4 @@
-import { defineCommand } from "../utils/spawn";
+import { defineCommand } from "@/src/utils/spawn";
 
 /** CodeQL runs in GitHub Actions, not locally — this is guidance only. */
 export default defineCommand({

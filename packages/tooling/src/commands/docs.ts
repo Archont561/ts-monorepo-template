@@ -7,8 +7,8 @@ import { cp, rm } from "node:fs/promises";
 const PAGES_STAGING_DIR = ".pages";
 
 import { spawnSync } from "bun";
-import { regenerateAll } from "../scaffold/aggregator";
-import { defineCommand } from "../utils/spawn";
+import { regenerateAll } from "@/src/scaffold/aggregator";
+import { defineCommand } from "@/src/utils/spawn";
 
 /** The template-only VitePress app — a workspace like any other. */
 const DOCS_APP = "apps/template-docs";

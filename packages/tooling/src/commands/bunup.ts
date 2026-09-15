@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { Glob } from "bun";
-import { defineCommand, defineWrapperCommand, spawnTool } from "../utils/spawn";
+import { defineCommand, defineWrapperCommand, spawnTool } from "@/src/utils/spawn";
 
 /**
  * Workspace globs from the root package.json. Read rather than hardcoded so

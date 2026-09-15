@@ -1,7 +1,7 @@
 import { cp, rm } from "node:fs/promises";
 import { relative } from "node:path";
 import { $ } from "bun";
-import { repoRoot } from "../utils/paths";
+import { repoRoot } from "@/src/utils/paths";
 
 /**
  * Compiles rsync-style include/exclude patterns into a matcher over a

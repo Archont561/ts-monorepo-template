@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { cp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { Glob, spawnSync } from "bun";
-import { defineCommand, spawnTool } from "../utils/spawn";
+import { defineCommand, spawnTool } from "@/src/utils/spawn";
 import {
   discoverPages,
   PAGES_COVERAGE_SUBDIR,

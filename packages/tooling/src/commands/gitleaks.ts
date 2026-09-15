@@ -4,8 +4,8 @@ import {
   rawArgsAfter,
   runMain,
   spawnTool,
-} from "../utils/spawn";
-import { withOptionalTool } from "../utils/tools";
+} from "@/src/utils/spawn";
+import { withOptionalTool } from "@/src/utils/tools";
 
 function runGitleaks(args: string[]): number {
   return withOptionalTool("gitleaks", (bin) => spawnTool([bin, ...args]));

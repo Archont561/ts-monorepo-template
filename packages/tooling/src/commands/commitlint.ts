@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { pkgRoot, resolveConfig } from "../utils/paths";
-import { defineCommand, rawArgsAfter, runMain, spawnTool } from "../utils/spawn";
-import { findTool, skipMissingTool, TOOLS } from "../utils/tools";
+import { pkgRoot, resolveConfig } from "@/src/utils/paths";
+import { defineCommand, rawArgsAfter, runMain, spawnTool } from "@/src/utils/spawn";
+import { findTool, skipMissingTool, TOOLS } from "@/src/utils/tools";
 
 /**
  * `commitlint --edit <file>` — Conventional Commits validation.

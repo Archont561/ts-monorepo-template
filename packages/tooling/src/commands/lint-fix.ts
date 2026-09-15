@@ -1,5 +1,5 @@
-import { configDir } from "../utils/paths";
-import { defineWrapperCommand } from "../utils/spawn";
+import { configDir } from "@/src/utils/paths";
+import { defineWrapperCommand } from "@/src/utils/spawn";
 
 const BIOME = Bun.fileURLToPath(import.meta.resolve("@biomejs/biome/bin/biome"));
 

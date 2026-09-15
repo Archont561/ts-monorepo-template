@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { sep } from "node:path";
 import { $, file } from "bun";
-import { TemplateHarness } from "../../src/scaffold/harness";
-import { MonorepoScaffolder } from "../../src/scaffold/pipeline";
+import { TemplateHarness } from "@/src/scaffold/harness";
+import { MonorepoScaffolder } from "@/src/scaffold/pipeline";
 
 /**
  * Integration tests for the full scaffolding pipeline. Each test copies the

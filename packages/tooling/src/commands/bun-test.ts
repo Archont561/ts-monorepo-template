@@ -1,5 +1,5 @@
-import { resolveConfig } from "../utils/paths";
-import { defineCommand, spawnTool } from "../utils/spawn";
+import { resolveConfig } from "@/src/utils/paths";
+import { defineCommand, spawnTool } from "@/src/utils/spawn";
 
 /** `m test` — `bun test` with the shared bunfig.toml. The `m bun test` equivalent. */
 export default defineCommand({

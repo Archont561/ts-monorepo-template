@@ -8,7 +8,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { which } from "bun";
-import { defineCommand, spawnTool } from "../utils/spawn";
+import { defineCommand, spawnTool } from "@/src/utils/spawn";
 import {
   COVERAGE_HTML,
   COVERAGE_LCOV,

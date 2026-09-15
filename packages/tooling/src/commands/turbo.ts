@@ -1,5 +1,5 @@
-import { resolveConfig } from "../utils/paths";
-import { defineWrapperCommand } from "../utils/spawn";
+import { resolveConfig } from "@/src/utils/paths";
+import { defineWrapperCommand } from "@/src/utils/spawn";
 
 const TURBO = Bun.fileURLToPath(import.meta.resolve("turbo/bin/turbo"));
 

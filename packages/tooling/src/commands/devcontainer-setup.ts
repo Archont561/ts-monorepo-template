@@ -2,7 +2,7 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { file, write } from "bun";
-import { resolveConfig } from "../utils/paths";
+import { resolveConfig } from "@/src/utils/paths";
 
 /**
  * Setup script for devcontainer — run when the devcontainer feature is enabled.

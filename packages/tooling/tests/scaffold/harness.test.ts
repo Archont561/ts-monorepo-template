@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdir } from "node:fs/promises";
 import { $ } from "bun";
-import { TemplateHarness } from "../../src/scaffold/harness";
+import { TemplateHarness } from "@/src/scaffold/harness";
 
 const completed: string[] = [];
 

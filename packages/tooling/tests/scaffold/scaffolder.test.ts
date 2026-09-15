@@ -2,19 +2,19 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdir } from "node:fs/promises";
 import { $, file, write } from "bun";
 import fc from "fast-check";
-import { removeJsonEntry } from "../../src/manifest/editor";
+import { removeJsonEntry } from "@/src/manifest/editor";
 import {
   type DiscoveredConfig,
   discoverConfigs,
   NATIVE_MODES,
   type ScaffoldMeta,
-} from "../../src/scaffold/features";
+} from "@/src/scaffold/features";
 import {
   collectScopeTargets,
   MonorepoScaffolder,
   stripMarkerBlocks,
-} from "../../src/scaffold/pipeline";
-import { REPO_ROOT } from "../helpers";
+} from "@/src/scaffold/pipeline";
+import { REPO_ROOT } from "@/tests/helpers";
 
 /**
  * Reads the synthetic `scaffold` blocks a test wrote into its fixture and hands

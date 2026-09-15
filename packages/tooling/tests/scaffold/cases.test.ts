@@ -6,10 +6,10 @@ import {
   getRegisteredConfigs,
   type NativeMode,
   type ScaffoldSelection,
-} from "../../src/scaffold/features";
-import { TemplateHarness } from "../../src/scaffold/harness";
-import { MonorepoScaffolder } from "../../src/scaffold/pipeline";
-import { REPO_ROOT } from "../helpers";
+} from "@/src/scaffold/features";
+import { TemplateHarness } from "@/src/scaffold/harness";
+import { MonorepoScaffolder } from "@/src/scaffold/pipeline";
+import { REPO_ROOT } from "@/tests/helpers";
 
 /**
  * Template combination tests — simulates common scaffolding flows

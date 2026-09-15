@@ -1,4 +1,4 @@
-import { defineWrapperCommand } from "../utils/spawn";
+import { defineWrapperCommand } from "@/src/utils/spawn";
 
 const TSC = Bun.fileURLToPath(
   import.meta.resolve("typescript/package.json").replace("package.json", "bin/tsc"),

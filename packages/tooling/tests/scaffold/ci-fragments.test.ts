@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { FEATURES } from "../../src/scaffold/features";
-import { resolveSrc } from "../../src/utils/paths";
+import { FEATURES } from "@/src/scaffold/features";
+import { resolveSrc } from "@/src/utils/paths";
 
 /**
  * The `ciFiles` declarations in the registry are the aggregator's only map from

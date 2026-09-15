@@ -1,5 +1,5 @@
 import { file } from "bun";
-import { resolveSrc } from "../utils/paths";
+import { resolveSrc } from "@/src/utils/paths";
 
 /** What a feature's setup step is handed when it runs. */
 export interface SetupContext {

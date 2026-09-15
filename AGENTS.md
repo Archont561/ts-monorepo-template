@@ -73,10 +73,16 @@ directory move.
 package's own `tsconfig.json`. bunup resolves it through `preferredTsconfig`, so
 the alias works in the build as well as in the editor.
 
-**Never write a `../../../` chain.** It is silently wrong the moment a file
-moves one level, and the failure is a missed lookup rather than an error. For
-filesystem paths (as opposed to module imports) use the exported root constant
-instead — `APP_ROOT` / `REPO_ROOT` from `apps/example/src/features/paths.ts`, or
+**Never write a `../` import — not even one level.** It is silently wrong the
+moment a file moves, and the failure is a missed lookup rather than an error.
+A single `../utils/x` is the same hazard as `../../../utils/x`, just smaller.
+`packages/tooling/tests/imports.test.ts` fails the build on any `../` module
+specifier in a tracked TypeScript file, and on any `@/` specifier that does not
+resolve.
+
+That rule is about **module specifiers only**. Filesystem paths are a different
+thing and legitimately need `..` — for those, use the exported root constant
+instead: `APP_ROOT` / `REPO_ROOT` from `apps/example/src/features/paths.ts`, or
 `pkgRoot()` / `repoRoot()` from `packages/tooling/src/utils/paths.ts`.
 
 The runtime constants matter for a second reason: the bundler moves files, so a

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { OptionsCollector } from "../../src/scaffold/collector";
+import { OptionsCollector } from "@/src/scaffold/collector";
 
 describe("OptionsCollector (non-interactive)", () => {
   test("returns project defaults when no overrides are given", async () => {

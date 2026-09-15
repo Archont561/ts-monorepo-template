@@ -3,7 +3,7 @@ import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { $ } from "bun";
-import { skipMissingTool, TOOLS, withOptionalTool } from "../src/utils/tools";
+import { skipMissingTool, TOOLS, withOptionalTool } from "@/src/utils/tools";
 import { REPO_ROOT } from "./helpers";
 
 const BASE = join(REPO_ROOT, "packages/tooling/src/configs/lefthook.base.yml");

@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, rmSync } from "node:fs";
 import { which } from "bun";
-import { pkgRoot, resolveConfig } from "../utils/paths";
-import { defineCommand, rawArgsAfter, runMain, spawnTool } from "../utils/spawn";
+import { pkgRoot, resolveConfig } from "@/src/utils/paths";
+import { defineCommand, rawArgsAfter, runMain, spawnTool } from "@/src/utils/spawn";
 
 const bunfig = resolveConfig("bunfig.toml");
 

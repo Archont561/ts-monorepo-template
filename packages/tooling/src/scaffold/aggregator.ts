@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { mkdir } from "node:fs/promises";
 import { $, file, write } from "bun";
-import { resolveSrc } from "../utils/paths";
+import { resolveSrc } from "@/src/utils/paths";
 import {
   type ConfigMap,
   DEFAULT_SCOPE,

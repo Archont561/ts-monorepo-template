@@ -1,6 +1,6 @@
 import { file, spawnSync } from "bun";
-import { repoRoot } from "../utils/paths";
-import { defineCommand, rawArgsAfter } from "../utils/spawn";
+import { repoRoot } from "@/src/utils/paths";
+import { defineCommand, rawArgsAfter } from "@/src/utils/spawn";
 
 const main = defineCommand({
   meta: {

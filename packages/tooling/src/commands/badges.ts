@@ -1,5 +1,5 @@
 import { file } from "bun";
-import { defineCommand, runCommand } from "../utils/spawn";
+import { defineCommand, runCommand } from "@/src/utils/spawn";
 import { checkBadges } from "./badges-shared";
 
 const checkCommand = defineCommand({

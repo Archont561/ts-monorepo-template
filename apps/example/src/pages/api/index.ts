@@ -1,6 +1,6 @@
-import { detectFeatures } from "../../features";
+import { detectFeatures } from "@/src/features";
 // TEMPLATE-ONLY:START(native)
-import { native } from "../../features/native";
+import { native } from "@/src/features/native";
 // TEMPLATE-ONLY:END(native)
 
 export default async function handleApiIndex(): Promise<Response> {

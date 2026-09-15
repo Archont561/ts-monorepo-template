@@ -6,9 +6,9 @@ import {
   removeJsonEntry,
   setJsonValue,
   updateManifestFile,
-} from "../manifest/editor";
-import { defineCommand, rawArgsAfter, spawnTool } from "../utils/spawn";
-import { hasTool, skipMissingTool, TOOLS, withOptionalTool } from "../utils/tools";
+} from "@/src/manifest/editor";
+import { defineCommand, rawArgsAfter, spawnTool } from "@/src/utils/spawn";
+import { hasTool, skipMissingTool, TOOLS, withOptionalTool } from "@/src/utils/tools";
 import {
   discoverBuildable,
   discoverCrates,

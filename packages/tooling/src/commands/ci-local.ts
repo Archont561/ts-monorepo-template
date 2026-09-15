@@ -1,4 +1,4 @@
-import { defineCommand, rawArgsAfter } from "../utils/spawn";
+import { defineCommand, rawArgsAfter } from "@/src/utils/spawn";
 import { runAct } from "./ci";
 
 /**

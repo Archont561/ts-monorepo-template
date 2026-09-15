@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { $, write } from "bun";
-import { defineCommand, rawArgsAfter, runMain } from "../utils/spawn";
+import { defineCommand, rawArgsAfter, runMain } from "@/src/utils/spawn";
 
 /**
  * Regenerates the root lefthook.yml as a one-line wrapper around the shared

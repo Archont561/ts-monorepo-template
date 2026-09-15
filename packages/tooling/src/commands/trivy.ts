@@ -6,8 +6,8 @@ import {
   rawArgsAfter,
   runMain,
   spawnTool,
-} from "../utils/spawn";
-import { withOptionalTool } from "../utils/tools";
+} from "@/src/utils/spawn";
+import { withOptionalTool } from "@/src/utils/tools";
 
 const DOCKERFILE = "apps/example/Dockerfile";
 const IMAGE = "app:trivy-scan";

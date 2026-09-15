@@ -5,8 +5,8 @@ import {
   removeJsonEntry,
   setJsonBlock,
   updateManifestFile,
-} from "../manifest/editor";
-import { CONFIGS_RELATIVE, TOOLING_RELATIVE } from "../utils/paths";
+} from "@/src/manifest/editor";
+import { CONFIGS_RELATIVE, TOOLING_RELATIVE } from "@/src/utils/paths";
 import { regenerateAll } from "./aggregator";
 import type {
   DiscoveredConfig,
