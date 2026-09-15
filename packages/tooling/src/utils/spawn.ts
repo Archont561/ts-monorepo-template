@@ -33,6 +33,53 @@ export function spawnTool(cmd: string[], opts: { cwd?: string } = {}): number {
   return result.exitCode;
 }
 
+/**
+ * Like {@link spawnTool}, but captures the child's output instead of inheriting
+ * it, so the caller can report *why* the tool failed.
+ *
+ * Worth the loss of live streaming: a CI step that only says "exit code 1" is
+ * unreadable when the run's log archive is out of reach (GitHub serves job logs
+ * from a separate blob host, and `::error::` annotations are the one part of a
+ * failed run that the check-run API returns directly). A wrapper that captures
+ * can turn the tool's own last lines into an annotation.
+ */
+export function spawnToolCaptured(
+  cmd: string[],
+  opts: { cwd?: string } = {},
+): { exitCode: number; output: string } {
+  const result = spawnSync({
+    cmd,
+    ...(opts.cwd ? { cwd: opts.cwd } : {}),
+    env: { ...process.env },
+    stdout: "pipe",
+    stderr: "pipe",
+    stdin: "inherit",
+  });
+  return {
+    exitCode: result.exitCode,
+    output: `${result.stdout.toString()}${result.stderr.toString()}`,
+  };
+}
+
+/**
+ * Emit a GitHub Actions error annotation. Newlines have to be percent-encoded
+ * (`%0A`) or the annotation is truncated at the first line; outside CI the same
+ * call is just a readable error on stderr.
+ */
+export function annotateError(title: string, detail = "", tailLines = 15): void {
+  const tail = detail
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line.length > 0)
+    .slice(-tailLines)
+    .join("\n");
+  const message = tail ? `${title}\n${tail}` : title;
+  console.error(
+    `::error::${message.replace(/%/g, "%25").replace(/\n/g, "%0A").replace(/\r/g, "%0D")}`,
+  );
+  if (!process.env.GITHUB_ACTIONS) console.error(message);
+}
+
 export interface WrapperOptions {
   name: string;
   version?: string;

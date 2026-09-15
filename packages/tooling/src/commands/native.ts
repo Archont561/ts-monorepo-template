@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   addJsonArrayValue,
   readJson,
@@ -7,7 +7,13 @@ import {
   setJsonValue,
   updateManifestFile,
 } from "@/src/manifest/editor";
-import { defineCommand, rawArgsAfter, spawnTool } from "@/src/utils/spawn";
+import {
+  annotateError,
+  defineCommand,
+  rawArgsAfter,
+  spawnTool,
+  spawnToolCaptured,
+} from "@/src/utils/spawn";
 import { hasTool, skipMissingTool, TOOLS, withOptionalTool } from "@/src/utils/tools";
 import {
   discoverBuildable,
@@ -66,9 +72,20 @@ function runCargo(args: string[], opts: { cwd?: string } = {}): number {
   // Reports the absent toolchain through the shared helper, so a package task
   // that shells out to cargo prints the same warning a hook would and still
   // exits 0 instead of failing the task graph.
-  return withOptionalTool("cargo", () =>
-    spawnTool(["cargo", ...args], { cwd: opts.cwd ?? WORKSPACE_DIR }),
-  );
+  return withOptionalTool("cargo", () => {
+    const cmd = ["cargo", ...args];
+    const { exitCode, output } = spawnToolCaptured(cmd, {
+      cwd: opts.cwd ?? WORKSPACE_DIR,
+    });
+    if (output) process.stdout.write(output);
+    // A cargo failure is the one case where "exit code 1" says nothing: the
+    // reason is in the child's own stderr (a manifest error, a rustup override
+    // it cannot satisfy, a compile error), so surface its tail as an annotation.
+    if (exitCode !== 0) {
+      annotateError(`${cmd.join(" ")} failed (exit ${exitCode})`, output);
+    }
+    return exitCode;
+  });
 }
 
 /**
@@ -95,8 +112,33 @@ const pureArg = {
   },
 } as const;
 
+/**
+ * The napi CLI entry point.
+ *
+ * Resolved through `./package.json` — the only subpath besides `.` that
+ * `@napi-rs/cli` v3 exports. The v2 layout had a `scripts/index.js` entry; v3
+ * has no such file and does not export `./dist/cli.js` either, so resolving the
+ * bin by its on-disk path throws a `ResolveMessage` before any napi command can
+ * run. Deriving the bin from the manifest that *is* exported survives both the
+ * package's own version bumps and bunup's bundling.
+ */
 function napiBin(): string {
-  return Bun.fileURLToPath(import.meta.resolve("@napi-rs/cli/scripts/index.js"));
+  let manifest: string;
+  try {
+    manifest = Bun.fileURLToPath(import.meta.resolve("@napi-rs/cli/package.json"));
+  } catch {
+    console.error(
+      "::error::Cannot resolve @napi-rs/cli — reinstall dependencies " +
+        "(`bun install`), then re-run the native command",
+    );
+    process.exit(1);
+  }
+  const cli = join(dirname(manifest), "dist", "cli.js");
+  if (!existsSync(cli)) {
+    console.error(`::error::@napi-rs/cli is installed but ${cli} is missing`);
+    process.exit(1);
+  }
+  return cli;
 }
 
 type NapiOptions = {
@@ -182,7 +224,8 @@ function warnIfWasiMissing(): void {
   if (!process.env.WASI_SDK_PATH) {
     console.warn(
       "⚠️ WASI_SDK_PATH is not set — install the WASI SDK if the wasm target fails to link\n" +
-        "   (CI does it for you; locally: https://github.com/WebAssembly/wasi-sdk/releases)",
+        "   (CI does it for you; locally: https://github.com/WebAssembly/wasi-sdk/releases)\n" +
+        `   The Rust target is needed too: rustup target add ${NATIVE_WASM_TARGET}`,
     );
   }
 }

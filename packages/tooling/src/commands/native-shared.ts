@@ -75,9 +75,15 @@ export const NATIVE_TARGETS: readonly NativeTargetSpec[] = [
     container: "ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64",
   },
   {
+    // NOT the `lts-alpine` image, even though the target is musl. Bun — which
+    // drives every step of this job — publishes glibc builds only, so its binary
+    // cannot exec on Alpine at all (`spawn ... ENOENT`: the ELF interpreter is
+    // missing). The Debian image runs Bun, and `musl-tools` supplies the
+    // `musl-gcc` linker napi's plain `cargo build --target` needs; the workflow
+    // installs it and points cargo at it via CARGO_TARGET_*_LINKER.
     target: "x86_64-unknown-linux-musl",
     runner: "ubuntu-latest",
-    container: "ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine",
+    container: "ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian",
   },
   { target: NATIVE_WASM_TARGET, runner: "ubuntu-latest", wasi: true },
 ];
