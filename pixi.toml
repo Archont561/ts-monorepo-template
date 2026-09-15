@@ -9,3 +9,4 @@ version = "0.1.0"
 
 [dependencies]
 actionlint = ">=1.7.12,<2"
+act = ">=0.2.89,<0.3"
