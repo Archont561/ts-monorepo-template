@@ -1,4 +1,3 @@
-# SECTION: coverage
       # Coverage reporting — all logic lives in the m coverage CLI
       # (configs/coverage/src/cli.ts): setup installs genhtml, html renders the
       # report, check enforces the threshold by parsing LCOV directly.

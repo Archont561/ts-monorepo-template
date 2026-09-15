@@ -12,6 +12,12 @@ configs/*/.turbo/
 .env.*
 !.env.example
 coverage/
+# `coverage/` above has no leading slash, so it matches a directory named
+# "coverage" at ANY depth — including source directories that must ship.
+# Anything tracked whose path contains such a directory needs a negation here
+# (and a scaffolded project needs its own). Prefer not naming source
+# directories "coverage": packages/tooling/src/ci/fragments/coverage-report/
+# is spelled that way for exactly this reason.
 !configs/coverage/
 !configs/coverage/**
 # Keep the tracked coverage config package visible, but not its generated output
