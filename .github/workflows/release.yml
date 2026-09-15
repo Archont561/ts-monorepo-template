@@ -30,7 +30,7 @@ jobs:
       - run: bun run build
         if: ${{ !env.ACT }}
 
-      - uses: changesets/action@v1
+      - uses: changesets/action@v2
         if: ${{ !env.ACT }}
         with:
           publish: bun run release
