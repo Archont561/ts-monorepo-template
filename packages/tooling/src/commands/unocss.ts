@@ -5,7 +5,7 @@ import { defineCommand, spawnTool } from "../utils/spawn";
 
 /**
  * The shared UnoCSS config lives in this package, so callers never pass
- * `--config ../../configs/unocss/uno.config.ts` by hand.
+ * `--config <shared config dir>/uno.config.ts` by hand.
  */
 const CONFIG_PATH = resolveConfig("uno.config.ts");
 
@@ -54,7 +54,7 @@ async function outputFiles(): Promise<string[]> {
 
 async function runUnocss(extraArgs: string[]): Promise<number> {
   if (!configExists()) {
-    console.warn("⚠️ UnoCSS not enabled (configs/unocss/uno.config.ts missing) — skipping");
+    console.warn("⚠️ UnoCSS not enabled (shared uno.config.ts missing) — skipping");
     return 0;
   }
   const bin = await unocssBin();
@@ -115,7 +115,7 @@ const main = defineCommand({
     info: infoCommand,
   },
   run() {
-    console.log(`\nmunocss — UnoCSS with the shared config (configs/unocss/uno.config.ts)
+    console.log(`\nm unocss — UnoCSS with the shared config
 
 Usage:
   m unocss <command>

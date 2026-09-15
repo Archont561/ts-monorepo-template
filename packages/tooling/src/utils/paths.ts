@@ -56,6 +56,17 @@ export function repoRoot(start: string = process.cwd()): string {
   }
 }
 
+/**
+ * Where the consolidated config assets live inside a repository, relative to
+ * its root — the same directory `configDir()` resolves to, spelled as a path.
+ *
+ * Setup scripts need this because they run against a *target* repository rather
+ * than against this package: they are spawned from the template's copy of
+ * tooling with `cwd` set to the project being scaffolded, so `pkgRoot()` would
+ * resolve to the wrong tree.
+ */
+export const CONFIGS_RELATIVE = "packages/tooling/src/configs";
+
 /** Directory holding the consolidated config assets. */
 export function configDir(): string {
   return join(pkgRoot(), "src", "configs");

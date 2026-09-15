@@ -17,7 +17,7 @@ function workspaceGlobs(): string[] {
   } catch {
     // no readable root manifest — fall through to the conventional layout
   }
-  return ["packages/*", "configs/*", "apps/*"];
+  return ["packages/*", "apps/*"];
 }
 
 /**

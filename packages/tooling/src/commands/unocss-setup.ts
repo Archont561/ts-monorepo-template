@@ -1,14 +1,15 @@
 import { join } from "node:path";
 import { $, file } from "bun";
 // Setup scripts run inside a freshly copied project, before `bun install`, so
-// they cannot resolve workspace packages by name — the shared editor is
-// imported by path, and `configs/manifest` is an always-on config.
+// they cannot resolve workspace packages by name — the shared editor and the
+// path helpers are imported by relative path instead.
 import { readJson, removeJsonEntry, setJsonValue, updateManifestFile } from "../manifest/editor";
+import { CONFIGS_RELATIVE } from "../utils/paths";
 
 /**
  * Setup script for UnoCSS — run when unocss config is enabled.
- * - Config lives in configs/unocss/uno.config.ts (not root) — avoids root level file
- * - Uses `bunx unocss --config configs/unocss/uno.config.ts` CLI
+ * - Config lives in the shared config dir (not the repo root) — avoids a root-level file
+ * - `m unocss` passes that path to the UnoCSS CLI via --config
  * - Handles index-unocss.html → index.html replacement
  * - Adds @myorg/unocss dep to example app
  */
@@ -21,9 +22,9 @@ const SCOPE = process.env.UNOCSS_SCOPE ?? "@myorg";
 const BUILD_CSS_SCRIPT = "m unocss build";
 const WATCH_CSS_SCRIPT = "m unocss watch";
 
-const CONFIG_PATH = join(TARGET_DIR, "configs/unocss/uno.config.ts");
+const CONFIG_PATH = join(TARGET_DIR, CONFIGS_RELATIVE, "uno.config.ts");
 
-/** Content of `configs/unocss/uno.config.ts` when the package had to create it. */
+/** Content written to the shared uno.config.ts when it is missing. */
 function defaultConfig(): string {
   return `import { baseConfig, defineConfig } from "./unocss-shared";
 
@@ -48,7 +49,7 @@ export default defineConfig({
 `.replaceAll("@myorg", SCOPE);
 }
 
-/** Ensures the config exists in `configs/unocss/` — never at the repo root. */
+/** Ensures the config exists in the shared config dir — never at the repo root. */
 async function ensureConfig(): Promise<void> {
   if (await file(CONFIG_PATH).exists()) {
     console.log(`  ✓ Config exists at ${CONFIG_PATH} (used via --config flag)`);
@@ -133,7 +134,7 @@ async function dropRootCssScript(): Promise<void> {
   });
 }
 
-/** Config lives in `configs/unocss/` — an older setup may have left one at the root. */
+/** Config lives in the shared config dir — an older setup may have left one at the root. */
 async function removeStrayRootConfig(): Promise<void> {
   const rootUnoConfig = join(TARGET_DIR, "uno.config.ts");
   if (!(await file(rootUnoConfig).exists())) return;

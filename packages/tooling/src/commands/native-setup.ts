@@ -1,9 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { $, file, spawnSync } from "bun";
-// Setup scripts run inside a freshly copied project, before `bun install`, so
-// they cannot resolve workspace packages by name — the shared editor is
-// imported by path, and `configs/manifest` is an always-on config.
 import {
   addJsonArrayValue,
   readJson,
@@ -12,6 +9,10 @@ import {
   setJsonValue,
   updateManifestFile,
 } from "../manifest/editor";
+// Setup scripts run inside a freshly copied project, before `bun install`, so
+// they cannot resolve workspace packages by name — the shared editor and the
+// path helpers are imported by relative path instead.
+import { CONFIGS_RELATIVE } from "../utils/paths";
 import {
   DEFAULT_NATIVE_CRATES,
   DEFAULT_NATIVE_SCOPE,
@@ -51,7 +52,7 @@ import {
  * `m native add shared --pure` for a crate with no Node-API surface). Cargo runs
  * against the whole workspace; napi runs per package.
  *
- * Data-driven via `scaffold.setup` in configs/native/package.json.
+ * Registered as the `native` feature's setup step in the registry (`FEATURES`).
  */
 
 const TARGET_DIR = process.cwd();
@@ -63,7 +64,7 @@ const REPO_URL = repositoryUrl();
 const SCOPE = process.env.NATIVE_SCOPE ?? DEFAULT_NATIVE_SCOPE;
 
 const ROOT_PACKAGE_JSON = join(TARGET_DIR, "package.json");
-const TURBO_BASE = join(TARGET_DIR, "configs/turbo/turbo.base.json");
+const TURBO_BASE = join(TARGET_DIR, CONFIGS_RELATIVE, "turbo.base.json");
 const EXAMPLE_NATIVE_DIR = join(TARGET_DIR, "apps/example/src/pages/api/native");
 
 const WORKSPACE_MANIFEST = join(NATIVE_ROOT, "Cargo.toml");
