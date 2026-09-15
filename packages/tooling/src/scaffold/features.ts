@@ -1,3 +1,5 @@
+import { file } from "bun";
+
 import { type FeatureSetup, setupDevcontainer, setupNative, setupUnocss } from "./setups";
 
 /** Values the native config accepts — one source of truth for the select metadata. */
@@ -526,6 +528,165 @@ export const FEATURES_BY_DIR: ReadonlyMap<string, DiscoveredConfig> = new Map(
  */
 export async function discoverConfigs(_repoRoot?: string): Promise<DiscoveredConfig[]> {
   return [...FEATURES];
+}
+
+/** Flag -> the value chosen for it, as recorded in a generated project. */
+export type ConfigMap = Record<string, ScaffoldSelection>;
+
+/** Root manifest entry a generated project records its selections under. */
+export const FEATURES_MANIFEST_PATH = "tooling.features";
+
+/** Root manifest entry a generated project records its package scope under. */
+export const SCOPE_MANIFEST_PATH = "tooling.scope";
+
+/** The select values, as plain strings, for membership tests. */
+const NATIVE_MODE_VALUES: readonly string[] = Object.values(NATIVE_MODES);
+
+/**
+ * Narrows an unknown manifest value to a selection.
+ *
+ * A predicate rather than a cast, so a hand-edited manifest that names a mode
+ * this build does not know about is dropped instead of flowing into the
+ * scaffolder as a value with no removal set behind it.
+ */
+function isScaffoldSelection(value: unknown): value is ScaffoldSelection {
+  if (typeof value === "boolean") return true;
+  if (typeof value !== "string") return false;
+  return value === "always" || NATIVE_MODE_VALUES.includes(value);
+}
+
+/** The value a feature ends up with: the caller's choice, else its default. */
+export function selectedFor(meta: ScaffoldMeta, configs: ConfigMap): ScaffoldSelection {
+  const selected = meta.flag ? configs[meta.flag] : undefined;
+  return selected === undefined ? meta.default : selected;
+}
+
+/**
+ * True when a selection means "off": the "none"-ish default for a select, a
+ * falsy answer for a confirm.
+ */
+export function isDisabledSelection(meta: ScaffoldMeta, selected: ScaffoldSelection): boolean {
+  return meta.type === "select" ? selected === meta.default : !selected;
+}
+
+/**
+ * True when a feature survives into the generated project: always-on features
+ * stay unless they are template-only, opt-in features stay when selected.
+ */
+export function isStaying(meta: ScaffoldMeta, configs: ConfigMap): boolean {
+  if (meta.default === "always" && !meta.selfDestruct) return true;
+  const selected = selectedFor(meta, configs);
+  return !(meta.selfDestruct === true || isDisabledSelection(meta, selected));
+}
+
+/**
+ * Every feature dir that survives a scaffold with these selections.
+ *
+ * The feature list is a parameter rather than a read of `FEATURES` so a
+ * scaffolder running with an injected list stays consistent with the scopes it
+ * computes from the same list.
+ */
+export function enabledDirsFor(
+  features: readonly DiscoveredConfig[],
+  configs: ConfigMap,
+): Set<string> {
+  const dirs = new Set<string>();
+  for (const feature of features) {
+    if (isStaying(feature.meta, configs)) dirs.add(feature.dir);
+  }
+  return dirs;
+}
+
+/**
+ * Every TEMPLATE-ONLY scope that a scaffold with these selections strips.
+ *
+ * `template` is always in the set: the template's own blocks never survive into
+ * a generated project. Beyond that a scope is disabled when its feature is off,
+ * or when it belongs to a select option the user did not pick.
+ *
+ * Shared with the workflow generator, which has to reach the same conclusion
+ * from the recorded selections alone — two copies of this logic is how the
+ * scaffolder and the generator drifted apart the first time.
+ */
+export function disabledScopesFor(
+  features: readonly DiscoveredConfig[],
+  configs: ConfigMap,
+): Set<string> {
+  const scopes = new Set<string>(["template"]);
+
+  for (const feature of features) {
+    const { meta } = feature;
+    if (meta.default === "always") continue;
+    const selected = selectedFor(meta, configs);
+
+    if (isDisabledSelection(meta, selected)) {
+      scopes.add(feature.dir);
+      if (meta.flag) scopes.add(meta.flag);
+      if (meta.marker) scopes.add(meta.marker);
+      if (meta.templateMarker) scopes.add(meta.templateMarker);
+      for (const m of meta.markers ?? []) scopes.add(m);
+    }
+
+    for (const opt of meta.options ?? []) {
+      if (opt.value === selected) continue;
+      if (opt.marker) scopes.add(opt.marker);
+      if (opt.templateMarker) scopes.add(opt.templateMarker);
+      for (const m of opt.markers ?? []) scopes.add(m);
+    }
+
+    const removal = meta.removals?.[String(selected)];
+    if (removal) {
+      if (removal.marker) scopes.add(removal.marker);
+      if (removal.templateMarker) scopes.add(removal.templateMarker);
+      for (const m of removal.markers ?? []) scopes.add(m);
+      for (const m of removal.markersToRemove ?? []) scopes.add(m);
+    }
+  }
+
+  return scopes;
+}
+
+/**
+ * The selections a generated project recorded when it was scaffolded, or null
+ * when its manifest carries no record.
+ *
+ * The template repository itself has no record, which is the signal that every
+ * feature is on. A generated project needs one because workflows are built from
+ * fragments that ship inside this package: nothing left in the project's tree
+ * says which features were opted out of, so a later `m docs` would otherwise
+ * hand back workflows for features the user removed.
+ */
+export async function readRecordedSelections(targetDir: string): Promise<ConfigMap | null> {
+  const manifest = file(`${targetDir}/package.json`);
+  if (!(await manifest.exists())) return null;
+
+  try {
+    const pkg = (await manifest.json()) as { tooling?: { features?: unknown } };
+    const recorded = pkg.tooling?.features;
+    if (!recorded || typeof recorded !== "object" || Array.isArray(recorded)) return null;
+
+    const configs: ConfigMap = {};
+    for (const [flag, value] of Object.entries(recorded)) {
+      if (isScaffoldSelection(value)) configs[flag] = value;
+    }
+    return configs;
+  } catch {
+    return null;
+  }
+}
+
+/** The package scope a generated project recorded, or null when it has none. */
+export async function readRecordedScope(targetDir: string): Promise<string | null> {
+  const manifest = file(`${targetDir}/package.json`);
+  if (!(await manifest.exists())) return null;
+
+  try {
+    const pkg = (await manifest.json()) as { tooling?: { scope?: unknown } };
+    const scope = pkg.tooling?.scope;
+    return typeof scope === "string" && scope.length > 0 ? scope : null;
+  } catch {
+    return null;
+  }
 }
 
 export interface RegisteredConfigInfo {

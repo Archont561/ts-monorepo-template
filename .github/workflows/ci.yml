@@ -84,37 +84,6 @@ jobs:
       - name: Package health (publint + arethetypeswrong, via m build)
         run: bunx m health
 
-      # Coverage reporting — all logic lives in the m coverage CLI
-      # (configs/coverage/src/cli.ts): setup installs genhtml, html renders the
-      # report, check enforces the threshold by parsing LCOV directly.
-      - name: Setup coverage tooling
-        run: bunx m coverage setup
-        shell: bash
-
-      - name: Generate coverage HTML
-        run: bunx m coverage html
-        shell: bash
-
-      - name: Upload coverage HTML artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: coverage-report
-          path: coverage/html/
-          retention-days: 14
-
-      # Threshold comes from COVERAGE_THRESHOLD in configs/coverage/index.ts.
-      - name: Check coverage threshold (m coverage)
-        run: bunx m coverage check
-        shell: bash
-
-      - name: Report coverage to PR
-        if: github.event_name == 'pull_request'
-        uses: romeovs/lcov-reporter-action@v0.3.1
-        with:
-          lcov-file: ./coverage/lcov.info
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          delete-old-comments: true
-
       - name: Validate workflows
         run: bun run ci:lint
 
@@ -174,6 +143,37 @@ jobs:
         if: always()
         run: bunx m coverage summary --markdown >> $GITHUB_STEP_SUMMARY
         shell: bash
+
+      # Coverage reporting — all logic lives in the m coverage CLI
+      # (configs/coverage/src/cli.ts): setup installs genhtml, html renders the
+      # report, check enforces the threshold by parsing LCOV directly.
+      - name: Setup coverage tooling
+        run: bunx m coverage setup
+        shell: bash
+
+      - name: Generate coverage HTML
+        run: bunx m coverage html
+        shell: bash
+
+      - name: Upload coverage HTML artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-report
+          path: coverage/html/
+          retention-days: 14
+
+      # Threshold comes from COVERAGE_THRESHOLD in configs/coverage/index.ts.
+      - name: Check coverage threshold (m coverage)
+        run: bunx m coverage check
+        shell: bash
+
+      - name: Report coverage to PR
+        if: github.event_name == 'pull_request'
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          lcov-file: ./coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          delete-old-comments: true
 
   security:
     name: Security Scans

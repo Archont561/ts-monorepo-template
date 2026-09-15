@@ -3,6 +3,7 @@ import {
   readJson,
   removeJsonArrayValue,
   removeJsonEntry,
+  setJsonBlock,
   updateManifestFile,
 } from "../manifest/editor";
 import { regenerateAll } from "./aggregator";
@@ -12,7 +13,17 @@ import type {
   ScaffoldRemovals,
   ScaffoldSelection,
 } from "./features";
-import { DEFAULT_SCOPE, FEATURES } from "./features";
+import {
+  DEFAULT_SCOPE,
+  disabledScopesFor,
+  enabledDirsFor,
+  FEATURES,
+  FEATURES_MANIFEST_PATH,
+  isDisabledSelection,
+  isStaying as isStayingFeature,
+  SCOPE_MANIFEST_PATH,
+  selectedFor as selectedForFeature,
+} from "./features";
 
 export interface ScaffolderOptions {
   targetDir?: string;
@@ -55,120 +66,20 @@ const PACKAGE_JSON_SCRIPTS_TO_REMOVE = [
 ];
 
 /**
- * Text files that can carry marker blocks, and the three comment styles they use.
- *
- * The marker line's own indentation is part of each match: leaving it behind
- * glues it onto whatever follows (a kept block gets its first line
- * double-indented, a removed block leaves a whitespace-only line that
- * `biome check` rejects in the scaffolded project).
+ * Marker handling lives in `./markers` so the workflow generator can use it
+ * without a cycle. Re-exported here because it is part of this module's
+ * documented surface — `src/scaffold/index.ts` and the tests both import it
+ * from here.
  */
-const MARKER_EXTENSIONS = [".yml", ".yaml", ".ts", ".js", ".md", ".toml", ".html"];
+export {
+  CUSTOM_MARKER_PATTERNS,
+  isScopeDisabled,
+  MARKER_PATTERNS,
+  markerFindArgs,
+  stripMarkerBlocks,
+} from "./markers";
 
-export const MARKER_PATTERNS: readonly RegExp[] = [
-  // YAML/TOML/shell
-  /[ \t]*#[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)[ \t]*#[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
-  // TS/JS
-  /[ \t]*\/\/[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[^\n]*\n([\s\S]*?)[ \t]*\/\/[ \t]*TEMPLATE-ONLY:END\([^)]*\)[^\n]*\n?/g,
-  // HTML/MD
-  /[ \t]*<!--[ \t]*TEMPLATE-ONLY:START\(([^)]+)\)[ \t]*-->([\s\S]*?)<!--[ \t]*TEMPLATE-ONLY:END\([^)]*\)[ \t]*-->[ \t]*\n?/g,
-];
-
-/**
- * Custom declared marker patterns, supporting e.g.:
- * `<!-- unocss:START --> ... <!-- unocss:END -->`
- * `// unocss:START ... // unocss:END`
- * `<!-- UNOCSS:START --> ... <!-- UNOCSS:END -->`
- */
-export const CUSTOM_MARKER_PATTERNS: readonly RegExp[] = [
-  // YAML/TOML/shell
-  /[ \t]*#[ \t]*([A-Za-z0-9_!-]+):START[^\n]*\n([\s\S]*?)[ \t]*#[ \t]*\1:END[^\n]*\n?/g,
-  // TS/JS
-  /[ \t]*\/\/[ \t]*([A-Za-z0-9_!-]+):START[^\n]*\n([\s\S]*?)[ \t]*\/\/[ \t]*\1:END[^\n]*\n?/g,
-  // HTML/MD
-  /[ \t]*<!--[ \t]*([A-Za-z0-9_!-]+):START[ \t]*-->([\s\S]*?)<!--[ \t]*\1:END[ \t]*-->[ \t]*\n?/g,
-];
-
-/**
- * Checks whether a scope is disabled.
- * Supports inverted scopes prefix `!` (e.g. `!unocss` is active when `unocss` is disabled).
- */
-export function isScopeDisabled(scope: string, disabledScopes: ReadonlySet<string>): boolean {
-  if (scope.startsWith("!")) {
-    const base = scope.slice(1).trim();
-    return !disabledScopes.has(base) && !disabledScopes.has(base.toLowerCase());
-  }
-  return disabledScopes.has(scope) || disabledScopes.has(scope.toLowerCase());
-}
-
-/** `find` argv for every marker-carrying file under `root`. */
-export function markerFindArgs(root: string): string[] {
-  // Bun's shell does not word-split interpolated strings, so the find
-  // arguments must be spread as an array (one element per word).
-  return [
-    root,
-    "-type",
-    "f",
-    "(",
-    ...MARKER_EXTENSIONS.flatMap((ext, i) => [...(i > 0 ? ["-o"] : []), "-name", `*${ext}`]),
-    ")",
-    "-not",
-    "-path",
-    "*/node_modules/*",
-    "-not",
-    "-path",
-    "*/dist/*",
-    "-not",
-    "-path",
-    "*/configs/template/*",
-  ];
-}
-
-/**
- * Pure marker pass: a block is removed entirely when ALL its scopes are
- * disabled; when any scope is enabled only the marker lines go and the content
- * is preserved. Whitespace left behind by a removal is normalised.
- *
- * Returns whether anything matched, so the caller can skip the write —
- * behaviour the file loop had before this was extracted.
- */
-export function stripMarkerBlocks(
-  content: string,
-  disabledScopes: ReadonlySet<string>,
-): { content: string; changed: boolean } {
-  let next = content;
-  let changed = false;
-
-  for (const regex of MARKER_PATTERNS) {
-    next = next.replace(regex, (_match, scopesStr: string, innerContent: string) => {
-      const scopes = scopesStr.split(",").map((s) => s.trim());
-      changed = true;
-      const allDisabled = scopes.every((s) => isScopeDisabled(s, disabledScopes));
-      return allDisabled ? "" : innerContent;
-    });
-  }
-
-  for (const regex of CUSTOM_MARKER_PATTERNS) {
-    next = next.replace(regex, (_match, marker: string, innerContent: string) => {
-      if (marker.toUpperCase() === "TEMPLATE-ONLY") return _match;
-      changed = true;
-      const disabled = isScopeDisabled(marker, disabledScopes);
-      return disabled ? "" : innerContent;
-    });
-  }
-
-  if (!changed) return { content, changed };
-
-  return {
-    changed,
-    content: next
-      // Marker lines left over from a removal, e.g. an indented block that
-      // was cut out whole.
-      .replace(/[ \t]+\n/g, "\n")
-      .replace(/\n{3,}/g, "\n\n")
-      // A block that ended the file leaves a blank tail behind.
-      .replace(/\n{2,}$/, "\n"),
-  };
-}
+import { markerFindArgs, stripMarkerBlocks } from "./markers";
 
 /** Files that always carry the placeholder scope, relative to the target dir. */
 const STATIC_SCOPE_TARGETS: readonly string[] = [
@@ -490,9 +401,7 @@ export class MonorepoScaffolder {
    * metadata default when no explicit override was provided.
    */
   private selectedFor(meta: ScaffoldMeta): ScaffoldSelection {
-    const selected = meta.flag ? this.configs[meta.flag] : undefined;
-    if (selected !== undefined) return selected;
-    return meta.default;
+    return selectedForFeature(meta, this.configs);
   }
 
   /**
@@ -500,7 +409,7 @@ export class MonorepoScaffolder {
    * a confirm-type config is disabled when the user answers "no".
    */
   private isDisabled(meta: ScaffoldMeta, selected: ScaffoldSelection): boolean {
-    return meta.type === "select" ? selected === meta.default : !selected;
+    return isDisabledSelection(meta, selected);
   }
 
   /**
@@ -545,48 +454,15 @@ export class MonorepoScaffolder {
   }
 
   /**
-   * Computes the set of TEMPLATE-ONLY scopes to strip based on the
-   * discovered config metadata and the user's selections.
+   * The TEMPLATE-ONLY scopes this scaffold strips.
+   *
+   * Derived by the shared `disabledScopesFor` over the same feature list the
+   * rest of the run uses. The workflow generator calls it too, from the
+   * selections a project recorded — two copies of this logic is exactly how the
+   * two entry points drifted apart the first time.
    */
   private async computeDisabledScopes(): Promise<Set<string>> {
-    const scopes = new Set<string>(["template"]);
-    const configs = this.featureList();
-
-    for (const config of configs) {
-      if (config.meta.default === "always") continue;
-      const selected = this.selectedFor(config.meta);
-      const disabled = this.isDisabled(config.meta, selected);
-
-      if (disabled) {
-        scopes.add(config.dir);
-        if (config.meta.flag) scopes.add(config.meta.flag);
-        if (config.meta.marker) scopes.add(config.meta.marker);
-        if (config.meta.templateMarker) scopes.add(config.meta.templateMarker);
-        for (const m of config.meta.markers ?? []) scopes.add(m);
-      }
-
-      if (config.meta.options) {
-        for (const opt of config.meta.options) {
-          if (opt.value !== selected) {
-            if (opt.marker) scopes.add(opt.marker);
-            if (opt.templateMarker) scopes.add(opt.templateMarker);
-            for (const m of opt.markers ?? []) scopes.add(m);
-          }
-        }
-      }
-
-      if (config.meta.removals) {
-        const removal = config.meta.removals[String(selected)];
-        if (removal) {
-          if (removal.marker) scopes.add(removal.marker);
-          if (removal.templateMarker) scopes.add(removal.templateMarker);
-          for (const m of removal.markers ?? []) scopes.add(m);
-          for (const m of removal.markersToRemove ?? []) scopes.add(m);
-        }
-      }
-    }
-
-    return scopes;
+    return disabledScopesFor(this.featureList(), this.configs);
   }
 
   /**
@@ -706,10 +582,7 @@ export class MonorepoScaffolder {
    * unless they are template-only, opt-in configs stay when selected.
    */
   private isStaying(meta: ScaffoldMeta): boolean {
-    if (meta.default === "always" && !meta.selfDestruct) return true;
-
-    const selected = this.selectedFor(meta);
-    return !(meta.selfDestruct || this.isDisabled(meta, selected));
+    return isStayingFeature(meta, this.configs);
   }
 
   /**
@@ -847,18 +720,66 @@ export class MonorepoScaffolder {
   }
 
   /**
-   * Regenerates `.github/workflows/*.yml` + `.github/dependabot.yml` from the
-   * gh-actions base skeletons and the surviving configs' step fragments.
+   * Every feature dir that survives this scaffold — the vocabulary the workflow
+   * generator is allowed to draw fragments from.
    */
+  private enabledFeatureDirs(): Set<string> {
+    return enabledDirsFor(this.featureList(), this.configs);
+  }
+
+  /**
+   * Records what this project was generated from, in its root manifest.
+   *
+   * Workflows are built from fragments that ship inside `@myorg/tooling`, so
+   * nothing left in a generated project says which features were opted out of.
+   * Without this record a later `m docs` would hand back workflows for features
+   * the user removed, and would reintroduce the `@myorg` placeholder and the
+   * TEMPLATE-ONLY markers.
+   *
+   * The template repository never gets the record: every feature is on there,
+   * and the absence of the key is what tells the generator to leave the markers
+   * and the placeholder alone.
+   */
+  private async recordGenerationContext(): Promise<void> {
+    const selections: Record<string, ScaffoldSelection> = {};
+    for (const config of this.featureList()) {
+      const flag = config.meta.flag;
+      if (flag) selections[flag] = this.selectedFor(config.meta);
+    }
+
+    await updateManifestFile(`${this.targetDir}/package.json`, (source) =>
+      setJsonBlock(
+        setJsonBlock(source, FEATURES_MANIFEST_PATH, JSON.stringify(selections, null, 2)),
+        SCOPE_MANIFEST_PATH,
+        JSON.stringify(this.scope),
+      ),
+    );
+  }
+
   /**
    * Regenerates `.github/workflows/*.yml` + `.github/dependabot.yml` from the
-   * surviving configs' step fragments.
+   * skeletons and step fragments that ship inside `@myorg/tooling`.
    *
-   * The template's docs site is deleted earlier in the pipeline, so the
-   * docs-site guard is switched off explicitly rather than re-tested.
+   * Three things are handed over explicitly, because the generator no longer
+   * reads anything from the target tree:
+   *
+   * - `enabled` — which features are on. It used to be inferred from which
+   *   `configs/<feature>/` directories were still on disk.
+   * - `postProcess` — strips TEMPLATE-ONLY blocks and swaps the `@myorg`
+   *   placeholder. The fragments ship unprocessed, and this runs after the
+   *   pipeline's own tree-wide marker and scope passes, so nothing else can.
+   * - `templateDocsSite: false` — the template's docs site is deleted earlier
+   *   in the pipeline, so the guard is switched off rather than re-tested.
    */
   async regenerateCI(): Promise<void> {
-    await regenerateAll(this.targetDir, { templateDocsSite: false });
+    await regenerateAll(this.targetDir, {
+      templateDocsSite: false,
+      enabled: this.enabledFeatureDirs(),
+      postProcess: (rendered) => {
+        const { content } = stripMarkerBlocks(rendered, this.disabledScopes);
+        return this.replaceIdentity(content).replaceAll(this.placeholder, this.scope);
+      },
+    });
   }
 
   /**
@@ -928,6 +849,7 @@ export class MonorepoScaffolder {
     // Second pass after setup — catches files created by setup scripts (e.g. .agents/skills)
     await this.replaceScopePlaceholders();
     await this.regenerateCI(); // Workflows only — README/AGENTS are static reference files
+    await this.recordGenerationContext();
     await this.setupGitHooks();
 
     console.log(`\n🔗 Repository identity: ${this.owner}/${this.repo}`);

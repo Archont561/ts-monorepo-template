@@ -1,44 +1,54 @@
 #!/usr/bin/env bun
 import { mkdir } from "node:fs/promises";
 import { $, file, write } from "bun";
+import { resolveSrc } from "../utils/paths";
+import {
+  type ConfigMap,
+  DEFAULT_SCOPE,
+  disabledScopesFor,
+  enabledDirsFor,
+  FEATURES,
+  readRecordedScope,
+  readRecordedSelections,
+} from "./features";
+import { stripMarkerBlocks } from "./markers";
 import { WORKFLOW_VARS } from "./vars";
 
 /**
- * Regenerates CI workflows from the config packages.
+ * Regenerates CI workflows from the skeletons and fragments this package ships.
  *
- * Everything is discovery-driven — there is no central registry:
+ * Nothing is discovered in the target tree. Each feature declares the files it
+ * contributes under `src/ci/` in its `ciFiles` entry, and the caller says which
+ * features are enabled:
  *
- * - `.github/workflows/ci.yml` is `configs/gh-actions/ci.base.yml`, which has
- *   one job per concern. Every `configs/<dir>/ci.steps.yml` says which job it
- *   belongs to with a `# SECTION: <name>` comment, and its steps are spliced at
- *   the matching marker in the base (see `routeSections`). Jobs left with
- *   nothing but the shared bootstrap are removed, and the gate job's `needs` is
- *   rewritten to match.
- * - `.github/workflows/release.yml` is `configs/gh-actions/release.base.yml`
- *   with `{{STEPS}}` filled from every `configs/<dir>/release.steps.yml`
- *   (sorted, concatenated).
- * - `.github/workflows/pages.yml` is `configs/gh-actions/pages.base.yml`
- *   with `{{STEPS}}` filled from every `configs/<dir>/pages.steps.yml`
- *   (sorted, concatenated) — GitHub Pages deployment.
- * - `.github/workflows/coverage.yml` is `configs/gh-actions/coverage.base.yml`
- *   with `{{STEPS}}` filled from `coverage.steps.yml` — LCOV + HTML + artifact + Pages.
- * - `.github/dependabot.yml` is `configs/gh-actions/dependabot.base.yml`
- *   with `{{UPDATES}}` filled from every `configs/<dir>/dependabot.yml`
- *   (sorted, concatenated) — Dependabot version updates.
+ * - `src/ci/ci.base.yml` has one job per concern. Every `sections/<name>.yml`
+ *   says which job it belongs to with a `# SECTION: <name>` comment, and its
+ *   steps are spliced at the matching marker (see `routeSections`). Jobs left
+ *   with nothing but the shared bootstrap are removed, and the gate job's
+ *   `needs` is rewritten to match.
+ * - Every other workflow splices its `*.steps.yml` fragments into a single
+ *   `{{STEPS}}` (`{{UPDATES}}` for dependabot).
+ * - A feature may own a workflow outright by declaring a `*.base.yml`
+ *   (coverage, pages, native, stale, dependabot); `ci.base.yml`,
+ *   `release.base.yml` and the `ci.bootstrap.yml` preamble belong to
+ *   `gh-actions`.
+ *
+ * Enablement used to be inferred from the filesystem: the scaffolder deleted
+ * `configs/<feature>/` and this generator collected whatever
+ * `find <target>/configs -name '<steps>.yml'` still returned. R27 deletes that
+ * directory, so the set is passed in instead — and a generated project records
+ * it, so regenerating its workflows later reproduces them.
+ *
  * Step fragments may use `{{NAME}}` placeholders (`{{BUN_VERSION}}`,
- *   `{{NATIVE_DIR}}`, `{{APP_DOCKERFILE}}`, ...) that are filled from
- *   `configs/template/src/vars.ts`, so paths and versions have one source.
- * - `.github/workflows/dependabot-auto-merge.yml` is
- *   `configs/gh-actions/dependabot-auto-merge.base.yml` with `{{STEPS}}`
- *   filled from `dependabot-auto-merge.steps.yml`.
+ * `{{NATIVE_DIR}}`, `{{APP_DOCKERFILE}}`, ...) filled from `vars.ts`, so paths
+ * and versions have one source.
  *
- * Root README.md and AGENTS.md are now static reference files (not concatenated)
- * that list configs via links. They have TEMPLATE-ONLY blocks for template vs
- * monorepo descriptions and are NOT regenerated here.
+ * Root README.md and AGENTS.md are static reference files (not concatenated)
+ * with TEMPLATE-ONLY blocks; they are NOT regenerated here.
  *
- * Run from the repository root: `bun run docs:sync`.
+ * Run from the repository root: `m docs`.
  * A target directory may be passed as an argument for testing:
- * `bun configs/template/src/aggregate.ts <targetDir>`.
+ * `bun packages/tooling/src/scaffold/aggregator.ts <targetDir>`.
  */
 
 /** Matches a `# SECTION: <name>` routing comment in a base or a step fragment. */
@@ -194,67 +204,151 @@ function rewriteGateNeeds(rendered: string, survivors: readonly string[]): strin
   return lines.join("\n");
 }
 
+/**
+ * How one generation pass is scoped and finished.
+ *
+ * Every field is optional because the in-repo pass (`m docs`) wants none of
+ * them: all features on, and the emitted workflows keep their TEMPLATE-ONLY
+ * markers and `@myorg` placeholders so the template stays scaffoldable.
+ */
+export interface AggregateOptions {
+  /**
+   * Feature dirs whose fragments take part. Defaults to every feature.
+   *
+   * This is what decides whether a disabled feature reaches a workflow — it
+   * replaces the old arrangement where the scaffolder deleted
+   * `configs/<feature>/` and enablement was inferred from what survived.
+   */
+  enabled?: ReadonlySet<string>;
+  /** Overrides the `apps/template-docs` probe. A scaffold passes `false`. */
+  templateDocsSite?: boolean;
+  /**
+   * Applied to each rendered workflow immediately before it is written.
+   *
+   * Required when generating into a scaffold. The fragments ship inside this
+   * package, so they arrive with their TEMPLATE-ONLY markers and `@myorg`
+   * placeholders intact — and generation runs after the scaffolder's tree-wide
+   * marker and scope passes, which could never reach files outside the target
+   * tree anyway.
+   */
+  postProcess?: (rendered: string) => string;
+}
+
+/** Every feature — what an unrestricted pass (this repo, `m docs`) includes. */
+function allFeatures(): ReadonlySet<string> {
+  return new Set(FEATURES.map((feature) => feature.dir));
+}
+
+/** Absolute path of one `src/ci/` fragment from its registry-relative form. */
+function ciPath(relative: string): string {
+  return resolveSrc("ci", ...relative.split("/"));
+}
+
+/** Does this declared fragment contribute to the workflow `stepsFileName` names? */
+function contributes(relative: string, stepsFileName: string): boolean {
+  // CI is the odd one out: its steps are not a `<name>.steps.yml` file but a
+  // `sections/<feature>.yml` chunk per feature, each carrying its own
+  // `# SECTION:` marker. The WORKFLOWS spec still calls the pair
+  // `ci.steps.yml`, so that name selects the whole `sections/` directory.
+  if (stepsFileName === "ci.steps.yml") return relative.startsWith("sections/");
+  return (relative.split("/").pop() ?? "") === stepsFileName;
+}
+
+/**
+ * Every enabled feature's contribution to one workflow, in registry order.
+ *
+ * Registry order is alphabetical by feature dir, which is the order the old
+ * `find … | sort` produced over `configs/<dir>/<steps>.yml`, so the rendered
+ * workflows are byte-identical to the ones the directory scan generated.
+ */
+async function collectFragments(
+  stepsFileName: string,
+  enabled: ReadonlySet<string>,
+): Promise<string[]> {
+  const texts: string[] = [];
+  for (const feature of FEATURES) {
+    if (!enabled.has(feature.dir)) continue;
+    for (const relative of feature.ciFiles ?? []) {
+      if (!contributes(relative, stepsFileName)) continue;
+      texts.push((await file(ciPath(relative)).text()).trimEnd());
+    }
+  }
+  return texts;
+}
+
+/**
+ * The skeleton for a workflow: whichever enabled feature declared a `ciFiles`
+ * entry with this filename, or null when none did.
+ */
+async function resolveBase(
+  baseFileName: string,
+  enabled: ReadonlySet<string>,
+): Promise<string | null> {
+  for (const feature of FEATURES) {
+    if (!enabled.has(feature.dir)) continue;
+    for (const relative of feature.ciFiles ?? []) {
+      if ((relative.split("/").pop() ?? "") === baseFileName) return ciPath(relative);
+    }
+  }
+  return null;
+}
+
 /** The checkout/setup/cache/install preamble every CI job starts with. */
-async function readBootstrap(targetDir: string): Promise<string> {
-  const path = `${targetDir}/configs/gh-actions/ci.bootstrap.yml`;
+async function readBootstrap(): Promise<string> {
+  const path = ciPath("ci.bootstrap.yml");
   if (!(await file(path).exists())) return "";
   return (await file(path).text()).trimEnd();
 }
 
 /**
- * Renders a workflow skeleton, splicing the matching step fragments into
- * the `{{STEPS}}` placeholder. Both ci.steps.yml and release.steps.yml
- * aggregate from every config's fragment; legacy single-file mode is
- * kept for backward compat.
+ * The finishing pass a generated project needs, derived from what it recorded.
+ *
+ * Undefined inside this repository: its workflows keep their TEMPLATE-ONLY
+ * markers and `@myorg` placeholders, because that is what makes it
+ * scaffoldable.
+ */
+async function defaultPostProcess(
+  targetDir: string,
+  recorded: ConfigMap | null,
+): Promise<((rendered: string) => string) | undefined> {
+  if (!recorded) return undefined;
+
+  const disabled = disabledScopesFor(FEATURES, recorded);
+  const scope = await readRecordedScope(targetDir);
+  return (rendered: string): string => {
+    const { content } = stripMarkerBlocks(rendered, disabled);
+    return scope ? content.replaceAll(DEFAULT_SCOPE, scope) : content;
+  };
+}
+
+/**
+ * Renders a workflow skeleton, splicing the enabled features' step fragments
+ * into the `{{STEPS}}` (or `{{UPDATES}}`) placeholder.
  */
 export async function aggregateWorkflow(
   targetDir: string,
   baseFileName: string,
   stepsFileName: string,
+  options: AggregateOptions = {},
 ): Promise<void> {
-  // Base file discovery: prefer gh-actions for backward compat, but also allow
-  // self-contained configs to own their base (e.g. configs/pages/pages.base.yml)
-  let basePath = `${targetDir}/configs/gh-actions/${baseFileName}`;
-  if (!(await file(basePath).exists())) {
-    const foundBases =
-      await $`find ${targetDir}/configs -mindepth 2 -maxdepth 3 -name ${baseFileName} -type f`.text();
-    const first = foundBases.trim().split("\n").filter(Boolean).sort()[0];
-    if (first) {
-      basePath = first;
-    } else {
-      console.log(`⚠️ Skipping ${baseFileName} — base not found (config disabled)`);
-      return;
-    }
+  const enabled = options.enabled ?? allFeatures();
+
+  const basePath = await resolveBase(baseFileName, enabled);
+  if (!basePath) {
+    console.log(`⚠️ Skipping ${baseFileName} — no enabled feature declares it`);
+    return;
   }
   const base = await file(basePath).text();
 
-  let fragmentTexts: string[] = [];
-  let steps: string;
-  if (
-    stepsFileName === "ci.steps.yml" ||
-    stepsFileName === "release.steps.yml" ||
-    stepsFileName === "pages.steps.yml" ||
-    stepsFileName === "coverage.steps.yml" ||
-    stepsFileName === "dependabot.yml" ||
-    stepsFileName === "dependabot-auto-merge.steps.yml" ||
-    stepsFileName === "stale.steps.yml" ||
-    stepsFileName === "native.steps.yml"
-  ) {
-    const found =
-      await $`find ${targetDir}/configs -mindepth 2 -maxdepth 2 -name ${stepsFileName} -type f`.text();
-    const fragments = found.trim().split("\n").filter(Boolean).sort();
-    fragmentTexts = await Promise.all(fragments.map(async (p) => (await file(p).text()).trimEnd()));
-    steps = fragmentTexts.join("\n\n");
-  } else {
-    steps = (await file(`${targetDir}/configs/changeset/${stepsFileName}`).text()).trimEnd();
-  }
+  const fragmentTexts = await collectFragments(stepsFileName, enabled);
+  const steps = fragmentTexts.join("\n\n");
 
   let withSteps: string;
   if (stepsFileName === "ci.steps.yml" && isSectioned(base)) {
     // CI is the only workflow with more than one job, so it is the only one that
     // routes by section; the rest keep splicing into a single {{STEPS}}.
     const filled = routeSections(
-      base.replaceAll("{{BOOTSTRAP}}", await readBootstrap(targetDir)),
+      base.replaceAll("{{BOOTSTRAP}}", await readBootstrap()),
       fragmentTexts,
     );
     const remove = new Set(CI_PRUNABLE_JOBS.filter((job) => !filled.filled.has(job)));
@@ -282,24 +376,24 @@ export async function aggregateWorkflow(
     outputPath = `${targetDir}/.github/workflows/${baseFileName.replace(".base.yml", ".yml")}`;
   }
 
-  await write(outputPath, rendered);
+  await write(outputPath, options.postProcess ? options.postProcess(rendered) : rendered);
   console.log(`✅ generated ${outputPath}`);
 }
 
 /** How a generated workflow should be treated on this pass. */
 type WorkflowOutcome = "generate" | "remove" | "skip";
 
-/** What the surrounding tree looks like — computed once, read by every spec. */
+/** Which features are on — computed once, read by every spec. */
 interface WorkflowContext {
-  /** `configs/pages` survived the removal pass. */
+  /** The `pages` feature is enabled. */
   pages: boolean;
-  /** `configs/coverage` survived. */
+  /** The `coverage` feature is enabled. */
   coverage: boolean;
-  /** `packages/native` survived. */
+  /** The `native` feature is enabled. */
   native: boolean;
-  /** `configs/dependabot` or `configs/gh-actions` survived. */
+  /** The `dependabot` or `gh-actions` feature is enabled. */
   dependabot: boolean;
-  /** `configs/stale` survived. */
+  /** The `stale` feature is enabled. */
   stale: boolean;
   /** The template's own docs site deploys Pages — never true inside a scaffold. */
   templateDocsSite: boolean;
@@ -386,11 +480,12 @@ async function syncWorkflow(
   targetDir: string,
   spec: WorkflowSpec,
   ctx: WorkflowContext,
+  options: AggregateOptions,
 ): Promise<void> {
   const outcome = spec.outcome(ctx);
   if (outcome === "skip") return;
   if (outcome === "generate") {
-    await aggregateWorkflow(targetDir, spec.base, spec.steps);
+    await aggregateWorkflow(targetDir, spec.base, spec.steps, options);
     return;
   }
 
@@ -404,7 +499,11 @@ async function syncWorkflow(
 }
 
 /**
- * Regenerates every workflow the surviving configs ask for.
+ * Regenerates every workflow the enabled features ask for.
+ *
+ * A scaffold records the selections it was built from, so regenerating its
+ * workflows later reproduces them. This repository records nothing, which is
+ * the signal that every feature is on and the markers stay put.
  *
  * `templateDocsSite` defaults to testing for the template's own docs site, so
  * `m docs` (running inside the repo) keeps its behaviour; a scaffolder that has
@@ -413,30 +512,32 @@ async function syncWorkflow(
  */
 export async function regenerateAll(
   targetDir: string,
-  options: { templateDocsSite?: boolean } = {},
+  options: AggregateOptions = {},
 ): Promise<void> {
   await mkdir(`${targetDir}/.github/workflows`, { recursive: true });
   await mkdir(`${targetDir}/.github`, { recursive: true });
 
-  const exists = (relative: string) => file(`${targetDir}/${relative}`).exists();
-  const pages = await exists("configs/pages/package.json");
+  const recorded = await readRecordedSelections(targetDir);
+  const enabled =
+    options.enabled ?? (recorded ? enabledDirsFor(FEATURES, recorded) : allFeatures());
+  const postProcess = options.postProcess ?? (await defaultPostProcess(targetDir, recorded));
+  const pages = enabled.has("pages");
   const templateDocsSite =
-    options.templateDocsSite ?? (await exists("apps/template-docs/.vitepress/config.mts"));
+    options.templateDocsSite ??
+    (await file(`${targetDir}/apps/template-docs/.vitepress/config.mts`).exists());
 
   const ctx: WorkflowContext = {
     pages,
-    coverage: await exists("configs/coverage/package.json"),
-    native: await exists("configs/native/package.json"),
-    dependabot:
-      (await exists("configs/dependabot/package.json")) ||
-      (await exists("configs/gh-actions/package.json")),
-    stale: await exists("configs/stale/package.json"),
+    coverage: enabled.has("coverage"),
+    native: enabled.has("native"),
+    dependabot: enabled.has("dependabot") || enabled.has("gh-actions"),
+    stale: enabled.has("stale"),
     templateDocsSite,
     pagesDeploysToSite: pages && !templateDocsSite,
   };
 
   for (const spec of WORKFLOWS) {
-    await syncWorkflow(targetDir, spec, ctx);
+    await syncWorkflow(targetDir, spec, ctx, { ...options, enabled, postProcess });
   }
 }
 
