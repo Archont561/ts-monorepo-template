@@ -18,8 +18,20 @@ import { dirname, join } from "node:path";
 /**
  * VitePress bundles data loaders into a cache dir before running them, so the
  * repo root cannot be derived from `import.meta.url`. Walk up from the cwd
- * (`vitepress build docs` runs from the repo root) until the workspace markers
- * are found.
+ * (`vitepress build` runs from the app dir under Turbo, and from the repo root
+ * when invoked directly) until the workspace markers are found.
+ *
+ * Throws rather than falling back to the cwd. A wrong root used to degrade
+ * quietly: every lookup below is `join(ROOT, …)`, so a bogus ROOT means empty
+ * package and workflow lists, and the Status page publishes zeros that look
+ * like real measurements. Same reasoning as `pkgRoot()` in
+ * packages/tooling/src/utils/paths.ts — name the cause at the point it is
+ * known instead of three lookups downstream.
+ *
+ * Not shared with `repoRoot()` from @myorg/tooling, which uses a better marker
+ * (a `workspaces` key): that module re-exports `./utils/spawn`, which imports
+ * from `"bun"`, and this file runs under Node. Verified — importing it here
+ * fails with ERR_MODULE_NOT_FOUND before reaching any Bun API.
  */
 function findRoot(): string {
   let dir = process.cwd();
@@ -31,7 +43,11 @@ function findRoot(): string {
     if (parent === dir) break;
     dir = parent;
   }
-  return process.cwd();
+  throw new Error(
+    `status.data.ts: could not find the repository root. Walked up from ${process.cwd()} ` +
+      `looking for a directory holding both package.json and .github/workflows. ` +
+      `Run the docs build from inside the monorepo.`,
+  );
 }
 
 const ROOT = findRoot();
@@ -253,6 +269,12 @@ function coverage(): Coverage {
 
 export default {
   // Re-run in `docs:dev` when any of these change.
+  //
+  // These are the one place `../../` is correct and must stay. VitePress
+  // resolves `watch` patterns relative to the loader file itself — not the cwd
+  // and not the project root — and hands the matched files to `load()` as
+  // absolute paths. They are declarative globs owned by VitePress, not paths
+  // this file opens, so neither `ROOT` nor the `@/` alias applies.
   watch: [
     "../../coverage/lcov.info",
     "../../package.json",
