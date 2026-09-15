@@ -193,22 +193,23 @@ function runNapiPerPackage(
   let failed = 0;
   for (const pkg of packages) {
     console.log(`\n▸ ${pkg.name}: ${pkg.crateDir} → ${pkg.dir}`);
-    const exitCode = spawnTool(
-      [
-        "bun",
-        napiBin(),
-        ...args,
-        ...packageFlags(pkg),
-        ...extraFlags(pkg),
-        ...(options.target ? ["--target", options.target] : []),
-        ...(options.cross ? ["--use-napi-cross"] : []),
-        ...(options.dryRun ? ["--dry-run"] : []),
-      ],
-      { cwd: ROOT },
-    );
+    const cmd = [
+      "bun",
+      napiBin(),
+      ...args,
+      ...packageFlags(pkg),
+      ...extraFlags(pkg),
+      ...(options.target ? ["--target", options.target] : []),
+      ...(options.cross ? ["--use-napi-cross"] : []),
+      ...(options.dryRun ? ["--dry-run"] : []),
+    ];
+    const { exitCode, output } = spawnToolCaptured(cmd, { cwd: ROOT });
+    if (output) process.stdout.write(output);
     if (exitCode !== 0) {
       failed = exitCode;
-      console.error(`::error::${args.join(" ")} failed for ${pkg.name} (exit ${exitCode})`);
+      // The reason lives in napi's (or cargo's) own output — a bare "failed for
+      // <pkg>" annotation is not actionable.
+      annotateError(`${args.join(" ")} failed for ${pkg.name} (exit ${exitCode})`, output);
     }
   }
   return failed;
