@@ -9,8 +9,11 @@
     "packages/native/crates"
   ],
   "devDependencies": {
+    "@emnapi/core": "^1.7.1",
+    "@emnapi/runtime": "^1.7.1",
     "@myorg/native": "workspace:*",
-    "@myorg/tooling": "workspace:*"
+    "@myorg/tooling": "workspace:*",
+    "emnapi": "^1.7.1"
   },
   "bun-create": {
     "preinstall": "bun packages/tooling/dist/scaffold/run.js",

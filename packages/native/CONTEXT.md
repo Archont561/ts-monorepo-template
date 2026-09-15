@@ -19,12 +19,14 @@
 - **One bridge package for all pure crates** — pure crates stay out of the npm namespace (no package churn when they move), while Turbo still orders pure Rust before the napi builds that consume it. The guide's per-crate npm packages were collapsed into this single node deliberately.
 - **Cargo graph mirrored as `workspace:*`** — Turbo cannot see `[dependencies]` in Cargo.toml; the bridge edge is the one ordering fact it needs, and `mnative sync` keeps it honest.
 - **napi builds cached, cargo tasks not** — napi outputs are stable local artifacts with well-defined inputs; cargo's incremental state is its own cache and the toolchain belongs in its key. Over-invalidating is cheap, a stale `.node` is not.
-- **`unsafe_code = "forbid"` inherited, not per-crate** — a new crate is safe before anyone reviews it.
+- **`unsafe_code = "deny"` inherited, not per-crate** — a new crate is safe before anyone reviews it. It has to be `deny` and not `forbid`: `#[napi]` expands to `unsafe` code wrapped in its own `#[allow(unsafe_code)]`, and `forbid` cannot be overruled, so every `#[napi]` attribute died with E0453 and cascaded into E0425. `deny` still makes any `unsafe` we write a hard error.
+- **`emnapi` lives in the root `devDependencies`, not beside `@napi-rs/cli`** — the wasm build has `@napi-rs/cli` require it, and the CLI's realpath is inside `node_modules/.bun/…`, so the only `node_modules` its resolution walk reaches is the repo root's. Declaring it in `packages/tooling` (where the CLI is a devDependency) leaves it unresolvable; it is an *optional* peer there, so nothing installs it automatically.
 - **Clippy pedantic off** — `#[napi]` generates code that trips it; CI runs `-D warnings` instead.
 
 ## Open
 
-- No CI build has produced a prebuilt binary for any target yet, so the matrix in `native.yml` is unproven. The Rust layer (thin binding + `shared`) has not been compiled in this sandbox — verify with `mnative check && mnative test && mnative napi:build` on a machine with rustup.
+- The matrix in `native.yml` now reaches the `Build bindings` step on every target: the container jobs were blocked by a missing `unzip` (which `setup-bun` needs) and by Bun having no musl build, and both are fixed. What stopped all of them there was `unsafe_code = "forbid"`, now `deny`. No target has yet produced a binary, so the matrix is still unproven end to end — the `assemble` fan-in and the generated per-platform packages have never run.
+- `x86_64-apple-darwin` maps to the `macos-13` runner; a run on it was cancelled manually, so that target's status is unknown. GitHub has been retiring the Intel macOS runners — worth confirming `macos-13` is still available before relying on it.
 - Publish ordering across `npm/native` and its generated per-platform packages is out of scope.
 
 ## Recent changes
