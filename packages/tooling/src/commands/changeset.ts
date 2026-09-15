@@ -33,7 +33,13 @@ const firstArg = rawArgs[0];
 const isHelp = rawArgs.includes("--help") || rawArgs.includes("-h");
 const isVersion = rawArgs.includes("--version") || rawArgs.includes("-v");
 
+// This block runs at module scope, so it must not fire merely because another
+// command imported this module for `minit` — `m setup lefthook` would otherwise
+// hand `setup lefthook` to the real changeset CLI.
+const invoked = process.argv.slice(2).includes("changeset");
+
 if (
+  invoked &&
   firstArg &&
   !knownSubcommands.includes(firstArg) &&
   !firstArg.startsWith("-") &&

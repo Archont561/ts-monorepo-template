@@ -1,4 +1,4 @@
-import { defineConfig } from "@myorg/bunup";
+import { defineConfig } from "@myorg/tooling/bunup";
 
 export default defineConfig({
   entry: ["src/index.ts"],
@@ -8,6 +8,6 @@ export default defineConfig({
   dts: false,
   clean: true,
   // TEMPLATE-ONLY:START(unocss)
-  onSuccess: "munocss build",
+  onSuccess: "m unocss build",
   // TEMPLATE-ONLY:END(unocss)
 });

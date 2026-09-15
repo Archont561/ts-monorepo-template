@@ -1,8 +1,8 @@
 # SECTION: e2e
       # playwright.config.ts runs `webServer: { command: "bun run start" }`, and
-      # apps/example's `start` is `mbun dist/index.js` — so the app has to be
+      # apps/example's `start` is `m bun dist/index.js` — so the app has to be
       # built in this job before Playwright can serve it. Turbo makes the build
-      # cheap, and `me2e` exits 0 when no browser is installed, so this stays a
+      # cheap, and `m e2e` exits 0 when no browser is installed, so this stays a
       # no-op on runners without one.
       - name: Build for E2E
         run: bun run build

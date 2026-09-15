@@ -4,7 +4,7 @@ import { defineCommand, rawArgsAfter } from "../utils/spawn";
 
 const main = defineCommand({
   meta: {
-    name: "me2e",
+    name: "m e2e",
     version: "1.0.0",
     description:
       "Playwright E2E with browser detection — auto-skips if browsers missing, uses shared config",

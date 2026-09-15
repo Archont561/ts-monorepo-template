@@ -1,5 +1,5 @@
 {
-  "extends": "@myorg/ts/library.json",
+  "extends": "./src/configs/library.json",
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "./dist",

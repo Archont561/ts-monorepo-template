@@ -13,8 +13,8 @@ import {
 /**
  * File templates for the Rust workspace.
  *
- * Shared by `mnative setup` (which writes the whole workspace) and
- * `mnative add` (which appends one crate + package), so the two can never
+ * Shared by `m native setup` (which writes the whole workspace) and
+ * `m native add` (which appends one crate + package), so the two can never
  * drift. No workspace imports: `setup.ts` runs before `bun install`.
  */
 
@@ -36,7 +36,7 @@ const REPO = (options: TemplateOptions): string =>
 export function workspaceCargoToml(crates: NativeCrateSpec[], options: TemplateOptions): string {
   const members = crates.length
     ? crates.map((crate) => `  "crates/${crate.name}",`).join("\n")
-    : "  # no crates yet — add one with `mnative add <name>`";
+    : "  # no crates yet — add one with `m native add <name>`";
   const shared = crates.some((crate) => (crate.uses ?? []).includes("shared"));
   const lines = [
     "# Virtual Cargo workspace — no [package] here, only members.",
@@ -70,13 +70,13 @@ export function workspaceCargoToml(crates: NativeCrateSpec[], options: TemplateO
     "[workspace.lints.clippy]",
     'all = "warn"',
     "",
-    "# Release binaries — `mnative build:release` and every `napi build --release`.",
+    "# Release binaries — `m native build:release` and every `napi build --release`.",
     "[profile.release]",
     "lto           = true",
     "codegen-units = 1",
     "strip         = true",
     "",
-    "# CI builds — `mnative build:ci`: fast to produce, fast to run.",
+    "# CI builds — `m native build:ci`: fast to produce, fast to run.",
     "[profile.ci]",
     'inherits   = "dev"',
     "opt-level  = 1",
@@ -130,7 +130,7 @@ export const crateBuildRs = (): string =>
 
 /**
  * Sample Rust source — rustfmt-conformant (four-space indent) so a fresh
- * scaffold passes `mnative fmt:check` without a reformat.
+ * scaffold passes `m native fmt:check` without a reformat.
  */
 export function crateLibRs(spec: NativeCrateSpec): string {
   if (!spec.binding) {
@@ -526,19 +526,19 @@ export function npmPackageJson(
       },
     },
     scripts: {
-      build: `mnative napi:build --only ${spec.name}`,
-      "build:debug": `mnative napi:build:debug --only ${spec.name}`,
-      "build:wasm": `mnative napi:build:wasm --only ${spec.name}`,
-      "create-npm-dirs": `mnative create-npm-dirs --only ${spec.name}`,
-      artifacts: `mnative artifacts --only ${spec.name}`,
-      test: "mbun test",
-      "test:watch": "mbun test --watch",
-      typecheck: "mtsc --noEmit",
-      "cargo:check": "mnative check",
-      "cargo:clippy": "mnative clippy",
-      "cargo:fmt": "mnative fmt",
-      "cargo:fmt:check": "mnative fmt:check",
-      "cargo:test": "mnative test",
+      build: `m native napi:build --only ${spec.name}`,
+      "build:debug": `m native napi:build:debug --only ${spec.name}`,
+      "build:wasm": `m native napi:build:wasm --only ${spec.name}`,
+      "create-npm-dirs": `m native create-npm-dirs --only ${spec.name}`,
+      artifacts: `m native artifacts --only ${spec.name}`,
+      test: "m bun test",
+      "test:watch": "m bun test --watch",
+      typecheck: "m typecheck --noEmit",
+      "cargo:check": "m native check",
+      "cargo:clippy": "m native clippy",
+      "cargo:fmt": "m native fmt",
+      "cargo:fmt:check": "m native fmt:check",
+      "cargo:test": "m native test",
     },
     devDependencies: {
       [`${scope}/bun-config`]: "workspace:*",
@@ -556,7 +556,7 @@ export function npmPackageJson(
  * own line, and the generated project's `biome check` rejects that.
  *
  * `index.d.ts` is produced by `napi build`, so the committed test file is what
- * gives `mtsc` an input until the first build runs.
+ * gives `m typecheck` an input until the first build runs.
  */
 export function npmTsConfig(scope: string): string {
   return `{
@@ -614,7 +614,7 @@ export const npmTurboJson = (): string => `{
 
 /**
  * Structure test for a generated binding package — mirrors the one shipped
- * with the first crate, so a fresh `mnative add` package has both a
+ * with the first crate, so a fresh `m native add` package has both a
  * `typecheck` input and a `test` that runs without the Rust toolchain.
  */
 /**
@@ -665,12 +665,12 @@ describe("pure Rust crates", () => {
     expect(manifest).toContain("strip         = true");
   });
 
-  it("are one Turbo node — the bridge package runs mnative --pure", async () => {
+  it("are one Turbo node — the bridge package runs m native --pure", async () => {
     const pkg = await Bun.file("../../crates/package.json").json();
     expect(pkg.name).toBe("${scope}/native-crates");
     expect(pkg.private).toBe(true);
-    expect(pkg.scripts.build).toBe("mnative build --pure");
-    expect(pkg.scripts.test).toBe("mnative test --pure");
+    expect(pkg.scripts.build).toBe("m native build --pure");
+    expect(pkg.scripts.test).toBe("m native test --pure");
   });
 
   it("never Turbo-cache the bridge tasks (cargo owns target/)", async () => {
@@ -731,8 +731,8 @@ describe("${name} npm package", () => {
 
   it("builds only its own package", async () => {
     const pkg = await Bun.file("package.json").json();
-    expect(pkg.scripts.build).toBe("mnative napi:build --only ${name}");
-    expect(pkg.scripts["build:wasm"]).toBe("mnative napi:build:wasm --only ${name}");
+    expect(pkg.scripts.build).toBe("m native napi:build --only ${name}");
+    expect(pkg.scripts["build:wasm"]).toBe("m native napi:build:wasm --only ${name}");
   });
 ${
   usesPure
@@ -793,7 +793,7 @@ npm/*-*/
 /**
  * Writes one crate (and, for bindings, its npm package) under the workspace.
  * Existing files are left alone — this is used by both a fresh setup and
- * `mnative add`.
+ * `m native add`.
  */
 export async function writeCrate(
   root: string,
@@ -861,7 +861,7 @@ export async function addWorkspaceMember(root: string, name: string): Promise<vo
 /**
  * `package.json` for the bridge node — the ONE Turbo package that stands for
  * every pure Rust crate. It owns no files; its scripts scope cargo commands
- * to the pure crates via `mnative <cmd> --pure`, and binding npm packages
+ * to the pure crates via `m native <cmd> --pure`, and binding npm packages
  * depend on it (`workspace:*`) so Turbo orders pure Rust work before the napi
  * builds that compile it.
  */
@@ -871,12 +871,12 @@ export function bridgePackageJson(options: TemplateOptions): Record<string, unkn
     version: "0.0.0",
     private: true,
     scripts: {
-      build: "mnative build --pure",
-      test: "mnative test --pure",
-      "cargo:check": "mnative check --pure",
-      "cargo:clippy": "mnative clippy --pure",
-      "cargo:fmt": "mnative fmt --pure",
-      "cargo:fmt:check": "mnative fmt:check --pure",
+      build: "m native build --pure",
+      test: "m native test --pure",
+      "cargo:check": "m native check --pure",
+      "cargo:clippy": "m native clippy --pure",
+      "cargo:fmt": "m native fmt --pure",
+      "cargo:fmt:check": "m native fmt:check --pure",
     },
   };
 }
@@ -923,7 +923,7 @@ export const bridgeTurboJson = (): string => `{
 
 /**
  * Writes (or refreshes) the bridge node at `packages/native/crates/`. Called
- * by setup and by `mnative add --pure`, so the node can never go missing or
+ * by setup and by `m native add --pure`, so the node can never go missing or
  * drift from the templates.
  */
 export async function writeBridgeNode(

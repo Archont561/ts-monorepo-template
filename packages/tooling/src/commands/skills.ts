@@ -387,7 +387,7 @@ const removeCommand = defineCommand({
 
 const main = defineCommand({
   meta: {
-    name: "mskills",
+    name: "m skills",
     version: "1.0.0",
     description:
       "AI agent skills management via skills.sh + curated skills — sync, list, add, update, validate, index",

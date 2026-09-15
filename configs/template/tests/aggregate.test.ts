@@ -59,9 +59,9 @@ describe("aggregate", () => {
   test(
     "regenerateCI and docs:sync are the same generator — a second pass must be a no-op",
     async () => {
-      // `MonorepoScaffolder.regenerateCI()` and `mdocs`'s `regenerateAll()` used to be two
+      // `MonorepoScaffolder.regenerateCI()` and `m docs`'s `regenerateAll()` used to be two
       // hand-maintained copies, and had already drifted apart: a scaffolded repo whose owner
-      // later ran `mdocs` could get workflows that differ from the ones it shipped with.
+      // later ran `m docs` could get workflows that differ from the ones it shipped with.
       // Both callers now delegate to `regenerateAll`; this locks the wiring in place by
       // running the *other* entry point over a scaffolded tree and demanding identical bytes.
       const result = await new TemplateHarness({ skipInstall: true }).prepare();
@@ -272,7 +272,7 @@ describe("aggregate", () => {
       const coverage = `${result.templateDir}/.github/workflows/coverage.yml`;
 
       // Docs app present (this repo): template-docs.yml is the single deployer
-      // and `mdocs site` publishes coverage at /coverage/ inside that artifact.
+      // and `m docs site` publishes coverage at /coverage/ inside that artifact.
       expect(
         await file(`${result.templateDir}/apps/template-docs/.vitepress/config.mts`).exists(),
       ).toBe(true);

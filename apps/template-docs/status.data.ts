@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
  * VitePress data loaders run in Node during `bun run docs:build` (and on watch
  * in dev), so the page ships with real numbers instead of client-side fetches.
  * Everything that already has a CLI owns its own logic — coverage comes from
- * `mcoverage summary --json` and the repo slug from `mpages base --json`.
+ * `m coverage summary --json` and the repo slug from `m pages base --json`.
  *
  * Exported as a plain object rather than through vitepress' `defineLoader`:
  * the loader is bundled as CJS and `vitepress` is ESM-only, so importing it
@@ -188,7 +188,7 @@ function tools(): Tool[] {
 }
 
 function repo(): Repo {
-  const fromCli = json<Repo>(["bun", "run", "mpages", "base", "--json"]);
+  const fromCli = json<Repo>(["bun", "run", "m pages", "base", "--json"]);
   if (fromCli?.repo) return fromCli;
 
   // Fallback for a checkout where the bins aren't linked yet.
@@ -234,7 +234,7 @@ function coverage(): Coverage {
   const raw = json<{ available: boolean; lines: { hit: number; found: number; percent: number } }>([
     "bun",
     "run",
-    "mcoverage",
+    "m coverage",
     "summary",
     "--json",
   ]);
@@ -244,7 +244,7 @@ function coverage(): Coverage {
     percent: raw?.lines.percent ?? 0,
     hit: raw?.lines.hit ?? 0,
     found: raw?.lines.found ?? 0,
-    // Matches the CI gate (mcoverage check --threshold 80).
+    // Matches the CI gate (m coverage check --threshold 80).
     threshold: 80,
     source: "coverage/lcov.info",
     reportUrl: existsSync(reportPath) ? "./coverage/" : null,

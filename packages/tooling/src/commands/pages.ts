@@ -65,7 +65,7 @@ async function stage(root: string, targets: PagesTarget[]): Promise<void> {
   // Mirrors @myorg/coverage's COVERAGE_HTML. Kept as a literal on purpose:
   // Pages is usable without the coverage config, so it cannot depend on it.
   const COVERAGE_HTML_DIR = "coverage/html";
-  // Coverage is rendered by `mcoverage pages` into coverage/html; folding it in
+  // Coverage is rendered by `m coverage pages` into coverage/html; folding it in
   // here keeps the step order in the workflow irrelevant.
   const coverageHtml = join(root, COVERAGE_HTML_DIR);
   if (existsSync(join(coverageHtml, "index.html"))) {
@@ -111,7 +111,7 @@ const buildCommand = defineCommand({
     console.log("📄 Building static site for GitHub Pages");
 
     // Every package builds its own assets — apps own their CSS build
-    // (e.g. apps/example's munocss build), so there is no global CSS step here.
+    // (e.g. apps/example's m unocss build), so there is no global CSS step here.
     const exitCode = spawnTool(["bun", "run", "build"]);
     if (exitCode !== 0) {
       console.error(`::error::bun run build failed (exit ${exitCode})`);
@@ -201,7 +201,7 @@ const baseCommand = defineCommand({
 
 const main = defineCommand({
   meta: {
-    name: "mpages",
+    name: "m pages",
     version: "1.0.0",
     description: "GitHub Pages helper — discovers declared sites, builds and stages the artifact",
   },

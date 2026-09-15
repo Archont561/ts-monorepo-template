@@ -18,8 +18,8 @@ const TARGET_DIR = process.cwd();
 const SCOPE = process.env.UNOCSS_SCOPE ?? "@myorg";
 
 /** The app owns its CSS build; the CLI reads `cli.entry` from the config file. */
-const BUILD_CSS_SCRIPT = "munocss build";
-const WATCH_CSS_SCRIPT = "munocss watch";
+const BUILD_CSS_SCRIPT = "m unocss build";
+const WATCH_CSS_SCRIPT = "m unocss watch";
 
 const CONFIG_PATH = join(TARGET_DIR, "configs/unocss/uno.config.ts");
 
@@ -103,14 +103,14 @@ async function wireExampleApp(): Promise<void> {
     }
     next = setJsonValue(next, `devDependencies.${SCOPE}/unocss`, "workspace:*");
 
-    // munocss owns the shared config path, so scripts stay one-liners and
+    // m unocss owns the shared config path, so scripts stay one-liners and
     // degrade to a no-op in monorepos scaffolded without UnoCSS.
     if (pkg.scripts?.["build:css"] !== BUILD_CSS_SCRIPT) {
-      console.log(`  ✓ Updated build:css to use munocss`);
+      console.log(`  ✓ Updated build:css to use m unocss`);
     }
     next = setJsonValue(next, "scripts.build:css", BUILD_CSS_SCRIPT);
 
-    if (pkg.scripts?.build !== "mbunup" && pkg.scripts?.build !== BUILD_CSS_SCRIPT) {
+    if (pkg.scripts?.build !== "m build" && pkg.scripts?.build !== BUILD_CSS_SCRIPT) {
       console.log(`  ✓ Added build script to apps/example (per-app CSS build)`);
       next = setJsonValue(next, "scripts.build", BUILD_CSS_SCRIPT);
     }
@@ -143,9 +143,9 @@ async function removeStrayRootConfig(): Promise<void> {
 }
 
 function printNextSteps(): void {
-  console.log(`\n✅ UnoCSS setup complete — config via the munocss CLI, no root file\n`);
+  console.log(`\n✅ UnoCSS setup complete — config via the m unocss CLI, no root file\n`);
   console.log(
-    `   Usage: bun run build (apps/example builds its own CSS via munocss)\n` +
+    `   Usage: bun run build (apps/example builds its own CSS via m unocss)\n` +
       `         bun --filter @myorg/example run build:css:watch\n`,
   );
 }

@@ -5,7 +5,7 @@ import { defineCommand, rawArgsAfter, runMain, spawnTool } from "../utils/spawn"
 
 const bunfig = resolveConfig("bunfig.toml");
 
-/** `m turbo` re-entered through this package, so coverage does not depend on the legacy `mturbo` bin. */
+/** `m turbo` re-entered through this package, so coverage does not depend on the legacy `m turbo` bin. */
 const TURBO_VIA_CLI = ["bun", `${pkgRoot()}/src/cli.ts`, "turbo"];
 
 async function runCoverage() {
@@ -13,7 +13,7 @@ async function runCoverage() {
     console.error("m bun coverage needs `bun` on PATH.");
     process.exit(1);
   }
-  // Per-package coverage is turbo's job; merging is mcoverage's
+  // Per-package coverage is turbo's job; merging is m coverage's
   // (`bun run coverage` = m turbo coverage && m coverage merge).
   console.log("Running per-package coverage via turbo...\n");
   process.exit(spawnTool([...TURBO_VIA_CLI, "coverage"]));
@@ -43,7 +43,11 @@ const isHelp = rawArgs.includes("--help") || rawArgs.includes("-h");
 const isVersion = rawArgs.includes("--version") || rawArgs.includes("-v");
 const firstArg = rawArgs[0];
 
+// Same guard as changeset.ts: this runs at module scope.
+const invoked = process.argv.slice(2).includes("bun");
+
 if (
+  invoked &&
   firstArg &&
   !knownSubcommands.includes(firstArg) &&
   !firstArg.startsWith("-") &&

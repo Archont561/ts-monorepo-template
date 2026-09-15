@@ -1,7 +1,7 @@
 import { resolveConfig } from "../utils/paths";
 import { defineCommand, spawnTool } from "../utils/spawn";
 
-/** `m test` — `bun test` with the shared bunfig.toml. The `mbun test` equivalent. */
+/** `m test` — `bun test` with the shared bunfig.toml. The `m bun test` equivalent. */
 export default defineCommand({
   meta: { name: "test", description: "Run bun test with the shared bunfig.toml config" },
   args: {

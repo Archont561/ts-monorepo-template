@@ -1,5 +1,5 @@
 # AUTO-GENERATED from configs/*/dependabot-auto-merge.steps.yml — do not edit directly
-# Edit fragments then run bun run docs:sync (mdocs)
+# Edit fragments then run bun run docs:sync (m docs)
 name: Dependabot auto-merge
 
 on:

@@ -889,7 +889,7 @@ export class MonorepoScaffolder {
    * Ensures the target directory is a Git repository.
    *
    * Lefthook hooks are no longer installed here — the root `prepare` script
-   * (`msetup lefthook`) handles that during `bun install`,
+   * (`m setup lefthook`) handles that during `bun install`,
    * which in the `bun create` flow runs after this preinstall scaffold.
    */
   async setupGitHooks(): Promise<void> {

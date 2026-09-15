@@ -12,13 +12,13 @@
         with:
           workspaces: "{{NATIVE_DIR}}"
 
-      - name: Cargo build release (mnative)
+      - name: Cargo build release (m native)
         if: hashFiles('{{NATIVE_CARGO}}') != ''
-        run: bunx mnative build:release
+        run: bunx m native build:release
         shell: bash
 
-      - name: Build native bindings for release (napi via mnative)
+      - name: Build native bindings for release (napi via m native)
         if: hashFiles('{{NATIVE_CARGO}}') != ''
-        run: bunx mnative napi:build
+        run: bunx m native napi:build
         shell: bash
       # TEMPLATE-ONLY:END(native)

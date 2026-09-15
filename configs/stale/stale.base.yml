@@ -1,5 +1,5 @@
 # AUTO-GENERATED from configs/stale/stale.base.yml — do not edit directly
-# Edit skeleton then run bun run docs:sync (mdocs)
+# Edit skeleton then run bun run docs:sync (m docs)
 name: Stale
 
 on:

@@ -81,8 +81,39 @@ jobs:
       # are checked; private ones are never published.
       # attw runs with --profile esm-only: the template ships ESM-only
       # packages, so the strict profile's CJS resolutions are intentional.
-      - name: Package health (publint + arethetypeswrong, via mbunup)
-        run: bunx mbunup health
+      - name: Package health (publint + arethetypeswrong, via m build)
+        run: bunx m health
+
+      # Coverage reporting — all logic lives in the m coverage CLI
+      # (configs/coverage/src/cli.ts): setup installs genhtml, html renders the
+      # report, check enforces the threshold by parsing LCOV directly.
+      - name: Setup coverage tooling
+        run: bunx m coverage setup
+        shell: bash
+
+      - name: Generate coverage HTML
+        run: bunx m coverage html
+        shell: bash
+
+      - name: Upload coverage HTML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/html/
+          retention-days: 14
+
+      # Threshold comes from COVERAGE_THRESHOLD in configs/coverage/index.ts.
+      - name: Check coverage threshold (m coverage)
+        run: bunx m coverage check
+        shell: bash
+
+      - name: Report coverage to PR
+        if: github.event_name == 'pull_request'
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          lcov-file: ./coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          delete-old-comments: true
 
       - name: Validate workflows
         run: bun run ci:lint
@@ -127,7 +158,7 @@ jobs:
       - name: Coverage
         run: bun run coverage
 
-      # The merged report (SF: paths rebased to the repo root by `mcoverage
+      # The merged report (SF: paths rebased to the repo root by `m coverage
       # merge`) is the single Codecov upload: the components in the generated
       # codecov.yml slice it per package, so no per-package upload steps exist
       # to drift when the workspace changes. Store the token as CODECOV_TOKEN.
@@ -141,39 +172,8 @@ jobs:
 
       - name: Coverage summary
         if: always()
-        run: bunx mcoverage summary --markdown >> $GITHUB_STEP_SUMMARY
+        run: bunx m coverage summary --markdown >> $GITHUB_STEP_SUMMARY
         shell: bash
-
-      # Coverage reporting — all logic lives in the mcoverage CLI
-      # (configs/coverage/src/cli.ts): setup installs genhtml, html renders the
-      # report, check enforces the threshold by parsing LCOV directly.
-      - name: Setup coverage tooling
-        run: bunx mcoverage setup
-        shell: bash
-
-      - name: Generate coverage HTML
-        run: bunx mcoverage html
-        shell: bash
-
-      - name: Upload coverage HTML artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: coverage-report
-          path: coverage/html/
-          retention-days: 14
-
-      # Threshold comes from COVERAGE_THRESHOLD in configs/coverage/index.ts.
-      - name: Check coverage threshold (mcoverage)
-        run: bunx mcoverage check
-        shell: bash
-
-      - name: Report coverage to PR
-        if: github.event_name == 'pull_request'
-        uses: romeovs/lcov-reporter-action@v0.3.1
-        with:
-          lcov-file: ./coverage/lcov.info
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          delete-old-comments: true
 
   security:
     name: Security Scans
@@ -229,7 +229,7 @@ jobs:
       # TEMPLATE-ONLY:END(codeql)
 
       # Gitleaks — secret scanning in CI (always, security baseline)
-      - name: Gitleaks — secret scanning (mgitleaks via action)
+      - name: Gitleaks — secret scanning (m gitleaks via action)
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -253,7 +253,7 @@ jobs:
 
       - name: Build image for Trivy scan (if Dockerfile exists)
         if: hashFiles('apps/example/Dockerfile') != ''
-        run: bunx mtrivy build
+        run: bunx m trivy build
 
       - name: Trivy image scan (if Dockerfile)
         if: hashFiles('apps/example/Dockerfile') != ''
@@ -318,34 +318,34 @@ jobs:
         with:
           workspaces: "packages/native"
 
-      - name: Cargo fmt check (mnative)
+      - name: Cargo fmt check (m native)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: bunx mnative fmt:check
+        run: bunx m native fmt:check
         shell: bash
 
-      - name: Cargo clippy (deny warnings, mnative)
+      - name: Cargo clippy (deny warnings, m native)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: bunx mnative clippy
+        run: bunx m native clippy
         shell: bash
 
-      - name: Cargo check (fast, mnative)
+      - name: Cargo check (fast, m native)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: bunx mnative check
+        run: bunx m native check
         shell: bash
 
-      - name: Cargo test (mnative)
+      - name: Cargo test (m native)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: bunx mnative test
+        run: bunx m native test
         shell: bash
 
-      - name: Build native bindings (host, mnative)
+      - name: Build native bindings (host, m native)
         if: hashFiles('packages/native/Cargo.toml') != ''
-        run: bunx mnative napi:build
+        run: bunx m native napi:build
         shell: bash
 
       - name: Check native package types
         if: hashFiles('packages/native/npm/*/package.json') != ''
-        run: bunx mnative typecheck
+        run: bunx m native typecheck
         shell: bash
       # TEMPLATE-ONLY:END(native)
 
@@ -379,9 +379,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       # playwright.config.ts runs `webServer: { command: "bun run start" }`, and
-      # apps/example's `start` is `mbun dist/index.js` — so the app has to be
+      # apps/example's `start` is `m bun dist/index.js` — so the app has to be
       # built in this job before Playwright can serve it. Turbo makes the build
-      # cheap, and `me2e` exits 0 when no browser is installed, so this stays a
+      # cheap, and `m e2e` exits 0 when no browser is installed, so this stays a
       # no-op on runners without one.
       - name: Build for E2E
         run: bun run build

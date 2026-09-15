@@ -36,30 +36,27 @@
     }
   },
   "scripts": {
-    "build": "mnative napi:build --only native",
-    "build:debug": "mnative napi:build:debug --only native",
-    "build:wasm": "mnative napi:build:wasm --only native",
-    "create-npm-dirs": "mnative create-npm-dirs --only native",
-    "artifacts": "mnative artifacts --only native",
-    "test": "mbun test",
-    "test:watch": "mbun test --watch",
-    "typecheck": "mtsc --noEmit",
-    "cargo:check": "mnative check",
-    "cargo:clippy": "mnative clippy",
-    "cargo:fmt": "mnative fmt",
-    "cargo:fmt:check": "mnative fmt:check",
-    "cargo:test": "mnative test",
-    "cargo:tree": "mnative tree",
-    "cargo:update": "mnative update",
-    "cargo:doc": "mnative doc",
-    "cargo:audit": "mnative audit"
+    "build": "m native napi:build --only native",
+    "build:debug": "m native napi:build:debug --only native",
+    "build:wasm": "m native napi:build:wasm --only native",
+    "create-npm-dirs": "m native create-npm-dirs --only native",
+    "artifacts": "m native artifacts --only native",
+    "test": "m bun test",
+    "test:watch": "m bun test --watch",
+    "typecheck": "m typecheck --noEmit",
+    "cargo:check": "m native check",
+    "cargo:clippy": "m native clippy",
+    "cargo:fmt": "m native fmt",
+    "cargo:fmt:check": "m native fmt:check",
+    "cargo:test": "m native test",
+    "cargo:tree": "m native tree",
+    "cargo:update": "m native update",
+    "cargo:doc": "m native doc",
+    "cargo:audit": "m native audit"
   },
   "devDependencies": {
-    "@myorg/bun-config": "workspace:*",
-    "@myorg/bunup": "workspace:*",
-    "@myorg/native-config": "workspace:*",
-    "@myorg/ts": "workspace:*",
     "@myorg/native-crates": "workspace:*",
+    "@myorg/tooling": "workspace:*",
     "@napi-rs/cli": "^3.9.1"
   }
 }

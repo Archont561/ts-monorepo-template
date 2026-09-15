@@ -3,7 +3,7 @@ import { defineWrapperCommand } from "../utils/spawn";
 
 const BIOME = Bun.fileURLToPath(import.meta.resolve("@biomejs/biome/bin/biome"));
 
-/** `m lint:fix` — `biome check --write`. Replaces `mbiome check --write`. */
+/** `m lint:fix` — `biome check --write`. Replaces `m biome check --write`. */
 export default defineWrapperCommand({
   name: "lint:fix",
   version: "1.0.0",

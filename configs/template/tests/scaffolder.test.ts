@@ -140,7 +140,7 @@ describe("MonorepoScaffolder (unit)", () => {
         JSON.stringify({
           name: "test",
           scripts: {
-            prepare: "msetup lefthook && mchangeset init",
+            prepare: "m setup lefthook && m changeset init",
           },
         }),
       );
@@ -149,8 +149,8 @@ describe("MonorepoScaffolder (unit)", () => {
       await s.sanitizePackageJson();
 
       const pkg = await file(`${workDir}/package.json`).json();
-      expect(pkg.scripts.prepare).toContain("msetup");
-      expect(pkg.scripts.prepare).toContain("mchangeset");
+      expect(pkg.scripts.prepare).toContain("m setup");
+      expect(pkg.scripts.prepare).toContain("m changeset");
     });
 
     test("handles missing package.json gracefully", async () => {
@@ -206,14 +206,14 @@ describe("MonorepoScaffolder (unit)", () => {
       await mkdir(`${workDir}/packages/internal`, { recursive: true });
       await write(
         `${workDir}/packages/internal/tsconfig.json`,
-        JSON.stringify({ extends: "@myorg/ts/library.json" }),
+        JSON.stringify({ extends: "@myorg/tooling/library.json" }),
       );
 
       const s = new MonorepoScaffolder({ targetDir: workDir, scope: "@acme" });
       await s.replaceScopePlaceholders();
 
       const tsconfig = await file(`${workDir}/packages/internal/tsconfig.json`).json();
-      expect(tsconfig.extends).toBe("@acme/ts/library.json");
+      expect(tsconfig.extends).toBe("@acme/tooling/library.json");
     });
 
     test("replaces in source imports", async () => {
@@ -765,8 +765,8 @@ describe("MonorepoScaffolder (unit)", () => {
           name: "test",
           scripts: {
             "docs:sync": "bun configs/template/src/aggregate.ts",
-            "docs:site": "mdocs site",
-            "docs:dev": "mturbo dev --filter=@myorg/template-docs",
+            "docs:site": "m docs site",
+            "docs:dev": "m turbo dev --filter=@myorg/template-docs",
           },
           devDependencies: { "@myorg/template": "workspace:*", "@myorg/biome": "workspace:*" },
         }),
@@ -1045,7 +1045,7 @@ describe("MonorepoScaffolder (unit)", () => {
       );
       await write(
         `${workDir}/package.json`,
-        '{\n  "name": "demo",\n  "workspaces": ["packages/*", "configs/*"],\n  "scripts": {\n    "build": "mturbo build",\n    "demo": "mdemo"\n  },\n  "devDependencies": {\n    "@myorg/demo": "workspace:*",\n    "@myorg/internal": "workspace:*"\n  }\n}\n',
+        '{\n  "name": "demo",\n  "workspaces": ["packages/*", "configs/*"],\n  "scripts": {\n    "build": "m turbo build",\n    "demo": "mdemo"\n  },\n  "devDependencies": {\n    "@myorg/demo": "workspace:*",\n    "@myorg/internal": "workspace:*"\n  }\n}\n',
       );
       await mkdir(`${workDir}/packages/internal`, { recursive: true });
       await write(`${workDir}/packages/internal/package.json`, '{ "name": "@myorg/internal" }\n');
@@ -1058,7 +1058,7 @@ describe("MonorepoScaffolder (unit)", () => {
       expect(root).not.toContain("mdemo");
       expect(root).not.toContain("@myorg/demo");
       expect(root).toContain('"@myorg/internal": "workspace:*"');
-      expect(JSON.parse(root).scripts).toEqual({ build: "mturbo build" });
+      expect(JSON.parse(root).scripts).toEqual({ build: "m turbo build" });
 
       const turbo = await file(`${workDir}/configs/turbo/turbo.base.json`).text();
       expect(turbo).toContain('"dependsOn": ["^build"]');

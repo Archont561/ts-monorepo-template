@@ -42,7 +42,7 @@ export type NativeNpmPackage = {
 };
 
 /**
- * Walks up from `start` until it finds the Rust workspace, so `mnative` works
+ * Walks up from `start` until it finds the Rust workspace, so `m native` works
  * from any package directory (turbo runs it with cwd = the package).
  */
 export function findNativeRoot(start: string = process.cwd()): string {

@@ -6,7 +6,7 @@
       - name: Coverage
         run: bun run coverage
 
-      # The merged report (SF: paths rebased to the repo root by `mcoverage
+      # The merged report (SF: paths rebased to the repo root by `m coverage
       # merge`) is the single Codecov upload: the components in the generated
       # codecov.yml slice it per package, so no per-package upload steps exist
       # to drift when the workspace changes. Store the token as CODECOV_TOKEN.
@@ -20,7 +20,7 @@
 
       - name: Coverage summary
         if: always()
-        run: bunx mcoverage summary --markdown >> $GITHUB_STEP_SUMMARY
+        run: bunx m coverage summary --markdown >> $GITHUB_STEP_SUMMARY
         shell: bash
 
 # SECTION: quality

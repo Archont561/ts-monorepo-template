@@ -12,11 +12,11 @@ const CONFIG_PATH = resolveConfig("uno.config.ts");
 /**
  * The shared config scans root-relative patterns (`apps/example/src/**`), so
  * the UnoCSS CLI has to run from the repo root — otherwise an app that calls
- * `munocss build` from its own directory matches nothing.
+ * `m unocss build` from its own directory matches nothing.
  */
 const REPO_ROOT = repoRoot();
 
-/** Resolved relative to this file, so munocss works from any package dir. */
+/** Resolved relative to this file, so m unocss works from any package dir. */
 function configExists(): boolean {
   return existsSync(CONFIG_PATH);
 }
@@ -105,7 +105,7 @@ const infoCommand = defineCommand({
 
 const main = defineCommand({
   meta: {
-    name: "munocss",
+    name: "m unocss",
     version: "1.0.0",
     description: "UnoCSS wrapper — owns the shared config path, skips cleanly when disabled",
   },
@@ -118,7 +118,7 @@ const main = defineCommand({
     console.log(`\nmunocss — UnoCSS with the shared config (configs/unocss/uno.config.ts)
 
 Usage:
-  munocss <command>
+  m unocss <command>
 
 Commands:
   build     Generate CSS (no-op when UnoCSS is not enabled)
@@ -126,8 +126,8 @@ Commands:
   info      Show config path and declared output files
 
 Examples:
-  munocss build          # in an app's "build" script
-  munocss watch          # in an app's "build:css:watch" script
+  m unocss build          # in an app's "build" script
+  m unocss watch          # in an app's "build:css:watch" script
 `);
     process.exit(0);
   },

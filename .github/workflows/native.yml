@@ -28,7 +28,7 @@ env:
   WASI_SDK_VERSION: 24
 
 jobs:
-  # One entry per target triple, printed by `mnative matrix --gha`: the runner
+  # One entry per target triple, printed by `m native matrix --gha`: the runner
   # and container images live in configs/native next to the `napi.targets` each
   # package declares, so this file never lists a platform by hand.
   matrix:
@@ -46,7 +46,7 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - id: matrix
-        run: bunx mnative matrix --gha >> "$GITHUB_OUTPUT"
+        run: bunx m native matrix --gha >> "$GITHUB_OUTPUT"
 
   # Compile the bindings. Each job uploads its .node/.wasm; nothing here is
   # published — the fan-in job assembles the platform packages.
@@ -95,7 +95,7 @@ jobs:
 
       # One triple per job — `napi build` cannot cross-compile them all at once.
       - name: Build bindings
-        run: bunx mnative napi:build --target ${{ matrix.target }}
+        run: bunx m native napi:build --target ${{ matrix.target }}
         shell: bash
 
       - name: Upload bindings
@@ -133,10 +133,10 @@ jobs:
           merge-multiple: true
 
       - name: Create platform package dirs
-        run: bunx mnative create-npm-dirs
+        run: bunx m native create-npm-dirs
 
       - name: Move binaries into their platform packages
-        run: bunx mnative artifacts --dir packages/native/npm/.artifacts
+        run: bunx m native artifacts --dir packages/native/npm/.artifacts
 
       - name: Upload npm packages
         uses: actions/upload-artifact@v6

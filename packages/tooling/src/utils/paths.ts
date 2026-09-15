@@ -83,7 +83,7 @@ export function resolveSrc(...segments: string[]): string {
 
 /**
  * Directory of the curated skill files that `m skills sync` installs. Mirrors
- * `${import.meta.dir}/../skills` in the original `mskills`.
+ * `${import.meta.dir}/../skills` in the original `m skills`.
  */
 export function curatedSkillsDir(): string {
   return join(pkgRoot(), "skills");

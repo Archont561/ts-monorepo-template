@@ -4,7 +4,7 @@ const TSC = Bun.fileURLToPath(
   import.meta.resolve("typescript/package.json").replace("package.json", "bin/tsc"),
 );
 
-/** `m typecheck` — the `mtsc` equivalent. */
+/** `m typecheck` — the `m typecheck` equivalent. */
 export default defineWrapperCommand({
   name: "typecheck",
   version: "1.0.0",

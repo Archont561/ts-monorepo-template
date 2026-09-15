@@ -150,7 +150,7 @@ export function defineSpawnSubcommand(opts: SpawnSubcommandOptions) {
  * Arguments after the last occurrence of `name` in argv.
  *
  * `@myorg/citty` hardcoded `argv.slice(2)` / `argv.slice(3)` because every m-bin
- * was invoked as `mbiome check ...` — the command name was argv[0] of the raw
+ * was invoked as `m biome check ...` — the command name was argv[0] of the raw
  * slice. Under the unified CLI the same command is `m lint check ...`, so there
  * is one extra leading token. Slicing after the command's own name keeps both
  * invocations identical instead of baking in a magic offset that is only

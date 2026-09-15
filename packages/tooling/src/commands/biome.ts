@@ -4,7 +4,7 @@ import { defineWrapperCommand } from "../utils/spawn";
 const BIOME = Bun.fileURLToPath(import.meta.resolve("@biomejs/biome/bin/biome"));
 
 /**
- * Full Biome passthrough — the `mbiome` equivalent. `m lint` / `m lint:fix`
+ * Full Biome passthrough — the `m biome` equivalent. `m lint` / `m lint:fix`
  * are the ergonomic defaults over this; use `m biome <cmd>` for anything else
  * (format, migrate, rage, ...).
  */

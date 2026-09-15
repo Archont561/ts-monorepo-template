@@ -1,2 +1,2 @@
 extends:
-  - node_modules/@myorg/lefthook/lefthook.yml
+  - node_modules/@myorg/tooling/src/configs/lefthook.yml

@@ -47,8 +47,8 @@ import {
  * └── npm/native/       @scope/native — platform packages are generated in CI
  * ```
  *
- * Supports any number of crates: add one with `mnative add <name>` (or
- * `mnative add shared --pure` for a crate with no Node-API surface). Cargo runs
+ * Supports any number of crates: add one with `m native add <name>` (or
+ * `m native add shared --pure` for a crate with no Node-API surface). Cargo runs
  * against the whole workspace; napi runs per package.
  *
  * Data-driven via `scaffold.setup` in configs/native/package.json.
@@ -73,11 +73,11 @@ const CARGO_CONFIG = join(NATIVE_ROOT, ".cargo/config.toml");
 const ROOT_CARGO_CONFIG = join(TARGET_DIR, ".cargo/config.toml");
 const NATIVE_GITIGNORE = join(NATIVE_ROOT, ".gitignore");
 
-/** Root scripts the workspace needs, and the mnative command each one runs. */
+/** Root scripts the workspace needs, and the m native command each one runs. */
 const ROOT_SCRIPTS: Record<string, string> = {
-  "build:native": "mnative napi:build",
-  "build:wasm": "mnative napi:build:wasm",
-  "test:native": "mnative test",
+  "build:native": "m native napi:build",
+  "build:wasm": "m native napi:build:wasm",
+  "test:native": "m native test",
 };
 
 /** Turbo tasks for the native builds — cargo stays uncached. */
@@ -339,7 +339,7 @@ async function linkNpmPackages(): Promise<void> {
     for (const name of Object.keys(pkg.scripts ?? {})) {
       const command = pkg.scripts?.[name] ?? "";
       if (!name.startsWith("cargo:") || !command.includes("bun --filter")) continue;
-      console.log(`  🗑️ Removed root script ${name} (cargo goes through mnative)`);
+      console.log(`  🗑️ Removed root script ${name} (cargo goes through m native)`);
       next = removeJsonEntry(next, `scripts.${name}`);
     }
 
@@ -386,19 +386,19 @@ function printNextSteps(): void {
   console.log(`    ${NATIVE_DIR}/crates/<name>/   one crate per Rust unit`);
   console.log(`    ${NATIVE_DIR}/npm/<name>/      one npm package per binding\n`);
   console.log("  Commands:");
-  console.log("    mnative list              # crates + packages");
-  console.log("    mnative add <name>        # add a crate (+ npm package)");
-  console.log("    mnative add shared --pure # pure Rust crate, no Node-API");
-  console.log("    mnative check             # cargo check --workspace");
-  console.log("    mnative napi:build        # build every package's .node");
-  console.log("    mnative napi:build:wasm   # wasm32-wasip1-threads\n");
-  console.log("  Next: bun install && mnative check && bun run build:native\n");
+  console.log("    m native list              # crates + packages");
+  console.log("    m native add <name>        # add a crate (+ npm package)");
+  console.log("    m native add shared --pure # pure Rust crate, no Node-API");
+  console.log("    m native check             # cargo check --workspace");
+  console.log("    m native napi:build        # build every package's .node");
+  console.log("    m native napi:build:wasm   # wasm32-wasip1-threads\n");
+  console.log("  Next: bun install && m native check && bun run build:native\n");
 }
 
 async function main() {
   console.log("\n🦀 Setting up native Rust bindings (Cargo workspace + napi-rs)...\n");
   console.log(`  Mode: Cargo workspace at ${NATIVE_DIR}/ (crates/* + npm/*)`);
-  console.log("  CLI: mnative (cargo + napi wrapper)\n");
+  console.log("  CLI: m native (cargo + napi wrapper)\n");
 
   await mkdir(NATIVE_ROOT, { recursive: true });
 

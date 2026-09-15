@@ -47,8 +47,8 @@ describe("native npm package", () => {
 
   it("builds only its own package", async () => {
     const pkg = await Bun.file("package.json").json();
-    expect(pkg.scripts.build).toBe("mnative napi:build --only native");
-    expect(pkg.scripts["build:wasm"]).toBe("mnative napi:build:wasm --only native");
+    expect(pkg.scripts.build).toBe("m native napi:build --only native");
+    expect(pkg.scripts["build:wasm"]).toBe("m native napi:build:wasm --only native");
   });
 
   it("depends on the pure-Rust bridge package", async () => {
@@ -101,12 +101,12 @@ describe("pure Rust crates", () => {
     expect(manifest).toContain("strip         = true");
   });
 
-  it("are one Turbo node — the bridge package runs mnative --pure", async () => {
+  it("are one Turbo node — the bridge package runs m native --pure", async () => {
     const pkg = await Bun.file("../../crates/package.json").json();
     expect(pkg.name).toBe("@myorg/native-crates");
     expect(pkg.private).toBe(true);
-    expect(pkg.scripts.build).toBe("mnative build --pure");
-    expect(pkg.scripts.test).toBe("mnative test --pure");
+    expect(pkg.scripts.build).toBe("m native build --pure");
+    expect(pkg.scripts.test).toBe("m native test --pure");
   });
 
   it("never Turbo-cache the bridge tasks (cargo owns target/)", async () => {

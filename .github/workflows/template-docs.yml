@@ -1,7 +1,7 @@
 # TEMPLATE-ONLY:START(template)
 # Template-only docs Pages — deploys the docs app to GitHub Pages
 # Removed during scaffolding via configs/template extraRemovals
-# This is the ONLY Pages deployment for this repository: `mdocs site` assembles
+# This is the ONLY Pages deployment for this repository: `m docs site` assembles
 # the docs app + the coverage report (/coverage/) + the demo app (/example/)
 # into one artifact, so pages.yml and coverage.yml are not generated here (see
 # configs/template/src/aggregate.ts). Generated monorepos, which have no docs
@@ -50,7 +50,7 @@ jobs:
       # site lands in apps/template-docs/dist) and nests the coverage report
       # (/coverage/) and the demo app (/example/) into the same artifact.
       - name: Build the site (docs + coverage + demo app)
-        run: bunx mdocs site
+        run: bunx m docs site
 
       - name: Setup Pages
         uses: actions/configure-pages@v6

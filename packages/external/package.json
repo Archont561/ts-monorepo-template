@@ -12,16 +12,15 @@
     "dist"
   ],
   "scripts": {
-    "build": "mbunup",
-    "dev": "mbunup --watch",
-    "typecheck": "mtsc --noEmit",
-    "test": "mbun test",
-    "test:watch": "mbun test --watch",
-    "coverage": "mbun test --coverage"
+    "build": "m build",
+    "dev": "m build --watch",
+    "typecheck": "m typecheck --noEmit",
+    "test": "m bun test",
+    "test:watch": "m bun test --watch",
+    "coverage": "m bun test --coverage"
   },
   "devDependencies": {
-    "@myorg/ts": "workspace:*",
-    "@myorg/bunup": "workspace:*",
-    "@myorg/internal": "workspace:*"
+    "@myorg/internal": "workspace:*",
+    "@myorg/tooling": "workspace:*"
   }
 }

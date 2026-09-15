@@ -17,7 +17,7 @@ export default async function handleApiIndex(): Promise<Response> {
   // TEMPLATE-ONLY:END(native)
 
   // UnoCSS endpoint — either the config package or a UnoCSS page surviving
-  // scaffolding means `munocss build` output is served at /uno.css.
+  // scaffolding means `m unocss build` output is served at /uno.css.
   if (features.unocss) {
     endpoints.push(...unocss.endpoints());
   }

@@ -13,33 +13,33 @@
         with:
           workspaces: "{{NATIVE_DIR}}"
 
-      - name: Cargo fmt check (mnative)
+      - name: Cargo fmt check (m native)
         if: hashFiles('{{NATIVE_CARGO}}') != ''
-        run: bunx mnative fmt:check
+        run: bunx m native fmt:check
         shell: bash
 
-      - name: Cargo clippy (deny warnings, mnative)
+      - name: Cargo clippy (deny warnings, m native)
         if: hashFiles('{{NATIVE_CARGO}}') != ''
-        run: bunx mnative clippy
+        run: bunx m native clippy
         shell: bash
 
-      - name: Cargo check (fast, mnative)
+      - name: Cargo check (fast, m native)
         if: hashFiles('{{NATIVE_CARGO}}') != ''
-        run: bunx mnative check
+        run: bunx m native check
         shell: bash
 
-      - name: Cargo test (mnative)
+      - name: Cargo test (m native)
         if: hashFiles('{{NATIVE_CARGO}}') != ''
-        run: bunx mnative test
+        run: bunx m native test
         shell: bash
 
-      - name: Build native bindings (host, mnative)
+      - name: Build native bindings (host, m native)
         if: hashFiles('{{NATIVE_CARGO}}') != ''
-        run: bunx mnative napi:build
+        run: bunx m native napi:build
         shell: bash
 
       - name: Check native package types
         if: hashFiles('{{NATIVE_NPM}}') != ''
-        run: bunx mnative typecheck
+        run: bunx m native typecheck
         shell: bash
       # TEMPLATE-ONLY:END(native)

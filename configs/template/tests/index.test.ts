@@ -64,8 +64,8 @@ describe("Scaffolder integration", () => {
       expect(rootPkg.workspaces).not.toContain("configs/template");
 
       // 3. Prepare script still wires up lefthook + changeset on install.
-      expect(rootPkg.scripts?.prepare).toContain("msetup");
-      expect(rootPkg.scripts?.prepare).toContain("mchangeset");
+      expect(rootPkg.scripts?.prepare).toContain("m setup");
+      expect(rootPkg.scripts?.prepare).toContain("m changeset");
 
       // 4. Scope replacement reached workspace packages.
       const internalPkg = await file(`${result.templateDir}/packages/internal/package.json`).json();
@@ -212,8 +212,8 @@ describe("Scaffolder integration", () => {
       const rootPkg = await file(`${result.templateDir}/package.json`).json();
       expect(rootPkg["bun-create"]).toBeUndefined();
       expect(rootPkg.workspaces).not.toContain("configs/template");
-      expect(rootPkg.scripts?.prepare).toContain("msetup");
-      expect(rootPkg.scripts?.prepare).toContain("mchangeset");
+      expect(rootPkg.scripts?.prepare).toContain("m setup");
+      expect(rootPkg.scripts?.prepare).toContain("m changeset");
       expect(rootPkg.scripts?.["docs:sync"]).toBeUndefined();
 
       // The bundle regenerates docs and workflows from the pruned tree.

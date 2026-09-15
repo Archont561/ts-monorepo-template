@@ -407,7 +407,7 @@ async function syncWorkflow(
  * Regenerates every workflow the surviving configs ask for.
  *
  * `templateDocsSite` defaults to testing for the template's own docs site, so
- * `mdocs` (running inside the repo) keeps its behaviour; a scaffolder that has
+ * `m docs` (running inside the repo) keeps its behaviour; a scaffolder that has
  * already deleted `apps/template-docs/` passes `false` instead of re-testing
  * the pruned tree.
  */

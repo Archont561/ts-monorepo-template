@@ -26,11 +26,11 @@ import {
 import { addWorkspaceMember, writeBridgeNode, writeCrate } from "./native-templates";
 
 /**
- * mnative — Cargo + napi-rs wrapper for the `packages/native` workspace.
+ * m native — Cargo + napi-rs wrapper for the `packages/native` workspace.
  *
  * Cargo commands run against the whole workspace; napi commands run once per
  * npm package, each pointed at its own crate. The workspace is discovered from
- * disk, so `mnative` works from the repo root or from any package directory
+ * disk, so `m native` works from the repo root or from any package directory
  * (turbo runs it with cwd = the package).
  */
 
@@ -67,7 +67,7 @@ function runCargo(args: string[], opts: { cwd?: string } = {}): number {
 
 /**
  * `--exclude <binding>` for every cdylib crate, so the pure Rust crates can be
- * built, checked, tested and linted as one unit (`mnative <cmd> --pure`) —
+ * built, checked, tested and linted as one unit (`m native <cmd> --pure`) —
  * the bridge package `packages/native/crates/package.json` runs these.
  */
 function pureArgs(enabled: boolean): string[] {
@@ -338,7 +338,7 @@ const typecheckCommand = defineCommand({
     let failed = 0;
     for (const pkg of packages) {
       console.log(`▸ typecheck ${pkg.name}`);
-      // mtsc from the package dir keeps every path in the tsconfig relative.
+      // m typecheck from the package dir keeps every path in the tsconfig relative.
       const exitCode = spawnTool(["bun", "run", "typecheck"], { cwd: join(ROOT, pkg.dir) });
       if (exitCode !== 0) failed = exitCode;
     }
@@ -350,7 +350,7 @@ const typecheckCommand = defineCommand({
  * The CI build matrix: every target this template can build that at least one
  * npm package actually declares in `napi.targets`.
  *
- * CI prints it with `mnative matrix --gha` and feeds it straight into
+ * CI prints it with `m native matrix --gha` and feeds it straight into
  * `strategy.matrix`, so the runner/container mapping lives here — next to the
  * `napi.targets` written into each package — instead of being duplicated in
  * workflow YAML.
@@ -425,7 +425,7 @@ const listCommand = defineCommand({
     }
     console.log("\n  npm/");
     if (packages.length === 0) {
-      console.log("    (none — add a cdylib crate with `mnative add <name>`)");
+      console.log("    (none — add a cdylib crate with `m native add <name>`)");
     }
     for (const pkg of packages) {
       console.log(
@@ -441,7 +441,7 @@ const listCommand = defineCommand({
 /**
  * npm scope for a newly added package: `--scope` wins, then the scope the
  * existing packages already use (a scaffolded monorepo renames `@myorg` to the
- * user's own scope, and `mnative add` must not reintroduce the template's),
+ * user's own scope, and `m native add` must not reintroduce the template's),
  * then `NATIVE_SCOPE`, then the template default.
  */
 async function resolveScope(explicit?: string): Promise<string> {
@@ -520,7 +520,7 @@ const addCommand = defineCommand({
       console.log(`   Bindings that use "${name}" add it to workspace.dependencies + Cargo.toml,`);
       console.log(`   and \`${scope}/native-crates: workspace:*\` in their package.json.`);
     }
-    console.log(`\n   Run: bun install && mnative check\n`);
+    console.log(`\n   Run: bun install && m native check\n`);
     process.exit(0);
   },
 });
@@ -622,7 +622,7 @@ const napiCommand = defineCommand({
 });
 
 /**
- * `mnative sync` — re-syncs the Turbo ↔ Cargo wiring:
+ * `m native sync` — re-syncs the Turbo ↔ Cargo wiring:
  *   1. refreshes the bridge node (packages/native/crates/{package,turbo}.json),
  *   2. mirrors every binding's Cargo path deps as the `@scope/native-crates`
  *      workspace dependency (and drops the edge when the Cargo dep is gone),
@@ -691,7 +691,7 @@ const syncCommand = defineCommand({
 
 const main = defineCommand({
   meta: {
-    name: "mnative",
+    name: "m native",
     version: "1.0.0",
     description:
       "Native Rust bindings via Cargo + napi-rs — one Cargo workspace in packages/native with a crate per Rust unit and an npm package per napi binding.",
@@ -728,10 +728,10 @@ const main = defineCommand({
     const raw = rawArgsAfter("native");
     if (raw.length === 0) {
       console.log(`
-mnative — Cargo + napi-rs wrapper (${NATIVE_DIR})
+m native — Cargo + napi-rs wrapper (${NATIVE_DIR})
 
 Usage:
-  mnative <command> [args]
+  m native <command> [args]
 
 Workspace:
   list                 crates + npm packages discovered in ${NATIVE_DIR}
@@ -768,13 +768,13 @@ NAPI (once per npm package):
   --cross              cross-compile with napi's bundled toolchain
 
 Examples:
-  mnative list
-  mnative matrix --gha        # in CI: feeds strategy.matrix
-  mnative add parser
-  mnative add shared --pure
-  mnative sync                # after editing Cargo.toml path deps
-  mnative napi:build --only native
-  mnative napi:build --target aarch64-unknown-linux-gnu --cross
+  m native list
+  m native matrix --gha        # in CI: feeds strategy.matrix
+  m native add parser
+  m native add shared --pure
+  m native sync                # after editing Cargo.toml path deps
+  m native napi:build --only native
+  m native napi:build --target aarch64-unknown-linux-gnu --cross
 `);
       process.exit(0);
     }

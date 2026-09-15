@@ -140,7 +140,7 @@ describe("native setup — crates and packages", () => {
     expect(npmPackage.private).toBe(true);
     expect(npmPackage.napi.packageName).toBe(`${SCOPE}/native`);
     expect(npmPackage.napi.binaryName).toBe("native");
-    expect(npmPackage.scripts.build).toBe("mnative napi:build --only native");
+    expect(npmPackage.scripts.build).toBe("m native napi:build --only native");
     // The Cargo path dep is mirrored as the bridge workspace dependency.
     expect(npmPackage.devDependencies[`${SCOPE}/native-crates`]).toBe("workspace:*");
 
@@ -166,10 +166,10 @@ describe("native setup — crates and packages", () => {
       "packages/native/npm/*",
       "packages/native/crates",
     ]);
-    expect(pkg.scripts["build:native"]).toBe("mnative napi:build");
-    expect(pkg.scripts["build:wasm"]).toBe("mnative napi:build:wasm");
-    expect(pkg.scripts["test:native"]).toBe("mnative test");
-    // Cargo is driven through the mnative wrapper now.
+    expect(pkg.scripts["build:native"]).toBe("m native napi:build");
+    expect(pkg.scripts["build:wasm"]).toBe("m native napi:build:wasm");
+    expect(pkg.scripts["test:native"]).toBe("m native test");
+    // Cargo is driven through the m native wrapper now.
     expect(pkg.scripts["cargo:build"]).toBeUndefined();
     expect(pkg.private).toBe(true);
     expect(read(root, "package.json").endsWith("}\n")).toBe(true);
@@ -204,8 +204,8 @@ describe("native setup — crates and packages", () => {
     };
     expect(bridge.name).toBe(`${SCOPE}/native-crates`);
     expect(bridge.private).toBe(true);
-    expect(bridge.scripts.build).toBe("mnative build --pure");
-    expect(bridge.scripts.test).toBe("mnative test --pure");
+    expect(bridge.scripts.build).toBe("m native build --pure");
+    expect(bridge.scripts.test).toBe("m native test --pure");
 
     // Cargo owns target/ — the bridge tasks are never Turbo-cached.
     const bridgeTurbo = readJson(root, "packages/native/crates/turbo.json") as {

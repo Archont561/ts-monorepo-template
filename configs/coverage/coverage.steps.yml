@@ -1,15 +1,15 @@
       # Standalone coverage Pages site (used when the pages config is disabled).
-      # Every step delegates to the mcoverage CLI — no inline shell.
+      # Every step delegates to the m coverage CLI — no inline shell.
       - name: Collect coverage (Bun + Rust)
-        run: bunx mcoverage collect
+        run: bunx m coverage collect
         shell: bash
 
       - name: Setup coverage tooling
-        run: bunx mcoverage setup
+        run: bunx m coverage setup
         shell: bash
 
       - name: Generate coverage HTML
-        run: bunx mcoverage html
+        run: bunx m coverage html
         shell: bash
 
       - name: Upload coverage HTML artifact
@@ -20,8 +20,8 @@
           retention-days: 14
 
       # Threshold comes from COVERAGE_THRESHOLD in configs/coverage/index.ts.
-      - name: Check coverage threshold (mcoverage)
-        run: bunx mcoverage check
+      - name: Check coverage threshold (m coverage)
+        run: bunx m coverage check
         shell: bash
 
       - name: Report coverage to PR
@@ -45,5 +45,5 @@
 
       - name: Coverage summary
         if: always()
-        run: bunx mcoverage summary --markdown >> $GITHUB_STEP_SUMMARY
+        run: bunx m coverage summary --markdown >> $GITHUB_STEP_SUMMARY
         shell: bash

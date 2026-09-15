@@ -104,7 +104,7 @@ const COMMON_CASES: TemplateCase[] = [
         "packages/native/rust-toolchain.toml",
         "packages/native/.cargo/config.toml",
       ],
-      ciContains: ["test:e2e", "CodeQL", "Trivy", "Gitleaks", "mnative napi:build"],
+      ciContains: ["test:e2e", "CodeQL", "Trivy", "Gitleaks", "m native napi:build"],
       hasWorkflows: ["ci.yml", "release.yml", "pages.yml", "stale.yml", "dependabot.yml"],
       notHasWorkflows: ["coverage.yml"],
       rootScripts: ["build:native", "build:wasm", "test:native", "test:e2e"],
@@ -124,7 +124,7 @@ const COMMON_CASES: TemplateCase[] = [
         "packages/native/rust-toolchain.toml",
         "apps/example/Dockerfile",
       ],
-      ciContains: ["mnative napi:build", "mnative typecheck"],
+      ciContains: ["m native napi:build", "m native typecheck"],
       rootScripts: ["build:native", "build:wasm"],
     },
   },
@@ -421,11 +421,11 @@ describe("template cases — common flows with every combination", () => {
           `${result.templateDir}/packages/native/npm/native/package.json`,
         ).json();
         expect(npmPkg.napi.binaryName).toBe("native");
-        expect(npmPkg.scripts.build).toBe("mnative napi:build --only native");
+        expect(npmPkg.scripts.build).toBe("m native napi:build --only native");
         const tsconfig = await file(
           `${result.templateDir}/packages/native/npm/native/tsconfig.json`,
         ).text();
-        expect(tsconfig).toContain("@native-test/ts");
+        expect(tsconfig).toContain("@native-test/tooling");
         expect(tsconfig).not.toContain("@myorg");
       }
       const leaks = await scanForLeaks(result.templateDir);

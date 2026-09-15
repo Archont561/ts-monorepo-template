@@ -1,7 +1,6 @@
 import { $, write } from "bun";
 import { resolveConfig } from "../utils/paths";
 import { defineCommand, rawArgsAfter, runMain } from "../utils/spawn";
-import { minit } from "./changeset";
 
 /**
  * Regenerates the root lefthook.yml as a one-line wrapper around the shared
@@ -77,6 +76,9 @@ const main = defineCommand({
 
     // Default: full setup
     await msetup("lefthook");
+    // Dynamic: importing ./changeset statically would run its module-scope
+    // passthrough while this command is what the user actually asked for.
+    const { minit } = await import("./changeset");
     await minit("changeset").catch(() => {});
   },
 });

@@ -2,7 +2,7 @@ export const COVERAGE_DIR = "coverage";
 export const COVERAGE_LCOV = "coverage/lcov.info";
 export const COVERAGE_RUST_LCOV = "coverage/rust-lcov.info";
 export const COVERAGE_HTML = "coverage/html";
-/** Line-coverage floor enforced by `mcoverage check`, in percent. */
+/** Line-coverage floor enforced by `m coverage check`, in percent. */
 export const COVERAGE_THRESHOLD = 80;
 
 export const COVERAGE_COMMANDS = {

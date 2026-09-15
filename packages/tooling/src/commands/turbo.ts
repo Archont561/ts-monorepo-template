@@ -11,7 +11,7 @@ const TURBO = Bun.fileURLToPath(import.meta.resolve("turbo/bin/turbo"));
 // positive — turbo's own escape hatch silences it.
 process.env.TURBO_GLOBAL_WARNING_DISABLED = "1";
 
-/** `m turbo <task>` — the `mturbo` equivalent. */
+/** `m turbo <task>` — the `m turbo` equivalent. */
 export default defineWrapperCommand({
   name: "turbo",
   version: "1.0.0",

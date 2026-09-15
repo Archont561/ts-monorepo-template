@@ -103,22 +103,22 @@ export const CARGO_PROFILES = {
 
 /** Cargo runs against the whole workspace; napi runs per package. */
 export const CARGO_COMMANDS = {
-  check: "mnative check",
-  clippy: "mnative clippy",
-  fmtCheck: "mnative fmt:check",
-  fmt: "mnative fmt",
-  test: "mnative test",
-  build: "mnative build",
-  buildRelease: "mnative build:release",
-  buildCi: "mnative build:ci",
+  check: "m native check",
+  clippy: "m native clippy",
+  fmtCheck: "m native fmt:check",
+  fmt: "m native fmt",
+  test: "m native test",
+  build: "m native build",
+  buildRelease: "m native build:release",
+  buildCi: "m native build:ci",
 } as const;
 
 export const NAPI_COMMANDS = {
-  build: "mnative napi:build",
-  buildDebug: "mnative napi:build:debug",
-  buildWasm: "mnative napi:build:wasm",
-  list: "mnative list",
-  add: "mnative add <name>",
+  build: "m native napi:build",
+  buildDebug: "m native napi:build:debug",
+  buildWasm: "m native napi:build:wasm",
+  list: "m native list",
+  add: "m native add <name>",
 } as const;
 
 /**
@@ -139,7 +139,7 @@ export type NativeCrateSpec = {
 };
 
 /**
- * What `mnative setup` creates: one pure crate with the shared logic plus the
+ * What `m native setup` creates: one pure crate with the shared logic plus the
  * thin binding crate that exposes it to JS. The pure crate has no npm package
  * of its own — `packages/native/crates/package.json` (the bridge node) is the
  * single Turbo package that represents every pure crate.

@@ -1,7 +1,11 @@
 #!/usr/bin/env bun
 import { existsSync } from "node:fs";
 import { cp, rm } from "node:fs/promises";
-import { PAGES_STAGING_DIR } from "@myorg/pages";
+
+/** Staging dir m pages writes the built site to before deploy. Was
+ * `@myorg/pages`'s PAGES_STAGING_DIR; inlined so this package has no configs/ dep. */
+const PAGES_STAGING_DIR = ".pages";
+
 import { spawnSync } from "bun";
 import { regenerateAll } from "../scaffold/aggregator";
 import { defineCommand } from "../utils/spawn";
@@ -10,7 +14,7 @@ import { defineCommand } from "../utils/spawn";
 const DOCS_APP = "apps/template-docs";
 /** The bundled static site — also the Pages artifact root. */
 const SITE_OUT = `${DOCS_APP}/dist`;
-/** genhtml report as rendered by `mcoverage html` (its default out dir). */
+/** genhtml report as rendered by `m coverage html` (its default out dir). */
 const COVERAGE_HTML_DIR = "coverage/html";
 
 function run(cmd: string[]): number {
@@ -21,7 +25,7 @@ function run(cmd: string[]): number {
 
 const main = defineCommand({
   meta: {
-    name: "mdocs",
+    name: "m docs",
     version: "1.0.0",
     description:
       "Regenerate workflows from configs/* — static README/AGENTS with TEMPLATE-ONLY blocks",
@@ -63,8 +67,8 @@ const main = defineCommand({
             process.exit(tests);
           }
         }
-        run(["bun", "run", "mcoverage", "setup"]);
-        run(["bun", "run", "mcoverage", "html"]);
+        run(["bun", "run", "m coverage", "setup"]);
+        run(["bun", "run", "m coverage", "html"]);
 
         // 2. Docs — the app builds through Turbo like any other package (the
         //    root docs:build script is the filtered delegate), so the site
@@ -92,9 +96,9 @@ const main = defineCommand({
         //    artifact, so the app artifact is nested instead of deployed
         //    separately.
         if (!args["skip-app"]) {
-          const app = run(["bun", "run", "mpages", "build"]);
+          const app = run(["bun", "run", "m pages", "build"]);
           if (app !== 0) {
-            console.error(`::error::mpages build failed (exit ${app})`);
+            console.error(`::error::m pages build failed (exit ${app})`);
             process.exit(app);
           }
           if (existsSync(PAGES_STAGING_DIR)) {
@@ -119,7 +123,7 @@ const main = defineCommand({
   },
   async run({ args }) {
     // `--dir`, not a positional: a positional on the root command would swallow
-    // the subcommand name (`mdocs site` would read targetDir = "site").
+    // the subcommand name (`m docs site` would read targetDir = "site").
     await regenerateAll((args.dir as string) || ".");
   },
 });
