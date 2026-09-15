@@ -413,7 +413,7 @@ describe("MonorepoScaffolder (unit)", () => {
         `${workDir}/AGENTS.md`,
         [
           "<!-- TEMPLATE-ONLY:START(styles) -->",
-          "## Styling with UnoCSS",
+          "## Styling section",
           "<!-- TEMPLATE-ONLY:END(styles) -->",
         ].join("\n"),
       );
@@ -423,7 +423,7 @@ describe("MonorepoScaffolder (unit)", () => {
       await s.stripTemplateMarkers();
 
       const content = await file(`${workDir}/AGENTS.md`).text();
-      expect(content).not.toContain("Styling with UnoCSS");
+      expect(content).not.toContain("Styling section");
       expect(content).not.toContain("TEMPLATE-ONLY");
     });
 
@@ -1031,7 +1031,7 @@ describe("MonorepoScaffolder (unit)", () => {
       const source = [
         "start",
         "<!-- styles:START -->",
-        '<div class="flex">UnoCSS</div>',
+        '<div class="flex">Payload</div>',
         "<!-- styles:END -->",
         "end",
         "",
@@ -1058,7 +1058,7 @@ describe("MonorepoScaffolder (unit)", () => {
     test("handles inverted scope markers (!scope)", () => {
       const source = [
         "<!-- TEMPLATE-ONLY:START(styles) -->",
-        '<div class="flex">UnoCSS</div>',
+        '<div class="flex">Payload</div>',
         "<!-- TEMPLATE-ONLY:END(styles) -->",
         "<!-- TEMPLATE-ONLY:START(!styles) -->",
         '<div id="greeting">Plain</div>',
@@ -1071,7 +1071,7 @@ describe("MonorepoScaffolder (unit)", () => {
 
       // When styles is enabled, !styles is stripped
       const enabledRes = stripMarkerBlocks(source, new Set([]));
-      expect(enabledRes.content.trim()).toBe('<div class="flex">UnoCSS</div>');
+      expect(enabledRes.content.trim()).toBe('<div class="flex">Payload</div>');
     });
 
     test("property: stripMarkerBlocks is idempotent for arbitrary text", () => {
