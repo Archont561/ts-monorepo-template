@@ -9,6 +9,7 @@ import {
   runMain,
   spawnTool,
 } from "../utils/spawn";
+import { skipMissingTool, TOOLS, withOptionalTool } from "../utils/tools";
 
 const ACT_FLAGS = [
   "-P",
@@ -93,12 +94,11 @@ export function runActionlint(args: string[]): number {
 
   const binary = actionlintBinary();
   if (!binary) {
-    if (optional) {
-      console.warn("⚠️ actionlint not available — skipping local workflow validation.");
-      console.warn("   CI runs actionlint as the authoritative gate.");
-      console.warn("   To lint locally: bun install --force, or brew install actionlint");
-      return 0;
-    }
+    // --if-installed is the hook path: skip loudly and keep going, because CI is
+    // the authoritative gate. A bare `m ci:lint` is an explicit request to lint,
+    // so it still fails — but with the same install guidance rather than the
+    // opaque TLS error the npm wrapper used to surface.
+    if (optional) return skipMissingTool(TOOLS.actionlint);
     console.error(ACTIONLINT_INSTALL);
     return 1;
   }
@@ -106,26 +106,16 @@ export function runActionlint(args: string[]): number {
   return spawnTool([binary, `-config-file=${resolveConfig("actionlint.yaml")}`, ...forwarded]);
 }
 
+/**
+ * Runs workflows locally under Docker.
+ *
+ * A missing `act` is a logged skip rather than a failure, matching every other
+ * optional tool here: the developer learns what is absent and how to install it,
+ * and nothing that wraps this command — a hook, a package task, a CI job — is
+ * blocked by a tool it may not need.
+ */
 export function runAct(args: string[]): number {
-  const actPath = Bun.which("act");
-  if (!actPath) {
-    console.error(`
-'act' is not installed.
-
-act runs GitHub Actions locally via Docker.
-
-Install:
-  brew install act                          # macOS
-  sudo apt install act                      # Debian/Ubuntu
-  go install github.com/nektos/act@latest   # Go
-  scoop install act                         # Windows
-
-Then ensure Docker is running and try again.
-`);
-    return 1;
-  }
-
-  return spawnTool([actPath, ...ACT_FLAGS, ...args]);
+  return withOptionalTool("act", (actPath) => spawnTool([actPath, ...ACT_FLAGS, ...args]));
 }
 
 const lintCommand = defineSpawnSubcommand({

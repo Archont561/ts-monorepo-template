@@ -5,125 +5,88 @@
 # `extends:` wrapper around this file, so a project can add hooks of its own
 # without forking the shared config.
 #
-# Design rules, in priority order:
-#
-#   1. Hooks are an early-warning system; CI is authoritative. A hook that
-#      depends on a tool which is not installed skips with a warning — it never
-#      blocks the commit. This is why the wrappers are invoked as
-#      `m <tool> --if-installed` or are already defensive (gitleaks, trivy,
-#      cargo all exit 0 with a hint when the binary is missing).
-#   2. No hook performs a network operation. Tools whose npm wrapper downloads a
-#      binary on first run are probed for a cached binary instead.
-#   3. pre-commit stays interactive. Expensive verification lives in pre-push,
-#      which runs once per push rather than once per commit.
-#   4. Everything here is bypassable with `LEFTHOOK=0`.
+# Rules:
+#   1. Hooks are an early-warning system; CI is authoritative. A hook whose tool
+#      is not installed skips with a warning and never blocks — that behaviour
+#      lives in the `m` wrappers (src/utils/tools.ts), not in this file, so the
+#      commands here stay one line each.
+#   2. No hook performs a network operation.
+#   3. pre-commit stays interactive; expensive checks run once per push instead.
+#   4. Lefthook passes hook arguments as {1}/{2}/{3} templates. It does NOT pass
+#      them as shell positional parameters — `$1` is always empty in a run block.
+#   5. `LEFTHOOK=0` bypasses everything.
 
 pre-commit:
   parallel: true
   commands:
-    # Format and lint only what is staged, then re-stage the fixes.
-    #
-    # --no-errors-on-unmatched is load-bearing: staged paths that Biome's own
-    # config excludes (the shared config assets, generated output) would
-    # otherwise abort the commit with "No files were processed". Duplicating
-    # Biome's exclude list here would just be a second source of truth to drift.
-    #
-    # Note there is no `md` in the glob — Biome 2.5 does not parse Markdown and
-    # errors on it rather than ignoring it.
+    # --no-errors-on-unmatched is load-bearing: a staged path Biome's own config
+    # excludes would otherwise abort the commit with "No files were processed".
+    # No `md` in the glob — Biome 2.5 errors on Markdown rather than ignoring it.
     biome:
       glob: "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs,json,jsonc}"
       run: bun run m biome check --write --no-errors-on-unmatched {staged_files}
       stage_fixed: true
 
-    # Secret scanning. `m gitleaks` exits 0 with install hints when the binary
-    # is absent, so this never blocks a commit on a machine without gitleaks.
-    gitleaks:
+    # Skips with a warning when the binary is absent.
+    secrets:
       run: bun run m gitleaks protect --staged
 
-    # Rust formatting. Two independent guards: the explicit test for a Cargo
-    # workspace (a generated project may have opted out of native entirely), and
-    # `m native`'s own skip when the Rust toolchain is missing.
-    rustfmt:
-      glob: "*.rs"
-      run: |
-        test -f packages/native/Cargo.toml || exit 0
-        bun run m native fmt:check
-
-    # Unresolved merge or rebase markers are never intentional in a commit.
+    # Two cheap repo guards in one command: unresolved merge markers, and files
+    # too large for Git history. Only <<<<<<< and >>>>>>> are matched — a line of
+    # `=` is legitimate in Markdown and several config formats.
     #
-    # Only the two unambiguous markers are matched. A line of `=` is legitimate
-    # in Markdown, reStructuredText and several config formats, so including it
-    # would produce false positives on ordinary documentation edits.
-    conflict-markers:
+    # The loop runs in a subshell, so findings are captured via command
+    # substitution and the exit status is decided here in the parent.
+    guards:
       run: |
-        saved_ifs=$IFS
-        IFS=$(printf '\n')
-        bad=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACM | while IFS= read -r f; do
-          [ -f "$f" ] || continue
-          if grep -nE '^(<{7}|>{7})([[:space:]]|$)' "$f" >/dev/null 2>&1; then
-            printf '%s\n' "$f"
-          fi
-        done)
-        IFS=$saved_ifs
-        if [ -n "$bad" ]; then
-          echo "❌ Unresolved conflict markers in staged files:"
-          printf '%s\n' "$bad" | sed 's/^/   /'
-          exit 1
-        fi
-
-    # A file over 1MB almost always means a build artifact or a binary that
-    # belongs in a release, not in Git history where every clone pays for it
-    # forever.
-    large-files:
-      run: |
+        staged=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACM)
+        [ -n "$staged" ] || exit 0
         limit=${LARGE_FILE_LIMIT:-1048576}
-        saved_ifs=$IFS
-        IFS=$(printf '\n')
-        bad=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACM | while IFS= read -r f; do
+        problems=$(printf '%s\n' "$staged" | while IFS= read -r f; do
           [ -f "$f" ] || continue
+          if grep -qE '^(<{7}|>{7})([[:space:]]|$)' "$f" 2>/dev/null; then
+            printf '❌ conflict marker: %s\n' "$f"
+            continue
+          fi
           case "$f" in
             */node_modules/*|node_modules/*|*/dist/*|dist/*|*/.turbo/*|.turbo/*) continue ;;
             */coverage/*|coverage/*|*/.pages/*|.pages/*|*/test-results/*) continue ;;
           esac
           size=$(wc -c < "$f" 2>/dev/null | tr -d ' ')
-          [ -n "$size" ] || continue
-          if [ "$size" -gt "$limit" ]; then
-            printf '%s\n' "$((size / 1024)) KB  $f"
+          if [ -n "$size" ] && [ "$size" -gt "$limit" ]; then
+            printf '❌ over %s KB (%s KB): %s\n' "$((limit / 1024))" "$((size / 1024))" "$f"
           fi
         done)
-        IFS=$saved_ifs
-        if [ -n "$bad" ]; then
-          echo "❌ Staged files larger than $((limit / 1024)) KB:"
-          printf '%s\n' "$bad" | sed 's/^/   /'
-          echo "   Raise the ceiling with LARGE_FILE_LIMIT=<bytes> if this is deliberate."
-          exit 1
-        fi
+        [ -n "$problems" ] || exit 0
+        printf '%s\n' "$problems"
+        echo "   Raise the size ceiling with LARGE_FILE_LIMIT=<bytes> if it is deliberate."
+        exit 1
 
-    # Workflow lint. `--if-installed` turns a missing actionlint into a warning:
-    # the github-actionlint package downloads its binary on first run, and that
-    # download is routinely blocked (sandboxes, offline, cert interception).
-    # The glob also means this only runs when a workflow is actually staged.
-    actionlint:
+    # Skips with a warning when actionlint is unavailable; its npm wrapper
+    # downloads the binary on first run and that download is often blocked.
+    workflows:
       glob: "{.github/workflows/*.yml,.github/workflows/*.yaml}"
       run: bun run m ci:lint --if-installed
 
 commit-msg:
   commands:
-    # Conventional Commits.
+    # Conventional Commits, plus a block on wip/todo.
     #
-    # fixup!/squash! are allowed through here on purpose. `git commit --fixup`
-    # and `--squash` exist to produce commits that are later folded in by
-    # `git rebase -i --autosquash`; rejecting them at creation time breaks that
-    # workflow entirely, because there is then nothing to autosquash. The
-    # pre-push hook is what stops an unautosquashed fixup reaching the remote.
-    conventional:
+    # fixup!/squash! are allowed through deliberately: `git commit --fixup`
+    # exists to produce commits that `git rebase -i --autosquash` later folds in,
+    # and rejecting them here breaks that workflow. pre-push is what stops an
+    # unautosquashed fixup reaching the remote. wip/todo have no such use.
+    message:
       run: |
         msg=$(cat {1})
         case "$msg" in
-          "Merge "*|"Revert "*) exit 0 ;;
-          "fixup! "*|"squash! "*) exit 0 ;;
-          "chore(release):"*) exit 0 ;;
+          "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"chore(release):"*) exit 0 ;;
         esac
+        if printf '%s' "$msg" | grep -qiE '^[[:space:]]*(wip|todo)([[:space:]:!]|$)'; then
+          echo "❌ WIP/TODO commits are not allowed."
+          echo "   Use 'git commit --fixup=<sha>' for a scratch commit you intend to fold in."
+          exit 1
+        fi
         if ! printf '%s' "$msg" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\([^)]+\))?!?: .+'; then
           echo "❌ Commit message must follow Conventional Commits: type(scope): description"
           echo "   Types: feat fix docs style refactor perf test chore ci build revert"
@@ -131,57 +94,34 @@ commit-msg:
           exit 1
         fi
 
-    # wip/todo have no autosquash equivalent — they only ever mean "unfinished",
-    # so they are rejected at creation rather than deferred to push.
-    no-wip:
-      run: |
-        msg=$(cat {1})
-        if printf '%s' "$msg" | grep -qiE '^[[:space:]]*(wip|todo)([[:space:]:!]|$)'; then
-          echo "❌ WIP/TODO commits are not allowed."
-          echo "   Use 'git commit --fixup=<sha>' for a scratch commit you intend to fold in."
-          exit 1
-        fi
-
-# Sequential, not parallel: Turbo already parallelises internally, and running
-# four noisy commands at once makes a failure hard to read. Measured cost on
-# this repo is ~24s (typecheck 1s, test 14s, health 9s) — inside the target.
+# Sequential, not parallel: Turbo parallelises internally, and four interleaved
+# logs make a failure hard to read. Measured here: ~21s.
 pre-push:
   commands:
-    # `bun run typecheck`, not `m typecheck`. The latter is a bare `tsc` at the
-    # repo root, where there is no tsconfig to compile, so it prints usage and
-    # exits non-zero. The root script runs the Turbo task per package instead.
+    # `bun run typecheck` / `bun run test`, not `m typecheck` / `m test`. The
+    # latter are bare tsc / bun test at the repo root: tsc has no tsconfig there,
+    # and `bun test` collects every workspace's specs with the wrong cwd, which
+    # fails specs that resolve paths relative to cwd.
     typecheck:
       run: bun run typecheck
-
-    # Same distinction, and here it matters more: `m test` is a bare `bun test`
-    # from the root, which collects every workspace's specs with the wrong cwd.
-    # Specs that resolve paths relative to cwd (packages/native's structural
-    # tests) then fail spuriously — 15 false failures on a green tree.
     test:
       run: bun run test
-
-    # publint + arethetypeswrong over every publishable package.
     health:
       run: bun run m health
-
-    # Rust verification. Skipped when the project has no Cargo workspace; each
-    # `m native` subcommand also self-skips when cargo is missing.
+    # Formatting moved here from pre-commit to keep that hook minimal; it is
+    # still enforced, just once per push. Every subcommand self-skips with a
+    # warning when the toolchain is absent, and the guard keeps a project without
+    # a native workspace from even trying.
     native:
       run: |
         test -f packages/native/Cargo.toml || exit 0
-        bun run m native check && bun run m native clippy
-
-    # The one rule that genuinely belongs at push time rather than commit time:
-    # nothing that was meant to be folded into an earlier commit reaches the
-    # remote. Falls back to the remote's default branch for a branch with no
-    # upstream yet, and skips entirely if nothing resolves (shallow clone, first
-    # commit, detached remote refs).
-    no-unsquashed:
+        bun run m native fmt:check && bun run m native check && bun run m native clippy
+    # Falls back to the remote's default branch for a branch with no upstream,
+    # and skips if nothing resolves (shallow clone, first push).
+    unsquashed:
       run: |
         upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null) || upstream=""
         if [ -z "$upstream" ]; then
-          # No upstream yet (first push of a branch). Prefer the remote's
-          # default branch over a hardcoded name, which is not always "main".
           upstream=$(git rev-parse --abbrev-ref origin/HEAD 2>/dev/null | sed 's|^origin/||')
           [ -n "$upstream" ] && upstream="origin/$upstream" || upstream=origin/main
         fi
@@ -191,52 +131,33 @@ pre-push:
         if [ -n "$bad" ]; then
           echo "❌ Refusing to push commits that should be folded in or removed:"
           printf '%s\n' "$bad" | sed 's/^/   /'
-          echo ""
           echo "   Fix: git rebase -i --autosquash $upstream"
           exit 1
         fi
 
-# Install dependencies when a lockfile moved between revisions. Only `bun.lock`
-# is tracked today; the Cargo paths are listed so a project that commits a
-# Cargo.lock gets the same treatment without editing this file.
-#
-# Each hook receives the revision range differently, so each resolves it its own
-# way — the comparison itself is identical.
+# Install dependencies when a lockfile moved. Only bun.lock is tracked today;
+# the Cargo paths are listed so a project that commits one needs no edit here.
 post-checkout:
   commands:
     install:
+      # {1} = previous HEAD, {2} = new HEAD, {3} = 1 for a branch checkout.
       run: |
-        # Lefthook substitutes hook arguments as {1}/{2}/{3} templates — it does
-        # not pass them as shell positional parameters, so `$1`/`$3` would be
-        # empty here and the hook would silently skip every time.
-        #   {1} = previous HEAD, {2} = new HEAD, {3} = 1 for a branch checkout.
-        # A file checkout ({3} = 0) cannot move a lockfile, so skip it.
         [ "{3}" = "1" ] || exit 0
-        if ! git diff --quiet "{1}" "{2}" -- bun.lock Cargo.lock packages/native/Cargo.lock 2>/dev/null; then
-          echo "🔒 Lockfile changed — running bun install"
-          bun install
-        fi
+        git diff --quiet "{1}" "{2}" -- bun.lock Cargo.lock packages/native/Cargo.lock 2>/dev/null \
+          || { echo "🔒 Lockfile changed — running bun install"; bun install; }
 
 post-merge:
   commands:
     install:
       run: |
-        # ORIG_HEAD is the pre-merge revision. $1 is 1 for a squash merge and
-        # does not change where the comparison starts.
         git rev-parse --verify ORIG_HEAD >/dev/null 2>&1 || exit 0
-        if ! git diff --quiet ORIG_HEAD HEAD -- bun.lock Cargo.lock packages/native/Cargo.lock 2>/dev/null; then
-          echo "🔒 Lockfile changed — running bun install"
-          bun install
-        fi
+        git diff --quiet ORIG_HEAD HEAD -- bun.lock Cargo.lock packages/native/Cargo.lock 2>/dev/null \
+          || { echo "🔒 Lockfile changed — running bun install"; bun install; }
 
 post-rewrite:
   commands:
     install:
       run: |
-        # $1 is "amend" or "rebase"; the rewritten pairs arrive on stdin, which
-        # is not needed here. ORIG_HEAD is the pre-rewrite revision either way.
         git rev-parse --verify ORIG_HEAD >/dev/null 2>&1 || exit 0
-        if ! git diff --quiet ORIG_HEAD HEAD -- bun.lock Cargo.lock packages/native/Cargo.lock 2>/dev/null; then
-          echo "🔒 Lockfile changed — running bun install"
-          bun install
-        fi
+        git diff --quiet ORIG_HEAD HEAD -- bun.lock Cargo.lock packages/native/Cargo.lock 2>/dev/null \
+          || { echo "🔒 Lockfile changed — running bun install"; bun install; }

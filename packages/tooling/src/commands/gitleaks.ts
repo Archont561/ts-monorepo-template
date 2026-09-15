@@ -3,16 +3,12 @@ import {
   defineSpawnSubcommand,
   rawArgsAfter,
   runMain,
-  spawnIfPresent,
+  spawnTool,
 } from "../utils/spawn";
-
-const GITLEAKS_HINTS = [
-  "⚠️ gitleaks not found — skipping (install: brew install gitleaks or https://github.com/gitleaks/gitleaks)",
-  "   Docker fallback: docker run -v $(pwd):/path zricethezav/gitleaks:latest detect --source /path",
-];
+import { withOptionalTool } from "../utils/tools";
 
 function runGitleaks(args: string[]): number {
-  return spawnIfPresent("gitleaks", ["gitleaks", ...args], GITLEAKS_HINTS);
+  return withOptionalTool("gitleaks", (bin) => spawnTool([bin, ...args]));
 }
 
 const detectCommand = defineSpawnSubcommand({

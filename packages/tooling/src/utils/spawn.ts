@@ -33,19 +33,6 @@ export function spawnTool(cmd: string[], opts: { cwd?: string } = {}): number {
   return result.exitCode;
 }
 
-/**
- * Spawns a tool that may not be installed. A missing binary is a skip, not a
- * failure: the caller's install hints are warned and the check reports success
- * so CI without the tool still passes.
- */
-export function spawnIfPresent(tool: string, cmd: string[], hints: string[]): number {
-  if (!Bun.which(tool)) {
-    for (const hint of hints) console.warn(hint);
-    return 0;
-  }
-  return spawnTool(cmd);
-}
-
 export interface WrapperOptions {
   name: string;
   version?: string;

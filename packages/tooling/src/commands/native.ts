@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { which } from "bun";
 import {
   addJsonArrayValue,
   readJson,
@@ -9,6 +8,7 @@ import {
   updateManifestFile,
 } from "../manifest/editor";
 import { defineCommand, rawArgsAfter, spawnTool } from "../utils/spawn";
+import { hasTool, skipMissingTool, TOOLS, withOptionalTool } from "../utils/tools";
 import {
   discoverBuildable,
   discoverCrates,
@@ -37,16 +37,17 @@ import { addWorkspaceMember, writeBridgeNode, writeCrate } from "./native-templa
 const ROOT = findNativeRoot();
 const WORKSPACE_DIR = join(ROOT, NATIVE_DIR);
 
-function hasCargo(): boolean {
-  return !!which("cargo");
-}
-
+/**
+ * True when the Rust toolchain is present.
+ *
+ * Delegates to the shared reporter so a missing cargo reads the same here as it
+ * does from a Git hook or a CI step — and so the warning is always printed
+ * rather than the task failing or passing silently.
+ */
 function cargoExistsOrWarn(): boolean {
-  if (!hasCargo()) {
-    console.warn("⚠️ cargo not found, skipping (install Rust: https://rustup.rs)");
-    return false;
-  }
-  return true;
+  if (hasTool("cargo")) return true;
+  skipMissingTool(TOOLS.cargo);
+  return false;
 }
 
 /**
@@ -61,8 +62,13 @@ function nativeExistsOrWarn(): boolean {
 }
 
 function runCargo(args: string[], opts: { cwd?: string } = {}): number {
-  if (!nativeExistsOrWarn() || !cargoExistsOrWarn()) return 0;
-  return spawnTool(["cargo", ...args], { cwd: opts.cwd ?? WORKSPACE_DIR });
+  if (!nativeExistsOrWarn()) return 0;
+  // Reports the absent toolchain through the shared helper, so a package task
+  // that shells out to cargo prints the same warning a hook would and still
+  // exits 0 instead of failing the task graph.
+  return withOptionalTool("cargo", () =>
+    spawnTool(["cargo", ...args], { cwd: opts.cwd ?? WORKSPACE_DIR }),
+  );
 }
 
 /**

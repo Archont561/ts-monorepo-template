@@ -5,19 +5,15 @@ import {
   defineSpawnSubcommand,
   rawArgsAfter,
   runMain,
-  spawnIfPresent,
   spawnTool,
 } from "../utils/spawn";
+import { withOptionalTool } from "../utils/tools";
 
 const DOCKERFILE = "apps/example/Dockerfile";
 const IMAGE = "app:trivy-scan";
 
-const TRIVY_HINTS = [
-  "⚠️ trivy not found — skipping (install: brew install trivy or https://aquasecurity.github.io/trivy/)",
-];
-
 function runTrivy(args: string[]): number {
-  return spawnIfPresent("trivy", ["trivy", ...args], TRIVY_HINTS);
+  return withOptionalTool("trivy", (bin) => spawnTool([bin, ...args]));
 }
 
 const buildCommand = defineCommand({

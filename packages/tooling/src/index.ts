@@ -28,7 +28,6 @@ export {
   runMain,
   type SpawnSubcommandOptions,
   showUsage,
-  spawnIfPresent,
   spawnTool,
   type WrapperOptions,
 } from "./utils/spawn";
