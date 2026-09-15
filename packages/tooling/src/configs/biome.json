@@ -46,19 +46,12 @@
   "files": {
     "includes": [
       "**",
-      "!**/configs/biome",
       "!**/packages/tooling/src/configs",
       "!**/node_modules",
       "!**/dist",
       "!**/.vitepress/cache",
       "!**/.turbo",
       "!**/coverage",
-      "configs/coverage",
-      "configs/coverage/**",
-      "!configs/coverage/node_modules",
-      "!configs/coverage/dist",
-      "!configs/coverage/.turbo",
-      "!configs/coverage/coverage",
       "!**/test-results",
       "!**/playwright-report",
       "!**/uno.css",
@@ -68,8 +61,7 @@
   "overrides": [
     {
       "includes": [
-        "packages/**",
-        "configs/**"
+        "packages/**"
       ],
       "linter": {
         "rules": {
@@ -110,7 +102,6 @@
     },
     {
       "includes": [
-        "configs/bunup/**",
         "packages/tooling/src/bunup.ts",
         "packages/tooling/bunup.config.ts"
       ],

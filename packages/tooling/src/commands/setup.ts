@@ -1,26 +1,63 @@
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 import { $, write } from "bun";
-import { resolveConfig } from "../utils/paths";
 import { defineCommand, rawArgsAfter, runMain } from "../utils/spawn";
 
 /**
  * Regenerates the root lefthook.yml as a one-line wrapper around the shared
  * config, then installs the Git hooks.
  *
- * The wrapper points at this package's own copy of lefthook.yml rather than
- * `node_modules/@myorg/lefthook/lefthook.yml`, so it survives R27 deleting
- * configs/.
+ * The wrapper points at this package's own copy of lefthook.base.yml rather
+ * than a config owned by a separate package, so it survives R27 deleting
+ * configs/. Naming the shared file `.base.yml` also leaves `lefthook.yml` free
+ * as the project's own extension point.
  */
 export async function msetup(target = "lefthook"): Promise<void> {
   if (target !== "lefthook") {
     throw new Error(`Unknown setup target '${target}' (expected "lefthook")`);
   }
 
-  const shared = "node_modules/@myorg/tooling/src/configs/lefthook.yml";
+  const shared = "node_modules/@myorg/tooling/src/configs/lefthook.base.yml";
   await write("lefthook.yml", `extends:\n  - ${shared}\n`);
-  await $`bunx lefthook install`.quiet().nothrow();
-  // Referenced so the shared config is not tree-shaken out of readers' minds:
-  // the committed copy lives at resolveConfig("lefthook.yml").
-  void resolveConfig("lefthook.yml");
+
+  const result = await $`bunx lefthook install`.quiet().nothrow();
+  if (result.exitCode !== 0) {
+    // Not fatal — `bun install` runs this in `prepare`, and a checkout without
+    // a git directory (CI, a tarball) legitimately cannot install hooks. But it
+    // must not be silent, or hooks quietly stop running and nobody notices.
+    const stderr = result.stderr.toString().trim();
+    console.warn("⚠️ lefthook install failed — Git hooks are not active.");
+    if (stderr) console.warn(`   ${stderr.split("\n").join("\n   ")}`);
+    console.warn("   Re-run manually with: m setup lefthook");
+    return;
+  }
+
+  const installed = await installedHooks();
+  if (installed.length === 0) {
+    console.warn("⚠️ lefthook installed no hooks — is this a Git repository?");
+    return;
+  }
+  console.log(`✅ lefthook hooks active: ${installed.join(", ")}`);
+}
+
+/** Hooks lefthook actually wired up, read back from `.git/hooks`. */
+async function installedHooks(): Promise<string[]> {
+  let names: string[];
+  try {
+    names = (await readdir(join(await gitDir(), "hooks"))) as string[];
+  } catch {
+    return [];
+  }
+  return names.filter((n) => !n.endsWith(".sample") && !n.endsWith(".old")).sort();
+}
+
+/** `.git`, or the real git dir when this is a worktree or a submodule. */
+async function gitDir(): Promise<string> {
+  const result = await $`git rev-parse --git-dir`.quiet().nothrow();
+  if (result.exitCode !== 0) return ".git";
+  // Relative to cwd, which for `m setup` is always the repo root.
+  const dir = result.stdout.toString().trim();
+  return dir || ".git";
 }
 
 const lefthookCommand = defineCommand({
