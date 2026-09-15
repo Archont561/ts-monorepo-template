@@ -16,7 +16,8 @@
   "scripts": {
     "build": "bunup",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "coverage": "bun test --coverage"
   },
   "dependencies": {
     "citty": "^0.2.2"

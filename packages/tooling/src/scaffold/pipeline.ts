@@ -59,7 +59,9 @@ const PACKAGE_JSON_KEYS_TO_REMOVE = ["bun-create"];
 const PACKAGE_JSON_SCRIPTS_TO_REMOVE = [
   "build:template",
   "search:tools",
-  // Template-only test entry points — configs/template is pruned on scaffold.
+  // Template-only test entry points. They target @myorg/tooling, whose tests/
+  // and dist/ are pruned on scaffold (see the `template` feature's
+  // extraRemovals), so a generated repo would have nothing for them to run.
   "test:template",
   "test:template:cases",
   "test:template:coverage",

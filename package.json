@@ -52,10 +52,10 @@
     "test": "m turbo test",
     "test:e2e": "m turbo test:e2e",
     "test:native": "m native test",
-    "test:template": "m turbo test --filter=@myorg/template",
-    "test:template:cases": "m turbo test --filter=@myorg/template -- tests/cases.test.ts",
-    "test:template:coverage": "m turbo coverage --filter=@myorg/template",
-    "test:template:watch": "m turbo watch test --filter=@myorg/template",
+    "test:template": "m turbo test --filter=@myorg/tooling",
+    "test:template:cases": "m turbo test --filter=@myorg/tooling -- tests/scaffold/cases.test.ts",
+    "test:template:coverage": "m turbo coverage --filter=@myorg/tooling",
+    "test:template:watch": "m turbo watch test --filter=@myorg/tooling",
     "typecheck": "m turbo typecheck",
     "version": "m changeset version"
   }
