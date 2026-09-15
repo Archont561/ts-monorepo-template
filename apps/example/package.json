@@ -14,9 +14,7 @@
     "test": "m bun test tests/",
     "test:watch": "m bun test tests/ --watch",
     "coverage": "m bun test tests/ --coverage",
-    "test:e2e": "m e2e",
-    "build:css": "m unocss build",
-    "build:css:watch": "m unocss watch"
+    "test:e2e": "m e2e"
   },
   "dependencies": {
     "@myorg/external": "workspace:*"

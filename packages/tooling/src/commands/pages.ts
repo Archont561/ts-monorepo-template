@@ -111,7 +111,7 @@ const buildCommand = defineCommand({
     console.log("📄 Building static site for GitHub Pages");
 
     // Every package builds its own assets — apps own their CSS build
-    // (e.g. apps/example's m unocss build), so there is no global CSS step here.
+    // (e.g. an app's own CSS build), so there is no global CSS step here.
     const exitCode = spawnTool(["bun", "run", "build"]);
     if (exitCode !== 0) {
       console.error(`::error::bun run build failed (exit ${exitCode})`);

@@ -1,6 +1,6 @@
 import { file } from "bun";
 
-import { type FeatureSetup, setupDevcontainer, setupNative, setupUnocss } from "./setups";
+import { type FeatureSetup, setupDevcontainer, setupNative } from "./setups";
 
 /** Values the native config accepts — one source of truth for the select metadata. */
 export const NATIVE_MODES = { none: "none", publish: "publish", docker: "docker" } as const;
@@ -485,28 +485,6 @@ const FEATURE_RECORD = {
       default: "always",
       flag: "turbo",
       prompt: "Configure Turbo (task orchestration)?",
-    },
-  },
-  unocss: {
-    name: "@myorg/unocss",
-    dir: "unocss",
-    setup: setupUnocss,
-    meta: {
-      default: false,
-      flag: "unocss",
-      marker: "unocss",
-      prompt: "Include UnoCSS (atomic CSS engine)?",
-      type: "confirm",
-      removals: {
-        true: {},
-        false: {
-          marker: "unocss",
-          extraRemovals: ["apps/example/public/uno.css", "apps/example/uno.config.ts"],
-          filePatternsToRemove: ["**/uno.css", "**/*.unocss.*"],
-          fileRegexesToRemove: [],
-          appDepsToRemove: ["@unocss/reset", "unocss", "@myorg/unocss"],
-        },
-      },
     },
   },
 } satisfies Record<string, DiscoveredConfig>;

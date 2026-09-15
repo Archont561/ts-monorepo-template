@@ -38,7 +38,7 @@ not an npm package — the npm package is `packages/native/npm/native`.
 27 configs: 17 always-on, 9 opt-in (pruned by the scaffolder when declined), 1 template-only.
 
 - Always-on: badges, biome, bun-config, bunup, changeset, citty, commitlint, community, coverage, dependabot, editorconfig, gitattributes, gh-actions, gitleaks, lefthook, ts, turbo
-- Opt-in: codeql (default on), playwright (default on), devcontainer, native, pages, skills, stale, trivy, unocss
+- Opt-in: codeql (default on), playwright (default on), devcontainer, native, pages, skills, stale, trivy
 <!-- TEMPLATE-ONLY:START(template) -->
 - Template-only: the scaffolder config (`mdocs`) — self-destructs on scaffold
 <!-- TEMPLATE-ONLY:END(template) -->
@@ -65,12 +65,11 @@ not an npm package — the npm package is `packages/native/npm/native`.
   1. `mcoverage merge --report-only` hardcoded a `+` prefix on the delta, so a coverage *drop* from widening the gate printed as `+-15.00 points` — the dry run exists to show drops, so the sign is now computed via the exported `formatSigned` helper (`packages/tooling/src/commands/coverage.ts`), pinned by three regression tests in `tests/merge.test.ts`. Positive-delta output (`+2.05 points, +844 lines`) is byte-identical to before.
   2. `packages/tooling/src/configs/biome.json`'s `!**/coverage` ignore (for generated output dirs) also pruned the **tracked** `packages/tooling/src/ci/fragments/coverage-report/` source directory — Biome prunes a directory the moment it matches and file-level re-includes cannot un-prune it. Result: the package was silently excluded from every `bun run check`/CI lint pass, and the pre-commit hook (`mbiome check --write {staged_files}`) rejected any commit touching it with "No files were processed". The config now re-includes that directory after the exclusion and re-excludes the package's own generated dirs (the directory was later renamed `coverage-report/` so no negation is needed). Linting the package for the first time exposed three latent errors in `src/cli.ts` (dead `cp` import, unsorted imports, a 100+col line) — all fixed.
 - Branch `arena/01a09f8a-ts-monorepo-template`. Toolchain installed (Bun 1.4.2 from npm — `bun.sh` is unreachable here), full suite run, then a bug pass over the paths that no test covered.
-- Bugs fixed: the demo app resolved `public/` one level too high (`apps/public/...`), so `/uno.css` always served the "not built" fallback and the feature log read `unocss=no`; `/api` looked for the UnoCSS config one level short and listed only half the native routes; `mnative add` could only ever use `@myorg` (dead `? undefined : undefined`); `mcoverage check` hardcoded `80` instead of `COVERAGE_THRESHOLD`; `mbadges check` / `mchangeset init` ran twice because citty falls through to the parent command.
+- Bugs fixed: the demo app resolved `public/` one level too high (`apps/public/...`), so the feature log read the app's files as missing; `/api` resolved the repo root one level short and listed only half the native routes; `mnative add` could only ever use `@myorg` (dead `? undefined : undefined`); `mcoverage check` hardcoded `80` instead of `COVERAGE_THRESHOLD`; `mbadges check` / `mchangeset init` ran twice because citty falls through to the parent command.
 - New `apps/example/src/features.ts` owns the app's `public/` paths and feature detection — one source instead of a relative path per call site — with `tests/features.test.ts` (12 tests) covering it.
 - Scaffolds now match the picture the docs promised: the root manifest is reconciled with what survived a removal (`bun install` no longer fails on a deleted `packages/native`), scripts whose bin was removed are gone (`security:audit`, `skills`, `security:trivy`/`security:check`), and native-only test imports are wrapped in `TEMPLATE-ONLY` markers.
 - The marker stripper and the Turbo writer no longer hand the scaffolded project a file its own `biome check` rejects: marker lines take their indentation with them and JSON edits are text surgery, not `JSON.stringify`.
 - `mnative add` writes the package the shipped crate has — compact `tsconfig.json`, `turbo.json`, a structure test to typecheck — instead of a package that failed `typecheck`, lacked a test and broke `check`.
-- The E2E specs asserted the plain page only; `/` serves the UnoCSS page whenever that config is enabled, so the title/greeting/background assertions now accept both.
 
 ### Verified working (local, this sandbox)
 
@@ -79,7 +78,7 @@ not an npm package — the npm package is `packages/native/npm/native`.
 - Template suite: 103 tests over every opt-in combination, 0 fail
 - `mnative list`, `mnative matrix --gha`, `mnative add <name>` (crate + npm package + sorted `members`)
 - `bun install` links `node_modules/@myorg/native` → `packages/native/npm/native`
-- Demo app served with `bun src/index.ts` and probed over HTTP: `/health`, `/`, `/api`, `/uno.css` (6068 B built bundle, not the fallback), `/api/native/*` — all 200 with the expected payloads
+- Demo app served with `bun src/index.ts` and probed over HTTP: `/health`, `/`, `/api`, `/api/native/*` — all 200 with the expected payloads
 - `mnative add` scope resolution checked against a throwaway `@acme` workspace: flag → existing package scope → `NATIVE_SCOPE` → `@myorg`
 
 ### Known gaps

@@ -23,7 +23,7 @@ export default defineConfig({
   splitting: false,
   // The tools `m` shells out to are resolved at runtime from node_modules, not
   // bundled: playwright-core pulls in chromium-bidi, which is not installed.
-  external: ["@playwright/test", "playwright-core", "@napi-rs/cli", "@unocss/cli"],
+  external: ["@playwright/test", "playwright-core", "@napi-rs/cli"],
   // Two entry points, two consumers:
   //   dist/cli.js  — the `m` CLI, invoked through the package bin.
   //   dist/run.js  — the interactive scaffolder that `bun-create.preinstall`

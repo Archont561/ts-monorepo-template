@@ -24,7 +24,6 @@ from whichever configs survive.
 | :--- | :--- | :--- |
 | `playwright` | `true` | `me2e` |
 | `codeql` | `true` | `mcodeql` |
-| `unocss` | `false` | — |
 | `skills` | `false` | `mskills` |
 | `devcontainer` | `false` | — |
 | `pages` | `false` | — |

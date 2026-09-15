@@ -7,7 +7,7 @@
  * it was just handed. These helpers edit the text instead: the caller names the
  * entry it wants, and every byte it did not ask about survives.
  *
- * Paths are dotted (`scripts.build:native`, `devDependencies.@myorg/unocss`) and
+ * Paths are dotted (`scripts.build:native`, `devDependencies.@myorg/internal`) and
  * addresses must not contain dots themselves. Edits assume each entry occupies
  * its own line, which is how the manifests in this repo are committed.
  */

@@ -20,7 +20,7 @@ describe("OptionsCollector (non-interactive)", () => {
         targetDir: "/tmp/project",
         scope: "@acme",
         gitHooks: false,
-        configs: { unocss: true },
+        configs: { pages: true },
       },
     });
     const options = await collector.collect();
@@ -28,7 +28,7 @@ describe("OptionsCollector (non-interactive)", () => {
     expect(options.targetDir).toBe("/tmp/project");
     expect(options.scope).toBe("@acme");
     expect(options.gitHooks).toBe(false);
-    expect(options.configs).toEqual({ unocss: true });
+    expect(options.configs).toEqual({ pages: true });
   });
 
   test("non-interactive resolution finds the repo root via the configs/template marker", async () => {
@@ -80,9 +80,9 @@ describe("OptionsCollector overrides", () => {
     },
     {
       field: "configs",
-      defaults: { configs: { playwright: false, unocss: true } },
+      defaults: { configs: { playwright: false, pages: true } },
       expectedKey: "configs" as const,
-      expectedVal: { playwright: false, unocss: true },
+      expectedVal: { playwright: false, pages: true },
     },
   ])("respects $field override", async ({ defaults, expectedKey, expectedVal }) => {
     const collector = new OptionsCollector({ nonInteractive: true, defaults });
@@ -96,14 +96,14 @@ describe("OptionsCollector overrides", () => {
       defaults: {
         scope: "@combo",
         gitHooks: false,
-        configs: { playwright: false, unocss: true },
+        configs: { playwright: false, pages: true },
       },
     });
     const options = await collector.collect();
 
     expect(options.scope).toBe("@combo");
     expect(options.gitHooks).toBe(false);
-    expect(options.configs).toEqual({ playwright: false, unocss: true });
+    expect(options.configs).toEqual({ playwright: false, pages: true });
   });
 
   test("returns boolean/string/record types for all option fields", async () => {

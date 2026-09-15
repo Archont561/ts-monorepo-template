@@ -13,25 +13,11 @@ describe("handleHtml (page)", () => {
     expect(response.headers.get("content-type")).toContain("text/html");
   });
 
-  test("contains greeting div (plain or unocss)", async () => {
+  test("serves the greeting page", async () => {
     const response = await handleHtml();
     const html = await response.text();
-    // Plain version has <div id="greeting">Hello, World!</div>
-    // UnoCSS version has more complex structure but still has greeting
-    expect(html).toMatch(/greeting/i);
     expect(html).toContain("<!doctype html>");
-  });
-
-  test("unocss version has utility classes when enabled", async () => {
-    const response = await handleHtml();
-    const html = await response.text();
-    // If unocss file exists, it should contain utility classes
-    // Otherwise plain version is ok
-    if (html.includes("UnoCSS") || html.includes("unocss")) {
-      expect(html).toMatch(/class=.*flex/);
-    } else {
-      expect(html).toContain("Hello, World!");
-    }
+    expect(html).toContain('<div id="greeting">Hello, World!</div>');
   });
 });
 
@@ -60,7 +46,7 @@ describe("handleApiIndex (page)", () => {
     const data = await response.json();
     // `features` comes from the providers; the endpoint list is built from the
     // same providers, so the two must agree in every checkout.
-    expect(data.features.unocss).toBe(data.endpoints.includes("/uno.css"));
+    expect(data.features.native).toBe(data.endpoints.includes("/api/native"));
   });
 });
 

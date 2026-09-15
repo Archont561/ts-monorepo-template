@@ -42,7 +42,6 @@ COPY configs/skills/package.json ./configs/skills/package.json
 COPY configs/template/package.json ./configs/template/package.json
 COPY configs/ts/package.json ./configs/ts/package.json
 COPY configs/turbo/package.json ./configs/turbo/package.json
-COPY configs/unocss/package.json ./configs/unocss/package.json
 
 # The Rust workspace lives in packages/native (no root Cargo.toml): the virtual
 # manifest, its crates and their npm packages — busted only when they change.
@@ -58,13 +57,6 @@ FROM deps AS builder
 
 COPY . .
 
-# Build UnoCSS if config exists (opt-in)
-RUN if [ -f "configs/unocss/uno.config.ts" ]; then \
-      echo "🎨 Building UnoCSS..."; \
-      bunx unocss --config configs/unocss/uno.config.ts || echo "UnoCSS build skipped"; \
-    else \
-      echo "UnoCSS not enabled, skipping"; \
-    fi
 
 # Cargo via mnative CLI (virtual workspace in packages/native)
 RUN if [ -f "packages/native/Cargo.toml" ]; then \
@@ -129,7 +121,7 @@ ENV PORT=3000
 ENV HOST=0.0.0.0
 
 LABEL org.opencontainers.image.source="https://github.com/Archont561/ts-monorepo-template"
-LABEL org.opencontainers.image.description="Bun monorepo example - HTTP server with optional native Rust bindings via mnative + UnoCSS"
+LABEL org.opencontainers.image.description="Bun monorepo example - HTTP server with optional native Rust bindings"
 LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.title="example"
 LABEL org.opencontainers.image.version="0.0.0"

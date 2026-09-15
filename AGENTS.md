@@ -79,7 +79,6 @@ Every tool is reached through an `m`-prefixed bin that bakes in its config path.
 | `me2e` | playwright | Auto-skips when browsers are missing (opt-in) |
 | `mpages` | — | `build`, `base`, `list` (opt-in) |
 | `mskills` | skills.sh | `list`, `sync`, `add`, `update`, `validate`, `index` (opt-in) |
-| `munocss` | unocss | `build`, `watch`; no-op when disabled (opt-in) |
 | `mtrivy` / `mcodeql` | trivy / codeql | Scanning; no-op locally (opt-in) |
 
 Per-package work (`build`, `test`, `dev`, `coverage`, `typecheck`) belongs to each package's own script and is orchestrated by Turbo. Monorepo-wide concerns stay at the root: git hooks, workflow generation, skills, and the coverage merge that runs after the per-package reports exist.

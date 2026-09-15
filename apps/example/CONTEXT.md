@@ -4,9 +4,9 @@
 
 ## Current state
 
-- Version `0.0.0`, private, never published. Depends on `@myorg/external`; dev-depends on `@myorg/ts`, `@myorg/playwright`, `@myorg/unocss`, `@myorg/native` and `@playwright/test`.
+- Version `0.0.0`, private, never published. Depends on `@myorg/external`; dev-depends on `@myorg/tooling`, `@myorg/native` and `@playwright/test`.
 - Declares `pages: { dir: "public" }`, so it is the package the Pages site deploys.
-- Both opt-in features are present here: UnoCSS (plain + utility HTML, generated `uno.css`) and native (`src/pages/api/native/**`).
+- One opt-in feature is present here: native (`src/pages/api/native/**`).
 - Port defaults to 3000 and comes from `src/port.ts`; `PORT` overrides it and `playwright.config.ts` reads the same value.
 - Docker: multi-stage `Dockerfile` plus `docker-compose.yml`, both inheriting `BUN_VERSION` / `RUST_VERSION` from the Dockerfile ARGs.
 

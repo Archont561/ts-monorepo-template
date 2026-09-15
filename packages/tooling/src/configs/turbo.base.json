@@ -2,41 +2,70 @@
   "$schema": "https://turborepo.dev/schema.json",
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", "public/uno.css"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
     },
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": [
+        "^build"
+      ]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": [
+        "^build"
+      ]
     },
     "test:e2e": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "cache": false
     },
     "coverage": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/lcov.info"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "coverage/lcov.info"
+      ]
     },
     "dev": {
       "cache": false,
       "persistent": true,
-      "dependsOn": ["^build"]
+      "dependsOn": [
+        "^build"
+      ]
     },
     "preview": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "cache": false,
       "persistent": true
     },
     "build:native": {
-      "dependsOn": ["^build"],
-      "outputs": ["*.node", "index.js", "index.d.ts"],
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "*.node",
+        "index.js",
+        "index.d.ts"
+      ],
       "cache": false
     },
     "build:wasm": {
-      "dependsOn": ["build:native"],
-      "outputs": ["*.wasi.cjs", "wasi-worker.mjs"],
+      "dependsOn": [
+        "build:native"
+      ],
+      "outputs": [
+        "*.wasi.cjs",
+        "wasi-worker.mjs"
+      ],
       "cache": false
     }
   }

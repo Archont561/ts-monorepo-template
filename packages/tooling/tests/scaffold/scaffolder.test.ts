@@ -75,8 +75,8 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("stores opt-in config selections", () => {
-      const s = new MonorepoScaffolder({ configs: { unocss: true, native: "publish" } });
-      expect(s.configs).toEqual({ unocss: true, native: "publish" });
+      const s = new MonorepoScaffolder({ configs: { styles: true, native: "publish" } });
+      expect(s.configs).toEqual({ styles: true, native: "publish" });
     });
   });
 
@@ -412,14 +412,14 @@ describe("MonorepoScaffolder (unit)", () => {
       await write(
         `${workDir}/AGENTS.md`,
         [
-          "<!-- TEMPLATE-ONLY:START(unocss) -->",
+          "<!-- TEMPLATE-ONLY:START(styles) -->",
           "## Styling with UnoCSS",
-          "<!-- TEMPLATE-ONLY:END(unocss) -->",
+          "<!-- TEMPLATE-ONLY:END(styles) -->",
         ].join("\n"),
       );
 
-      const s = new MonorepoScaffolder({ targetDir: workDir, configs: { unocss: false } });
-      setDisabledScopes(s, ["template", "unocss"]);
+      const s = new MonorepoScaffolder({ targetDir: workDir, configs: { styles: false } });
+      setDisabledScopes(s, ["template", "styles"]);
       await s.stripTemplateMarkers();
 
       const content = await file(`${workDir}/AGENTS.md`).text();
@@ -465,9 +465,9 @@ describe("MonorepoScaffolder (unit)", () => {
           "};",
           "",
           "const other = {",
-          "  // TEMPLATE-ONLY:START(unocss)",
+          "  // TEMPLATE-ONLY:START(styles)",
           "  a: 1,",
-          "  // TEMPLATE-ONLY:END(unocss)",
+          "  // TEMPLATE-ONLY:END(styles)",
           "};",
         ].join("\n"),
       );
@@ -483,14 +483,14 @@ describe("MonorepoScaffolder (unit)", () => {
         `${workDir}/kept.ts`,
         [
           "const other = {",
-          "  // TEMPLATE-ONLY:START(unocss)",
+          "  // TEMPLATE-ONLY:START(styles)",
           "  a: 1,",
-          "  // TEMPLATE-ONLY:END(unocss)",
+          "  // TEMPLATE-ONLY:END(styles)",
           "};",
         ].join("\n"),
       );
 
-      const kept = new MonorepoScaffolder({ targetDir: workDir, configs: { unocss: true } });
+      const kept = new MonorepoScaffolder({ targetDir: workDir, configs: { styles: true } });
       setDisabledScopes(kept, ["template"]);
       await kept.stripTemplateMarkers();
       expect(await file(`${workDir}/kept.ts`).text()).toContain("const other = {\n  a: 1,\n};");
@@ -590,35 +590,35 @@ describe("MonorepoScaffolder (unit)", () => {
 
   describe("handleConfig", () => {
     test("removes a disabled feature\u2019s extra removals", async () => {
-      await mkdir(`${workDir}/packages/unocss`, { recursive: true });
+      await mkdir(`${workDir}/packages/styles`, { recursive: true });
       await write(
-        `${workDir}/packages/unocss/package.json`,
+        `${workDir}/packages/styles/package.json`,
         JSON.stringify({
-          name: "@myorg/unocss",
+          name: "@myorg/styles",
           scaffold: {
             default: false,
-            flag: "unocss",
-            extraRemovals: ["uno.config.ts"],
+            flag: "styles",
+            extraRemovals: ["style.config.ts"],
           },
         }),
       );
-      await write(`${workDir}/uno.config.ts`, "export default {}");
+      await write(`${workDir}/style.config.ts`, "export default {}");
       await write(
         `${workDir}/package.json`,
         JSON.stringify({
           name: "test",
-          devDependencies: { "@myorg/unocss": "workspace:*" },
+          devDependencies: { "@myorg/styles": "workspace:*" },
         }),
       );
 
       const s = new MonorepoScaffolder({
         targetDir: workDir,
-        configs: { unocss: false },
-        features: await fixtureFeatures(workDir, "unocss"),
+        configs: { styles: false },
+        features: await fixtureFeatures(workDir, "styles"),
       });
       await s.handleConfig();
 
-      expect(await pathExists(`${workDir}/uno.config.ts`)).toBe(false);
+      expect(await pathExists(`${workDir}/style.config.ts`)).toBe(false);
     });
 
     test("keeps enabled config intact", async () => {
@@ -743,33 +743,33 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("removes files matching regex patterns when config disabled", async () => {
-      await mkdir(`${workDir}/packages/unocss`, { recursive: true });
+      await mkdir(`${workDir}/packages/styles`, { recursive: true });
       await mkdir(`${workDir}/apps/example/src`, { recursive: true });
       await write(
-        `${workDir}/packages/unocss/package.json`,
+        `${workDir}/packages/styles/package.json`,
         JSON.stringify({
-          name: "@myorg/unocss",
+          name: "@myorg/styles",
           scaffold: {
             default: false,
-            flag: "unocss",
-            fileRegexesToRemove: ["uno\\.config\\.ts$", ".*\\.unocss\\..*", "unocss"],
+            flag: "styles",
+            fileRegexesToRemove: ["style\\.config\\.ts$", ".*\\.generated\\..*", "styles"],
           },
         }),
       );
-      await write(`${workDir}/uno.config.ts`, "export default {}");
-      await write(`${workDir}/apps/example/src/styles.unocss.css`, ".test{}");
+      await write(`${workDir}/style.config.ts`, "export default {}");
+      await write(`${workDir}/apps/example/src/styles.generated.css`, ".test{}");
       await write(`${workDir}/apps/example/src/keep.ts`, "keep");
       await write(`${workDir}/package.json`, JSON.stringify({ name: "test" }));
 
       const s = new MonorepoScaffolder({
         targetDir: workDir,
-        configs: { unocss: false },
-        features: await fixtureFeatures(workDir, "unocss"),
+        configs: { styles: false },
+        features: await fixtureFeatures(workDir, "styles"),
       });
       await s.handleConfig();
 
-      expect(await pathExists(`${workDir}/uno.config.ts`)).toBe(false);
-      expect(await pathExists(`${workDir}/apps/example/src/styles.unocss.css`)).toBe(false);
+      expect(await pathExists(`${workDir}/style.config.ts`)).toBe(false);
+      expect(await pathExists(`${workDir}/apps/example/src/styles.generated.css`)).toBe(false);
       expect(await pathExists(`${workDir}/apps/example/src/keep.ts`)).toBe(true);
     });
 
@@ -902,7 +902,7 @@ describe("MonorepoScaffolder (unit)", () => {
       '  "tasks": {',
       '    "build": {',
       '      "dependsOn": ["^build"],',
-      '      "outputs": ["dist/**", "public/uno.css"]',
+      '      "outputs": ["dist/**", "public/generated.css"]',
       "    },",
       '    "test:e2e": {',
       '      "dependsOn": ["^build"],',
@@ -921,9 +921,9 @@ describe("MonorepoScaffolder (unit)", () => {
       expect(next).not.toContain("test:e2e");
       // Serializing the rest would have reflowed arrays onto their own lines.
       expect(next).toContain('"dependsOn": ["^build"]');
-      expect(next).toContain('"outputs": ["dist/**", "public/uno.css"]');
+      expect(next).toContain('"outputs": ["dist/**", "public/generated.css"]');
       expect(JSON.parse(next).tasks).toEqual({
-        build: { dependsOn: ["^build"], outputs: ["dist/**", "public/uno.css"] },
+        build: { dependsOn: ["^build"], outputs: ["dist/**", "public/generated.css"] },
         typecheck: { dependsOn: ["^build"] },
       });
     });
@@ -933,7 +933,7 @@ describe("MonorepoScaffolder (unit)", () => {
       expect(next).not.toContain("typecheck");
       expect(next).toContain('"cache": false\n    }\n  }');
       expect(JSON.parse(next).tasks).toEqual({
-        build: { dependsOn: ["^build"], outputs: ["dist/**", "public/uno.css"] },
+        build: { dependsOn: ["^build"], outputs: ["dist/**", "public/generated.css"] },
         "test:e2e": { dependsOn: ["^build"], cache: false },
       });
     });
@@ -977,7 +977,7 @@ describe("MonorepoScaffolder (unit)", () => {
     test("keeps a block with a scope that is still enabled, dropping only markers", () => {
       const source = [
         "start",
-        "// TEMPLATE-ONLY:START(native, unocss)",
+        "// TEMPLATE-ONLY:START(native, styles)",
         "kept",
         "// TEMPLATE-ONLY:END(native)",
         "end",
@@ -1030,13 +1030,13 @@ describe("MonorepoScaffolder (unit)", () => {
     test("removes custom declared marker blocks when scope is disabled", () => {
       const source = [
         "start",
-        "<!-- unocss:START -->",
+        "<!-- styles:START -->",
         '<div class="flex">UnoCSS</div>',
-        "<!-- unocss:END -->",
+        "<!-- styles:END -->",
         "end",
         "",
       ].join("\n");
-      const { content, changed } = stripMarkerBlocks(source, new Set(["unocss"]));
+      const { content, changed } = stripMarkerBlocks(source, new Set(["styles"]));
       expect(changed).toBe(true);
       expect(content).toBe("start\nend\n");
     });
@@ -1044,32 +1044,32 @@ describe("MonorepoScaffolder (unit)", () => {
     test("keeps custom declared marker content when scope is enabled", () => {
       const source = [
         "start",
-        "// unocss:START",
-        'onSuccess: "m unocss build",',
-        "// unocss:END",
+        "// styles:START",
+        'onSuccess: "m styles build",',
+        "// styles:END",
         "end",
         "",
       ].join("\n");
       const { content, changed } = stripMarkerBlocks(source, new Set(["other"]));
       expect(changed).toBe(true);
-      expect(content).toBe('start\nonSuccess: "m unocss build",\nend\n');
+      expect(content).toBe('start\nonSuccess: "m styles build",\nend\n');
     });
 
     test("handles inverted scope markers (!scope)", () => {
       const source = [
-        "<!-- TEMPLATE-ONLY:START(unocss) -->",
+        "<!-- TEMPLATE-ONLY:START(styles) -->",
         '<div class="flex">UnoCSS</div>',
-        "<!-- TEMPLATE-ONLY:END(unocss) -->",
-        "<!-- TEMPLATE-ONLY:START(!unocss) -->",
+        "<!-- TEMPLATE-ONLY:END(styles) -->",
+        "<!-- TEMPLATE-ONLY:START(!styles) -->",
         '<div id="greeting">Plain</div>',
-        "<!-- TEMPLATE-ONLY:END(!unocss) -->",
+        "<!-- TEMPLATE-ONLY:END(!styles) -->",
       ].join("\n");
 
-      // When unocss is disabled, !unocss is kept
-      const disabledRes = stripMarkerBlocks(source, new Set(["unocss"]));
+      // When styles is disabled, !styles is kept
+      const disabledRes = stripMarkerBlocks(source, new Set(["styles"]));
       expect(disabledRes.content.trim()).toBe('<div id="greeting">Plain</div>');
 
-      // When unocss is enabled, !unocss is stripped
+      // When styles is enabled, !styles is stripped
       const enabledRes = stripMarkerBlocks(source, new Set([]));
       expect(enabledRes.content.trim()).toBe('<div class="flex">UnoCSS</div>');
     });

@@ -28,8 +28,8 @@ export const MARKER_PATTERNS: readonly RegExp[] = [
 
 /**
  * Custom declared marker patterns, supporting e.g.:
- * `<!-- unocss:START --> ... <!-- unocss:END -->`
- * `// unocss:START ... // unocss:END`
+ * `<!-- pages:START --> ... <!-- pages:END -->`
+ * `// pages:START ... // pages:END`
  * `<!-- UNOCSS:START --> ... <!-- UNOCSS:END -->`
  */
 export const CUSTOM_MARKER_PATTERNS: readonly RegExp[] = [
@@ -43,7 +43,7 @@ export const CUSTOM_MARKER_PATTERNS: readonly RegExp[] = [
 
 /**
  * Checks whether a scope is disabled.
- * Supports inverted scopes prefix `!` (e.g. `!unocss` is active when `unocss` is disabled).
+ * Supports inverted scopes prefix `!` (e.g. `!pages` is active when `pages` is disabled).
  */
 export function isScopeDisabled(scope: string, disabledScopes: ReadonlySet<string>): boolean {
   if (scope.startsWith("!")) {

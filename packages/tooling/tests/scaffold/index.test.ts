@@ -36,7 +36,7 @@ describe("Scaffolder integration", () => {
         targetDir: result.templateDir,
         scope: "@integration-test",
         gitHooks: false,
-        configs: { playwright: true, unocss: false },
+        configs: { playwright: true },
       });
       await scaffolder.execute();
 
@@ -150,7 +150,7 @@ describe("Scaffolder integration", () => {
         targetDir: result.templateDir,
         scope: "@myorg",
         gitHooks: false,
-        configs: { playwright: false, unocss: false },
+        configs: { playwright: false },
       });
       await scaffolder.execute();
 
@@ -160,7 +160,7 @@ describe("Scaffolder integration", () => {
       expect(await pathExists(`${result.templateDir}/.devcontainer`)).toBe(false);
 
       // Always-on shared assets remain, now inside the tooling package.
-      for (const asset of ["biome.json", "bunfig.toml", "turbo.base.json", "uno.config.ts"]) {
+      for (const asset of ["biome.json", "bunfig.toml", "turbo.base.json"]) {
         expect(
           await pathExists(`${result.templateDir}/packages/tooling/src/configs/${asset}`),
         ).toBe(true);

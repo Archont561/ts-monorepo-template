@@ -71,7 +71,7 @@ describe("aggregate", () => {
         targetDir: result.templateDir,
         scope: "@agent-test",
         gitHooks: false,
-        configs: { playwright: true, unocss: false },
+        configs: { playwright: true },
       }).execute();
 
       const githubDir = `${result.templateDir}/.github`;
@@ -228,7 +228,7 @@ describe("aggregate", () => {
         targetDir: result.templateDir,
         scope: "@agent-test",
         gitHooks: false,
-        configs: { playwright: true, unocss: false },
+        configs: { playwright: true },
       });
       await scaffolder.execute();
 

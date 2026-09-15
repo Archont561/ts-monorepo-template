@@ -17,7 +17,7 @@ import { defineCommand, runMain } from "./utils/spawn";
  *   mnative    -> m native          mpages     -> m pages
  *   mskills    -> m skills          mtrivy     -> m trivy
  *   mtsc       -> m typecheck       mturbo     -> m turbo
- *   munocss    -> m unocss          me2e       -> m e2e
+ *   me2e       -> m e2e
  *   mdocs      -> m docs
  *
  * `mcitty` has no subcommand: it only ever printed framework info, and the
@@ -57,7 +57,6 @@ const subCommands: SubCommandsDef = {
   // Opt-in features
   native: () => import("./commands/native").then((m) => m.default),
   e2e: () => import("./commands/e2e").then((m) => m.default),
-  unocss: () => import("./commands/unocss").then((m) => m.default),
   pages: () => import("./commands/pages").then((m) => m.default),
   skills: () => import("./commands/skills").then((m) => m.default),
   badges: () => import("./commands/badges").then((m) => m.default),

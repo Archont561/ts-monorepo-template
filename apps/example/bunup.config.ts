@@ -7,7 +7,4 @@ export default defineConfig({
   target: "bun",
   dts: false,
   clean: true,
-  // TEMPLATE-ONLY:START(unocss)
-  onSuccess: "m unocss build",
-  // TEMPLATE-ONLY:END(unocss)
 });

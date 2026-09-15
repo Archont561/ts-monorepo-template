@@ -29,7 +29,7 @@ The example server starts at [http://localhost:3000](http://localhost:3000) (ove
 During scaffolding you are prompted for:
 
 - Organization scope (e.g. `@acme`) — replaces `@myorg` everywhere
-- Opt-in configs: Playwright E2E (default on), UnoCSS, NAPI-RS native bindings, AI skills, Devcontainer, GitHub Pages, CodeQL (default on), Trivy, Stale
+- Opt-in configs: Playwright E2E (default on), NAPI-RS native bindings, AI skills, Devcontainer, GitHub Pages, CodeQL (default on), Trivy, Stale
 
 > [!TIP]
 > Non-interactive for CI: `bun create Archont561/ts-monorepo-template my-app -- --scope @acme --no-interactive`.
@@ -192,7 +192,7 @@ Every tool is reached through a subcommand of the single `m` CLI, which lives in
 
 </details>
 
-<!-- TEMPLATE-ONLY:START(playwright,skills,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
+<!-- TEMPLATE-ONLY:START(playwright,skills,native,devcontainer,pages,codeql,trivy,stale) -->
 <details>
 <summary>Opt-in — pruned when declined</summary>
 
@@ -206,10 +206,9 @@ Every tool is reached through a subcommand of the single `m` CLI, which lives in
 | Skills | `mskills` | off | AI agent skills |
 | Stale | — | off | Auto-close inactive issues/PRs |
 | Trivy | `mtrivy` | off | Container and filesystem scanning |
-| UnoCSS | `munocss` | off | Atomic CSS |
 
 </details>
-<!-- TEMPLATE-ONLY:END(playwright,skills,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
+<!-- TEMPLATE-ONLY:END(playwright,skills,native,devcontainer,pages,codeql,trivy,stale) -->
 
 ## Adding a package or app
 

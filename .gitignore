@@ -76,9 +76,6 @@ Cargo.lock
 index.js
 index.d.ts
 
-# UnoCSS generated
-**/uno.css
-apps/example/public/uno.css
 
 # Pages staging dir — assembled by `mpages build` from declared packages
 .pages/

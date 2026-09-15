@@ -6,8 +6,8 @@ import { file } from "bun";
  * Every path is resolved from *this* module's location, so the app root is two
  * levels up: `public/` is `../../public` from `features/`. Spelling the relative
  * path out per call site is how the lookups drifted — `../../public/...` from
- * `src/` resolved to `apps/public/`, which does not exist, so every UnoCSS
- * lookup silently missed and `/uno.css` always served the "not built" fallback.
+ * `src/` resolved to `apps/public/`, which does not exist, so every lookup
+ * silently missed and the feature flags were always reported as off.
  */
 
 /** `apps/example/` — the app root that owns `public/` and `src/`. */
@@ -19,12 +19,12 @@ const REPO_ROOT = new URL(
   import.meta.url,
 );
 
-/** A file inside the app, e.g. `appFile("public/uno.css")`. */
+/** A file inside the app, e.g. `appFile("public/index.html")`. */
 export function appFile(path: string): ReturnType<typeof file> {
   return file(new URL(path, APP_ROOT));
 }
 
-/** A file at the repo root, e.g. `repoFile("packages/tooling/src/configs/uno.config.ts")`. */
+/** A file at the repo root, e.g. `repoFile("packages/tooling/src/configs/biome.json")`. */
 export function repoFile(path: string): ReturnType<typeof file> {
   return file(new URL(path, REPO_ROOT));
 }

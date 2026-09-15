@@ -57,9 +57,6 @@ function runSetupScript(relativeScript: string, label: string): FeatureSetup {
 /** Scaffolds `packages/native/` — crates, bridge package, toolchain, routes. */
 export const setupNative: FeatureSetup = runSetupScript("commands/native-setup.ts", "native");
 
-/** Writes the UnoCSS config, swaps the HTML entry, wires the example app. */
-export const setupUnocss: FeatureSetup = runSetupScript("commands/unocss-setup.ts", "unocss");
-
 /** Writes `.devcontainer/devcontainer.json` from the consolidated asset. */
 export const setupDevcontainer: FeatureSetup = runSetupScript(
   "commands/devcontainer-setup.ts",

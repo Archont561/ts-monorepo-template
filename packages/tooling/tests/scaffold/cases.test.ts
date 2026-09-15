@@ -99,7 +99,7 @@ const COMMON_CASES: TemplateCase[] = [
       hasWorkflows: ["ci.yml", "release.yml", "pages.yml", "stale.yml", "dependabot.yml"],
       notHasWorkflows: ["coverage.yml"],
       rootScripts: ["build:native", "build:wasm", "test:native", "test:e2e"],
-      appScripts: ["build", "build:css"],
+      appScripts: ["build"],
     },
   },
   {
@@ -144,19 +144,6 @@ const COMMON_CASES: TemplateCase[] = [
       hasFiles: [".github/CODEOWNERS", ".github/ISSUE_TEMPLATE/bug_report.yml"],
       ciContains: ["Gitleaks", "CodeQL", "Trivy"],
       hasWorkflows: ["ci.yml"],
-    },
-  },
-  {
-    name: "unocss only",
-    scope: "@unocss",
-    configs: {
-      ...buildDisabledConfigs(),
-      unocss: true,
-    },
-    expectations: {
-      hasFiles: ["apps/example/public/index.html"],
-      rootScriptsNot: ["build:css"],
-      appScripts: ["build", "build:css"],
     },
   },
   {
@@ -305,7 +292,7 @@ describe("template cases — common flows with every combination", () => {
         expect(pkg.scripts?.[s], `Expected root script ${s} NOT in ${c.name}`).toBeUndefined();
       }
 
-      // 5b. App scripts (per-app ownership, e.g. UnoCSS CSS build)
+      // 5b. App scripts (per-app ownership)
       const appPkg = await file(`${result.templateDir}/apps/example/package.json`).json();
       for (const s of c.expectations.appScripts ?? []) {
         expect(appPkg.scripts?.[s], `Expected apps/example script ${s} in ${c.name}`).toBeDefined();
@@ -329,9 +316,9 @@ describe("template cases — common flows with every combination", () => {
   );
 
   test(
-    "all boolean combinations — exhaustive for core 4 flags (playwright, unocss, pages, codeql)",
+    "all boolean combinations — exhaustive for core 3 flags (playwright, pages, codeql)",
     async () => {
-      const coreFlags = ["playwright", "unocss", "pages", "codeql"];
+      const coreFlags = ["playwright", "pages", "codeql"];
       const baseDisabled = buildDisabledConfigs();
       const combos: ConfigMap[] = [];
       for (let i = 0; i < 1 << coreFlags.length; i++) {

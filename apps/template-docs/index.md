@@ -20,7 +20,7 @@ features:
     details: Every script runs through Bun and the m-prefixed CLI aliases (mbiome, mturbo, mbun, mcoverage).
   - icon: 🧩
     title: Opt-in configs
-    details: Playwright, UnoCSS, NAPI-RS, CodeQL, Trivy, Pages, Stale — pick them at scaffold time, or strip them later.
+    details: Playwright, NAPI-RS, CodeQL, Trivy, Pages, Stale — pick them at scaffold time, or strip them later.
   - icon: 🏗️
     title: Scaffolds itself
     details: "bun create turns this template into your monorepo — scope replaced, template-only files pruned, workflows regenerated."

@@ -42,12 +42,6 @@ describe("Server routes integration", () => {
     expect(await res.text()).toBe("OK");
   });
 
-  test("GET /uno.css returns CSS", async () => {
-    const res = await fetch(`http://localhost:${server.port}/uno.css`);
-    expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toContain("text/css");
-  });
-
   test("GET /favicon.ico handles static asset", async () => {
     const res = await fetch(`http://localhost:${server.port}/favicon.ico`);
     // May be 200 if file exists or 404 if not

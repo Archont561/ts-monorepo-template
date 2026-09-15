@@ -19,7 +19,6 @@
           - "biome*"
           - "turbo"
           - "playwright*"
-          - "unocss*"
         update-types:
           - "minor"
           - "patch"
@@ -29,7 +28,6 @@
           - "biome*"
           - "turbo"
           - "playwright*"
-          - "unocss*"
           - "typescript"
           - "@myorg/*"
         update-types:

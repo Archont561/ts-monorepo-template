@@ -11,7 +11,6 @@
 - Opt-in features must be detected at runtime, not at build time: check whether the file or package exists before using it, so the app still runs after a config is pruned.
 - The port comes from `src/port.ts`, overridable with `PORT`. Read it; do not hardcode 3000 in a second place.
 - Static endpoints go in Tier 1 (`routes:` in `Bun.serve`); everything else is a file under `src/pages/`.
-- CSS is built by this app (`munocss build`), never by a root script.
 - E2E specs live in `e2e/`, unit tests in `tests/`. Never mix the two runners.
 
 ## Adding an endpoint

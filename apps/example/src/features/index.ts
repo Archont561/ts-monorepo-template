@@ -1,6 +1,5 @@
 import { native } from "./native";
 import { collectFlags, type FeatureFlags, type FeatureProvider } from "./provider";
-import { unocss } from "./unocss";
 
 export {
   hasNative,
@@ -12,14 +11,6 @@ export type { FeatureFiles } from "./paths";
 export { APP_FILES, appFile, repoFile } from "./paths";
 export type { FeatureFlags, FeatureName, FeatureProvider } from "./provider";
 export { collectFlags } from "./provider";
-export {
-  hasUnoConfig,
-  hasUnocss,
-  htmlHasUnocss,
-  unocss,
-  unocssPageEnabled,
-  unocssProvider,
-} from "./unocss";
 
 /**
  * Every opt-in feature the app reports, in flag order.
@@ -27,7 +18,7 @@ export {
  * Adding a feature is adding a provider: `/api` reads the flags and the
  * endpoints from here instead of probing files itself.
  */
-export const PROVIDERS: readonly FeatureProvider[] = [unocss, native];
+export const PROVIDERS: readonly FeatureProvider[] = [native];
 
 /**
  * All flags in one call.

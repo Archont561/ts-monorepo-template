@@ -4,19 +4,30 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bun Monorepo Example</title>
-    <!-- TEMPLATE-ONLY:START(unocss) -->
-    <link rel="stylesheet" href="/uno.css" />
-    <!-- TEMPLATE-ONLY:END(unocss) -->
     <style>
       body {
         font-family: system-ui, -apple-system, sans-serif;
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
+        gap: 2rem;
         min-height: 100vh;
         margin: 0;
         background: #09090b;
         color: #fafafa;
+      }
+      header {
+        text-align: center;
+      }
+      h1 {
+        margin: 0 0 0.5rem;
+        font-size: 2rem;
+        letter-spacing: -0.02em;
+      }
+      header p {
+        margin: 0;
+        color: #a1a1aa;
       }
       #greeting {
         padding: 2rem 3rem;
@@ -25,76 +36,47 @@
         background: #18181b;
         font-size: 1.5rem;
       }
+      nav {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      nav a {
+        padding: 0.75rem 1rem;
+        border: 1px solid #27272a;
+        border-radius: 0.5rem;
+        background: #18181b;
+        color: #fafafa;
+        text-decoration: none;
+        font-size: 0.875rem;
+      }
+      nav a:hover {
+        border-color: #3f3f46;
+      }
+      footer {
+        color: #71717a;
+        font-size: 0.75rem;
+      }
     </style>
   </head>
-  <body class="min-h-screen flex flex-col items-center justify-center bg-zinc-950 text-zinc-50 p-8">
-    <!-- TEMPLATE-ONLY:START(unocss) -->
-    <div class="max-w-2xl w-full space-y-8">
-      <header class="text-center space-y-4">
-        <h1 class="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">
-          Bun Monorepo
-        </h1>
-        <p class="text-zinc-400 text-lg">Powered by <span class="text-white font-medium">UnoCSS</span> + Bun + Turborepo</p>
-      </header>
+  <body>
+    <header>
+      <h1>Bun Monorepo</h1>
+      <p>Powered by Bun + Turborepo</p>
+    </header>
 
-      <div id="greeting" class="rounded-xl border border-zinc-800 bg-zinc-900 p-8 shadow-xl">
-        <div class="flex items-center gap-3 mb-4">
-          <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-          <span class="text-sm text-zinc-400">Server Status: OK</span>
-        </div>
-        <p class="text-2xl font-medium">Hello, World! 👋</p>
-        <p class="text-zinc-400 mt-2 text-sm">This page uses UnoCSS utility classes</p>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <a href="/api" class="group rounded-lg border border-zinc-800 bg-zinc-900 p-4 hover:border-zinc-700 transition-colors">
-          <h3 class="font-medium flex items-center gap-2">
-            <span class="i-lucide-api w-4 h-4"></span>
-            API
-            <span class="ml-auto text-zinc-500 group-hover:text-white transition-colors">→</span>
-          </h3>
-          <p class="text-sm text-zinc-400 mt-1">Explore API endpoints</p>
-        </a>
-        <a href="/api/greet/World" class="group rounded-lg border border-zinc-800 bg-zinc-900 p-4 hover:border-zinc-700 transition-colors">
-          <h3 class="font-medium flex items-center gap-2">
-            <span class="i-lucide-hand w-4 h-4"></span>
-            Greet
-            <span class="ml-auto text-zinc-500 group-hover:text-white transition-colors">→</span>
-          </h3>
-          <p class="text-sm text-zinc-400 mt-1">Try /api/greet/:name</p>
-        </a>
-        <!-- TEMPLATE-ONLY:START(native) -->
-        <a href="/api/native" class="group rounded-lg border border-zinc-800 bg-zinc-900 p-4 hover:border-zinc-700 transition-colors md:col-span-2">
-          <h3 class="font-medium flex items-center gap-2">
-            <span class="i-lucide-zap w-4 h-4 text-yellow-400"></span>
-            Native Bindings (Rust)
-            <span class="ml-auto text-zinc-500 group-hover:text-white transition-colors">→</span>
-          </h3>
-          <p class="text-sm text-zinc-400 mt-1">Test napi-rs performance: add, fibonacci, primes</p>
-        </a>
-        <!-- TEMPLATE-ONLY:END(native) -->
-      </div>
-
-      <footer class="text-center text-xs text-zinc-500">
-        <p>Built with <span class="text-white">Bun</span> • <span class="text-white">UnoCSS</span> • <span class="text-white">Turborepo</span></p>
-      </footer>
-    </div>
-
-    <script>
-      // Enhance greeting with API data
-      fetch('/api/greet/UnoCSS')
-        .then(r => r.json())
-        .then(data => {
-          const el = document.getElementById('greeting');
-          if (el && data.greeting) {
-            el.querySelector('p').textContent = `${data.greeting} 🎨`;
-          }
-        })
-        .catch(() => {});
-    </script>
-    <!-- TEMPLATE-ONLY:END(unocss) -->
-    <!-- TEMPLATE-ONLY:START(!unocss) -->
     <div id="greeting">Hello, World!</div>
-    <!-- TEMPLATE-ONLY:END(!unocss) -->
+
+    <nav>
+      <a href="/api">API index</a>
+      <a href="/api/greet/World">/api/greet/:name</a>
+      <a href="/health">/health</a>
+      <!-- TEMPLATE-ONLY:START(native) -->
+      <a href="/api/native">Native bindings (Rust)</a>
+      <!-- TEMPLATE-ONLY:END(native) -->
+    </nav>
+
+    <footer>Built with Bun and Turborepo</footer>
   </body>
 </html>

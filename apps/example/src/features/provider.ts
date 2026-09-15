@@ -1,5 +1,5 @@
 /** The opt-in features the demo app knows how to report. */
-export type FeatureName = "unocss" | "native";
+export type FeatureName = "native";
 
 /** What this checkout can serve — reported by `/api` and logged at boot. */
 export type FeatureFlags = Record<FeatureName, boolean>;

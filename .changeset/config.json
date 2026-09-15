@@ -8,22 +8,10 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [
-    "@myorg/bun-config",
-    "@myorg/bunup",
-    "@myorg/changeset",
-    "@myorg/commitlint",
     "@myorg/example",
-    "@myorg/gh-actions",
     "@myorg/internal",
-    "@myorg/lefthook",
     "@myorg/native",
-    "@myorg/native-crates",
-    "@myorg/playwright",
-    "@myorg/skills",
-    "@myorg/template",
     "@myorg/template-docs",
-    "@myorg/ts",
-    "@myorg/turbo",
-    "@myorg/unocss"
+    "@myorg/tooling"
   ]
 }
