@@ -72,6 +72,10 @@ component_management:
       name: packages/internal
       paths:
         - "packages/internal/**"
+    - component_id: tooling
+      name: packages/tooling
+      paths:
+        - "packages/tooling/**"
 
 comment:
   layout: "reach,diff,flags,components,tree"

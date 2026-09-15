@@ -37,7 +37,7 @@ jobs:
       targets: ${{ steps.matrix.outputs.targets }}
       has_targets: ${{ steps.matrix.outputs.has_targets }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -62,7 +62,7 @@ jobs:
       matrix: ${{ fromJSON(needs.matrix.outputs.targets) }}
     steps:
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -99,7 +99,7 @@ jobs:
         shell: bash
 
       - name: Upload bindings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: bindings-${{ matrix.target }}
           path: |
@@ -117,7 +117,7 @@ jobs:
     if: needs.matrix.outputs.has_targets == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -126,7 +126,7 @@ jobs:
       - run: bun install --frozen-lockfile
 
       - name: Download bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: bindings-*
           path: packages/native/npm/.artifacts
@@ -139,7 +139,7 @@ jobs:
         run: bunx mnative artifacts --dir packages/native/npm/.artifacts
 
       - name: Upload npm packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: native-npm-packages
           path: |

@@ -1,0 +1,47 @@
+{
+  "name": "@myorg/tooling",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "m": "./src/cli.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./bunup": "./src/bunup.ts",
+    "./base.json": "./src/configs/base.json",
+    "./library.json": "./src/configs/library.json",
+    "./app.json": "./src/configs/app.json"
+  },
+  "scripts": {
+    "build": "bunup",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "citty": "^0.2.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.13",
+    "@changesets/cli": "^3.0.2",
+    "@clack/prompts": "^1.8.0",
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
+    "@myorg/external": "workspace:*",
+    "@myorg/pages": "workspace:*",
+    "@myorg/ts": "workspace:*",
+    "@napi-rs/cli": "^3.9.1",
+    "@playwright/test": "^1.63.0",
+    "@types/bun": "^1.4.2",
+    "@unocss/cli": "^66.10.2",
+    "bunup": "^0.16.32",
+    "fast-check": "^4.10.0",
+    "github-actionlint": "^1.7.12",
+    "lcov-result-merger": "^6.0.0",
+    "lefthook": "^2.1.12",
+    "skills": "^1.5.26",
+    "turbo": "^2.10.12",
+    "typescript": "^7.0.2",
+    "unocss": "^66.10.2"
+  }
+}

@@ -1,13 +1,33 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { readdirSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { $, file } from "bun";
 
 /** Minimal shape of a generated workflow, used to assert YAML validity. */
 type WorkflowFile = { jobs?: Record<string, { steps?: unknown[] }> };
 
+/** The subset of a job the multi-job CI assertions read. */
+type CIJob = {
+  steps?: unknown[];
+  needs?: string | string[];
+  if?: string;
+  permissions?: Record<string, string>;
+};
+type CIWorkflow = { jobs: Record<string, CIJob> };
+
 import { regenerateAll } from "../src/aggregate";
+import { getRegisteredConfigs } from "../src/configs";
 import { TemplateHarness } from "../src/harness";
 import { MonorepoScaffolder } from "../src/scaffolder";
+
+const registry = await getRegisteredConfigs(resolve(import.meta.dir, "../../.."));
+
+/** A job the generated CI must contain — throws so the failure names the job. */
+function jobOf(ci: CIWorkflow, name: string): CIJob {
+  const job = ci.jobs[name];
+  if (!job) throw new Error(`the generated CI has no "${name}" job`);
+  return job;
+}
 
 /** Reads every file under `dir` into a sorted `{ relativePath: contents }` map. */
 async function snapshotTree(dir: string): Promise<Record<string, string>> {
@@ -81,7 +101,9 @@ describe("aggregate", () => {
 
       const ci = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
       expect(ci).not.toContain("{{STEPS}}");
-      expect(ci).toContain("actions/checkout@v4");
+      // Version-agnostic on purpose: the checkout action is pinned to a major,
+      // but which major is the audit's business, not this generator's.
+      expect(ci).toMatch(/actions\/checkout@v\d+/);
       expect(ci).toContain("bun run check");
       expect(ci).toContain("bun run ci:lint");
       expect(ci).toContain("run: bun run test:e2e");
@@ -266,6 +288,94 @@ describe("aggregate", () => {
       await aggregate(result.templateDir);
       expect(await file(pages).exists(), "pages.yml must exist for a Pages opt-in").toBe(true);
       expect(await file(coverage).exists(), "coverage is included in pages.yml").toBe(false);
+    },
+    { timeout: 120_000 },
+  );
+
+  test(
+    "CI is split into parallel jobs behind a gate",
+    async () => {
+      const result = await new TemplateHarness({ skipInstall: true }).prepare();
+      cleanup = result.cleanup;
+
+      await new MonorepoScaffolder({
+        targetDir: result.templateDir,
+        scope: "@agent-test",
+        gitHooks: false,
+        configs: registry.buildEnabledConfigs(),
+      }).execute();
+
+      const ci = Bun.YAML.parse(
+        await file(`${result.templateDir}/.github/workflows/ci.yml`).text(),
+      ) as CIWorkflow;
+
+      // quality is the root; the rest fan out from it so a native build failure
+      // cannot hold up coverage or e2e.
+      expect(Object.keys(ci.jobs).sort()).toEqual(
+        ["coverage", "e2e", "gate", "native", "quality", "security"].sort(),
+      );
+      expect(jobOf(ci, "quality").needs).toBeUndefined();
+      for (const name of ["coverage", "security", "native", "e2e"] as const) {
+        expect(jobOf(ci, name).needs, `${name} must wait on quality`).toBe("quality");
+      }
+
+      // The gate is what branch protection requires, so it has to see every run.
+      const gate = jobOf(ci, "gate");
+      expect(gate.if).toBe("always()");
+      expect([...(gate.needs ?? [])].sort()).toEqual(
+        ["coverage", "e2e", "native", "quality", "security"].sort(),
+      );
+
+      // Each job installs for itself, and carries only the scopes it uses.
+      for (const [name, job] of Object.entries(ci.jobs)) {
+        if (name === "gate") continue;
+        const names = (job.steps ?? []).map((s) => (s as { name?: string }).name);
+        expect(names, `${name} is missing the shared bootstrap`).toContain("Install Dependencies");
+      }
+      expect(jobOf(ci, "security").permissions?.["security-events"]).toBe("write");
+      expect(jobOf(ci, "quality").permissions?.["security-events"]).toBeUndefined();
+
+      // No marker or placeholder survives into the generated file.
+      const raw = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
+      expect(raw).not.toMatch(/^\s*#\s*SECTION:/m);
+      expect(raw).not.toContain("{{BOOTSTRAP}}");
+    },
+    { timeout: 120_000 },
+  );
+
+  test(
+    "a job with no steps left is pruned, and the gate stops waiting on it",
+    async () => {
+      const result = await new TemplateHarness({ skipInstall: true }).prepare();
+      cleanup = result.cleanup;
+
+      // Everything opt-in off: no Playwright config and no native config survive,
+      // so the e2e and native sections receive no steps at all.
+      await new MonorepoScaffolder({
+        targetDir: result.templateDir,
+        scope: "@agent-test",
+        gitHooks: false,
+        configs: registry.buildDisabledConfigs(),
+      }).execute();
+
+      const path = `${result.templateDir}/.github/workflows/ci.yml`;
+      const ci = Bun.YAML.parse(await file(path).text()) as CIWorkflow;
+
+      expect(Object.keys(ci.jobs).sort()).toEqual(
+        ["coverage", "gate", "quality", "security"].sort(),
+      );
+
+      // A `needs` entry naming a pruned job fails GitHub's workflow validation,
+      // so the gate's list has to shrink with the jobs.
+      expect([...(jobOf(ci, "gate").needs ?? [])].sort()).toEqual(
+        ["coverage", "quality", "security"].sort(),
+      );
+
+      // Every surviving job still has steps — an empty one is a parse-time smell
+      // and burns a runner.
+      for (const [name, job] of Object.entries(ci.jobs)) {
+        expect((job.steps ?? []).length, `${name} has no steps`).toBeGreaterThan(0);
+      }
     },
     { timeout: 120_000 },
   );

@@ -108,6 +108,10 @@ export class TemplateHarness {
       "apps/*/coverage",
       "target",
       "dist",
+      // packages/tooling is the consolidated toolchain package (R24-R25). Until
+      // the scaffolder learns to process it (Phase 4) it is template-only
+      // source that no scaffolded project consumes yet, so it is not copied.
+      "packages/tooling",
       ...(options.excludes ?? []),
     ];
     this.skipInstall = options.skipInstall ?? true;

@@ -1,0 +1,24 @@
+      # TEMPLATE-ONLY:START(native)
+      - name: Setup Rust toolchain (release)
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: wasm32-wasip1-threads
+
+      - name: Rust cache (release)
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "{{NATIVE_DIR}}"
+
+      - name: Cargo build release (mnative)
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
+        run: bunx mnative build:release
+        shell: bash
+
+      - name: Build native bindings for release (napi via mnative)
+        if: hashFiles('{{NATIVE_CARGO}}') != ''
+        run: bunx mnative napi:build
+        shell: bash
+      # TEMPLATE-ONLY:END(native)

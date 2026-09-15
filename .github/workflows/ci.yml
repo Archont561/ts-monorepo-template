@@ -11,19 +11,36 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Split into one job per concern so a slow or failing native build cannot hold
+# up coverage, and so each job carries only the permissions it needs.
+# TEMPLATE-ONLY:START(template)
+#
+# How this file is assembled (template repo only — the generator does not ship):
+# step fragments declare their job with a `# SECTION: <name>` comment and are
+# spliced at the matching marker below; a job left with nothing but the
+# bootstrap is dropped and the gate's `needs` is rewritten to match. The
+# BOOTSTRAP placeholder is the checkout/setup/cache/install preamble, kept in
+# ci.bootstrap.yml as a single copy so a version or cache change lands in every
+# job at once. See configs/template/src/aggregate.ts.
+# TEMPLATE-ONLY:END(template)
 jobs:
-  verify:
+  quality:
+    name: Quality & Unit Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v7
 
-      - uses: oven-sh/setup-bun@v2
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
       # Restored before install; saved automatically at the end of the job.
       - name: Cache Bun + Turbo
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.bun/install/cache
@@ -32,13 +49,80 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
 
-      - run: bun install --frozen-lockfile
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
 
       - name: Lint and format
         run: bun run check
 
       - name: Unit tests
         run: bun run test
+
+      # TEMPLATE-ONLY:START(template)
+      # configs/template/dist/index.js is committed because `bun-create` runs it
+      # straight off the tarball. Nothing else in CI would notice it drifting
+      # from src/, so rebuild and require a clean diff. Runs after install (deps
+      # resolved) and after check/test (source is known good), and before
+      # anything downstream consumes the scaffolder.
+      # Scoped `template` — the scaffolder always disables that scope and deletes
+      # configs/template, so this step must not survive into generated projects.
+      - name: Validate Scaffolder Bundle Integrity
+        run: |
+          bun run --filter @myorg/template build
+          if ! git diff --exit-code configs/template/dist/index.js; then
+            echo "::error::Scaffolder bundle is out of sync with source. Run 'bun run --filter @myorg/template build' and commit the result."
+            exit 1
+          fi
+      # TEMPLATE-ONLY:END(template)
+
+      # Package health — catch a broken exports map or unresolvable types
+      # before they reach npm. Builds first (Turbo makes the repeat call a
+      # cache hit) so dist/ exists for both tools. Only non-private packages
+      # are checked; private ones are never published.
+      # attw runs with --profile esm-only: the template ships ESM-only
+      # packages, so the strict profile's CJS resolutions are intentional.
+      - name: Package health (publint + arethetypeswrong, via mbunup)
+        run: bunx mbunup health
+
+      - name: Validate workflows
+        run: bun run ci:lint
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Build
+        run: bun run build
+
+  coverage:
+    name: Coverage Gates
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # The LCOV reporter comments on the PR with GITHUB_TOKEN.
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Restored before install; saved automatically at the end of the job.
+      - name: Cache Bun + Turbo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.bun/install/cache
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
 
       - name: Coverage
         run: bun run coverage
@@ -60,32 +144,6 @@ jobs:
         run: bunx mcoverage summary --markdown >> $GITHUB_STEP_SUMMARY
         shell: bash
 
-      # Package health — catch a broken exports map or unresolvable types
-      # before they reach npm. Builds first (Turbo makes the repeat call a
-      # cache hit) so dist/ exists for both tools. Only non-private packages
-      # are checked; private ones are never published.
-      # attw runs with --profile esm-only: the template ships ESM-only
-      # packages, so the strict profile's CJS resolutions are intentional.
-      - name: Package health (publint + arethetypeswrong, via mbunup)
-        run: bunx mbunup health
-
-      # TEMPLATE-ONLY:START(codeql)
-      # CodeQL — SAST for JS/TS (opt-in, default true)
-      - name: Initialize CodeQL (JS/TS)
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript-typescript
-          queries: security-and-quality
-
-      - name: Autobuild (CodeQL)
-        uses: github/codeql-action/autobuild@v3
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:javascript-typescript"
-      # TEMPLATE-ONLY:END(codeql)
-
       # Coverage reporting — all logic lives in the mcoverage CLI
       # (configs/coverage/src/cli.ts): setup installs genhtml, html renders the
       # report, check enforces the threshold by parsing LCOV directly.
@@ -98,7 +156,7 @@ jobs:
         shell: bash
 
       - name: Upload coverage HTML artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-report
           path: coverage/html/
@@ -117,14 +175,134 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           delete-old-comments: true
 
-      - name: Validate workflows
-        run: bun run ci:lint
+  security:
+    name: Security Scans
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # TEMPLATE-ONLY:START(codeql,trivy)
+      # SARIF results published into GitHub code scanning. Scoped to the two
+      # opt-ins that produce them, so a project using neither is not granted it.
+      security-events: write
+      # TEMPLATE-ONLY:END(codeql,trivy)
+      # Secret-scanning findings are posted as PR comments.
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Restored before install; saved automatically at the end of the job.
+      - name: Cache Bun + Turbo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.bun/install/cache
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      # TEMPLATE-ONLY:START(codeql)
+      # CodeQL — SAST for JS/TS (opt-in, default true)
+      - name: Initialize CodeQL (JS/TS)
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      - name: Autobuild (CodeQL)
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript"
+      # TEMPLATE-ONLY:END(codeql)
 
       # Gitleaks — secret scanning in CI (always, security baseline)
       - name: Gitleaks — secret scanning (mgitleaks via action)
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # TEMPLATE-ONLY:START(trivy)
+      # Trivy — filesystem + container vulnerability scanning (opt-in)
+      - name: Run Trivy FS scan (HIGH, CRITICAL)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          format: sarif
+          output: trivy-fs-results.sarif
+
+      - name: Upload Trivy FS SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('trivy-fs-results.sarif') != ''
+        with:
+          sarif_file: trivy-fs-results.sarif
+
+      - name: Build image for Trivy scan (if Dockerfile exists)
+        if: hashFiles('apps/example/Dockerfile') != ''
+        run: bunx mtrivy build
+
+      - name: Trivy image scan (if Dockerfile)
+        if: hashFiles('apps/example/Dockerfile') != ''
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: app:trivy-scan
+          severity: HIGH,CRITICAL
+          format: sarif
+          output: trivy-image-results.sarif
+
+      - name: Upload Trivy image SARIF to GitHub Security
+        if: always() && hashFiles('apps/example/Dockerfile') != '' && hashFiles('trivy-image-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image-results.sarif
+      # TEMPLATE-ONLY:END(trivy)
+
+  # No job-level `hashFiles` guard: the function is not available there (the
+  # runner rejects it before any checkout exists), so the individual steps keep
+  # their own `hashFiles` guards and skip themselves. The job is removed
+  # entirely by the generator when the native config is absent.
+  native:
+    name: Native FFI Validation
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Restored before install; saved automatically at the end of the job.
+      - name: Cache Bun + Turbo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.bun/install/cache
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
 
       # TEMPLATE-ONLY:START(native)
       - name: Setup Rust toolchain
@@ -171,48 +349,65 @@ jobs:
         shell: bash
       # TEMPLATE-ONLY:END(native)
 
+  e2e:
+    name: End-to-End Tests
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Restored before install; saved automatically at the end of the job.
+      - name: Cache Bun + Turbo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.bun/install/cache
+            .turbo
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      # playwright.config.ts runs `webServer: { command: "bun run start" }`, and
+      # apps/example's `start` is `mbun dist/index.js` — so the app has to be
+      # built in this job before Playwright can serve it. Turbo makes the build
+      # cheap, and `me2e` exits 0 when no browser is installed, so this stays a
+      # no-op on runners without one.
+      - name: Build for E2E
+        run: bun run build
+
       - name: E2E tests
         run: bun run test:e2e
 
-      # TEMPLATE-ONLY:START(trivy)
-      # Trivy — filesystem + container vulnerability scanning (opt-in)
-      - name: Run Trivy FS scan (HIGH, CRITICAL)
-        uses: aquasecurity/trivy-action@v0.24.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          severity: HIGH,CRITICAL
-          format: sarif
-          output: trivy-fs-results.sarif
-
-      - name: Upload Trivy FS SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: trivy-fs-results.sarif
-
-      - name: Build image for Trivy scan (if Dockerfile exists)
-        if: hashFiles('apps/example/Dockerfile') != ''
-        run: bunx mtrivy build
-
-      - name: Trivy image scan (if Dockerfile)
-        if: hashFiles('apps/example/Dockerfile') != ''
-        uses: aquasecurity/trivy-action@v0.24.0
-        with:
-          image-ref: app:trivy-scan
-          severity: HIGH,CRITICAL
-          format: sarif
-          output: trivy-image-results.sarif
-
-      - name: Upload Trivy image SARIF to GitHub Security
-        if: always() && hashFiles('apps/example/Dockerfile') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-image-results.sarif
-      # TEMPLATE-ONLY:END(trivy)
-
-      - name: Typecheck
-        run: bun run typecheck
-
-      - name: Build
-        run: bun run build
+  gate:
+    name: Quality Gate
+    needs: [quality, coverage, security, native, e2e]
+    # Runs even when an upstream job failed so the run still reports a single
+    # status branch protection can require. `needs.*.result` is the object-filter
+    # form — a shell loop over `${{ needs[job].result }}` would never interpolate,
+    # because expressions resolve when the job is parsed, not at runtime. The
+    # generator rewrites the list above when it prunes a job.
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Evaluate upstream job results
+        shell: bash
+        run: |
+          results='${{ toJSON(needs.*.result) }}'
+          echo "upstream job results: $results"
+          if echo "$results" | grep -Eq '"(failure|cancelled)"'; then
+            echo "::error::An upstream job did not succeed"
+            exit 1
+          fi

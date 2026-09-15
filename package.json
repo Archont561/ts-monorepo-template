@@ -33,6 +33,7 @@
     "@myorg/skills": "workspace:*",
     "@myorg/stale": "workspace:*",
     "@myorg/template": "workspace:*",
+    "@myorg/tooling": "workspace:*",
     "@myorg/trivy": "workspace:*",
     "@myorg/ts": "workspace:*",
     "@myorg/turbo": "workspace:*",

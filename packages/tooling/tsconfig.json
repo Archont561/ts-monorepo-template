@@ -1,0 +1,13 @@
+{
+  "extends": "@myorg/ts/library.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist",
+    "types": ["bun"]
+  },
+  "include": ["src", "tests"],
+  // src/configs holds config *assets* the tools load themselves at runtime
+  // (uno.config.ts is consumed by the UnoCSS CLI, not compiled here), so it is
+  // not part of this package's typechecked sources.
+  "exclude": ["node_modules", "dist", "src/configs"]
+}
