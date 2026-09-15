@@ -73,6 +73,22 @@ export interface DiscoveredConfig {
    * stopped existing the moment `configs/` was deleted.
    */
   setup?: FeatureSetup;
+  /**
+   * The files under `src/ci/` this feature contributes, e.g.
+   * `["sections/biome.yml"]`.
+   *
+   * The aggregator used to gather fragments with
+   * `find <target>/configs -name '<steps>.yml'`, which made "is this feature
+   * enabled?" a question about whether `configs/<dir>/` still existed. R27
+   * removes that directory, so contribution is declared here and the
+   * scaffolder selects from its own enabled set instead.
+   *
+   * `*.base.yml` entries own a workflow; `*.steps.yml` and `sections/*.yml`
+   * contribute steps to one. Derived by content hash from the `configs/`
+   * layout, which makes the split a perfect bijection with it — see
+   * `tests/scaffold/ci-fragments.test.ts`.
+   */
+  ciFiles?: string[];
 }
 
 /**
@@ -105,6 +121,7 @@ const FEATURE_RECORD = {
   },
   biome: {
     name: "@myorg/biome",
+    ciFiles: ["sections/biome.yml"],
     dir: "biome",
     meta: {
       default: "always",
@@ -114,6 +131,7 @@ const FEATURE_RECORD = {
   },
   "bun-config": {
     name: "@myorg/bun-config",
+    ciFiles: ["sections/bun-config.yml"],
     dir: "bun-config",
     meta: {
       default: "always",
@@ -123,6 +141,7 @@ const FEATURE_RECORD = {
   },
   bunup: {
     name: "@myorg/bunup",
+    ciFiles: ["sections/bunup.yml"],
     dir: "bunup",
     meta: {
       default: "always",
@@ -132,6 +151,7 @@ const FEATURE_RECORD = {
   },
   changeset: {
     name: "@myorg/changeset",
+    ciFiles: ["fragments/changeset/release.steps.yml"],
     dir: "changeset",
     meta: {
       default: "always",
@@ -150,6 +170,7 @@ const FEATURE_RECORD = {
   },
   codeql: {
     name: "@myorg/codeql",
+    ciFiles: ["sections/codeql.yml"],
     dir: "codeql",
     meta: {
       default: true,
@@ -179,6 +200,12 @@ const FEATURE_RECORD = {
   },
   coverage: {
     name: "@myorg/coverage",
+    ciFiles: [
+      "fragments/coverage-report/coverage.base.yml",
+      "fragments/coverage-report/coverage.steps.yml",
+      "fragments/coverage-report/pages.steps.yml",
+      "sections/coverage.yml",
+    ],
     dir: "coverage",
     meta: {
       default: "always",
@@ -188,6 +215,12 @@ const FEATURE_RECORD = {
   },
   dependabot: {
     name: "@myorg/dependabot",
+    ciFiles: [
+      "fragments/dependabot/dependabot-auto-merge.base.yml",
+      "fragments/dependabot/dependabot-auto-merge.steps.yml",
+      "fragments/dependabot/dependabot.base.yml",
+      "standalone/dependabot.yml",
+    ],
     dir: "dependabot",
     meta: {
       default: "always",
@@ -225,6 +258,7 @@ const FEATURE_RECORD = {
   },
   "gh-actions": {
     name: "@myorg/gh-actions",
+    ciFiles: ["ci.base.yml", "ci.bootstrap.yml", "release.base.yml", "sections/gh-actions.yml"],
     dir: "gh-actions",
     meta: {
       default: "always",
@@ -243,6 +277,7 @@ const FEATURE_RECORD = {
   },
   gitleaks: {
     name: "@myorg/gitleaks",
+    ciFiles: ["sections/gitleaks.yml"],
     dir: "gitleaks",
     meta: {
       default: "always",
@@ -270,6 +305,12 @@ const FEATURE_RECORD = {
   },
   native: {
     name: "@myorg/native-config",
+    ciFiles: [
+      "fragments/native/native.base.yml",
+      "fragments/native/native.steps.yml",
+      "fragments/native/release.steps.yml",
+      "sections/native.yml",
+    ],
     dir: "native",
     setup: setupNative,
     meta: {
@@ -316,6 +357,7 @@ const FEATURE_RECORD = {
   },
   pages: {
     name: "@myorg/pages",
+    ciFiles: ["fragments/pages/pages.base.yml", "fragments/pages/pages.steps.yml"],
     dir: "pages",
     meta: {
       default: false,
@@ -334,6 +376,7 @@ const FEATURE_RECORD = {
   },
   playwright: {
     name: "@myorg/playwright",
+    ciFiles: ["sections/playwright.yml"],
     dir: "playwright",
     meta: {
       default: true,
@@ -371,6 +414,7 @@ const FEATURE_RECORD = {
   },
   stale: {
     name: "@myorg/stale",
+    ciFiles: ["fragments/stale/stale.base.yml"],
     dir: "stale",
     meta: {
       default: false,
@@ -401,6 +445,7 @@ const FEATURE_RECORD = {
   },
   trivy: {
     name: "@myorg/trivy",
+    ciFiles: ["sections/trivy.yml"],
     dir: "trivy",
     meta: {
       default: false,
@@ -426,6 +471,7 @@ const FEATURE_RECORD = {
   },
   turbo: {
     name: "@myorg/turbo",
+    ciFiles: ["sections/turbo.yml"],
     dir: "turbo",
     meta: {
       default: "always",
