@@ -12,7 +12,7 @@ import type {
   ScaffoldRemovals,
   ScaffoldSelection,
 } from "./features";
-import { DEFAULT_SCOPE, discoverConfigs } from "./features";
+import { DEFAULT_SCOPE, FEATURES } from "./features";
 
 export interface ScaffolderOptions {
   targetDir?: string;
@@ -24,6 +24,15 @@ export interface ScaffolderOptions {
   repo?: string;
   /** Flag -> selected value for opt-in configs (from scaffold metadata). */
   configs?: Record<string, ScaffoldSelection>;
+  /**
+   * The features to apply. Defaults to the `FEATURES` registry.
+   *
+   * Injectable because discovery stopped reading the filesystem (R27): the
+   * removal engine can no longer be driven by `configs/<dir>/package.json`
+   * files written into a fixture directory, so unit tests hand it a synthetic
+   * feature list instead. Production callers leave it unset.
+   */
+  features?: readonly DiscoveredConfig[];
 }
 
 /** Identity that badge/Cargo/Pages URLs are rewritten to. */
@@ -330,6 +339,8 @@ export class MonorepoScaffolder {
   readonly owner: string;
   readonly repo: string;
   readonly configs: Record<string, ScaffoldSelection>;
+  /** Injected feature list, or `undefined` to use the `FEATURES` registry. */
+  readonly features: readonly DiscoveredConfig[] | undefined;
   private readonly placeholder = DEFAULT_SCOPE;
   private disabledScopes = new Set<string>(["template"]);
 
@@ -340,6 +351,18 @@ export class MonorepoScaffolder {
     this.owner = options.owner ?? resolveOwner();
     this.repo = options.repo ?? resolveRepo(this.targetDir);
     this.configs = options.configs ?? {};
+    this.features = options.features;
+  }
+
+  /**
+   * The features this run applies — the injected list, or the registry.
+   *
+   * Replaces the three `discoverConfigs(this.targetDir)` call sites. The
+   * target directory is no longer consulted: R27 deletes `configs/`, so there
+   * is nothing there to scan.
+   */
+  private featureList(): DiscoveredConfig[] {
+    return this.features ? [...this.features] : [...FEATURES];
   }
 
   /**
@@ -527,7 +550,7 @@ export class MonorepoScaffolder {
    */
   private async computeDisabledScopes(): Promise<Set<string>> {
     const scopes = new Set<string>(["template"]);
-    const configs = await discoverConfigs(this.targetDir);
+    const configs = this.featureList();
 
     for (const config of configs) {
       if (config.meta.default === "always") continue;
@@ -749,7 +772,7 @@ export class MonorepoScaffolder {
   }
 
   async handleConfig(): Promise<void> {
-    const configs = await discoverConfigs(this.targetDir);
+    const configs = this.featureList();
     const rootPkgPath = `${this.targetDir}/package.json`;
 
     await updateManifestFile(rootPkgPath, async (source) => {
@@ -839,16 +862,20 @@ export class MonorepoScaffolder {
   }
 
   /**
-   * Runs setup scripts for enabled configs (data-driven).
-   * Setup scripts are declared in scaffold.setup and are executed when config is enabled.
-   * Used for native bindings to scaffold packages/native/ when selected.
+   * Runs setup steps for enabled configs (data-driven).
+   *
+   * Each step is a function reference on the registry entry (see `FEATURES`),
+   * not a path inside the target: R27 deletes `configs/`, so the previous
+   * `${targetDir}/configs/<dir>/src/setup.ts` no longer resolves. The gating
+   * rules are unchanged — always-on configs always run unless they
+   * self-destruct, opt-in configs run only when enabled.
    */
   async runSetup(): Promise<void> {
-    const configs = await discoverConfigs(this.targetDir);
+    const configs = this.featureList();
 
     for (const config of configs) {
       const meta = config.meta;
-      if (!meta.setup) continue;
+      if (!config.setup) continue;
 
       // Always-on configs always run setup unless selfDestruct
       // Opt-in configs run setup only when enabled
@@ -858,30 +885,7 @@ export class MonorepoScaffolder {
       const disabled = meta.selfDestruct || this.isDisabled(meta, selected);
       if (disabled) continue; // Only run for enabled
 
-      const setupPath = `${this.targetDir}/${meta.setup}`;
-      if (!(await file(setupPath).exists())) continue;
-
-      console.log(`\n🔧 Running setup for ${config.dir}: ${meta.setup}\n`);
-      try {
-        // Run setup script with scope env
-        const proc = Bun.spawn({
-          cmd: ["bun", setupPath],
-          cwd: this.targetDir,
-          env: {
-            ...process.env,
-            SCOPE: this.scope,
-            NATIVE_SCOPE: this.scope,
-            UNOCSS_SCOPE: this.scope,
-            DEVCONTAINER_SCOPE: this.scope,
-            SKILLS_SCOPE: this.scope,
-          },
-          stdout: "inherit",
-          stderr: "inherit",
-        });
-        await proc.exited;
-      } catch (e) {
-        console.warn(`⚠️ Setup for ${config.dir} failed:`, e);
-      }
+      await config.setup({ targetDir: this.targetDir, scope: this.scope });
     }
   }
 

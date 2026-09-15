@@ -1,4 +1,4 @@
-import { $, file } from "bun";
+import { type FeatureSetup, setupDevcontainer, setupNative, setupUnocss } from "./setups";
 
 /** Values the native config accepts — one source of truth for the select metadata. */
 export const NATIVE_MODES = { none: "none", publish: "publish", docker: "docker" } as const;
@@ -49,7 +49,6 @@ export interface ScaffoldMeta extends ScaffoldRemovals {
   type?: "confirm" | "select";
   /** Select values — the typed vocabulary, so a typo cannot fall through. */
   options?: ScaffoldOption[];
-  setup?: string;
   removals?: Record<string, ScaffoldRemovals>;
   /** Custom template marker(s) declared by this package */
   marker?: string;
@@ -57,37 +56,430 @@ export interface ScaffoldMeta extends ScaffoldRemovals {
   markers?: string[];
 }
 
+/**
+ * One scaffoldable feature.
+ *
+ * `dir` is kept even though `configs/` is gone (R27): it is the flag fallback
+ * (`meta.flag ?? dir`) and the key every removal set is looked up by, so it is
+ * part of the vocabulary rather than a filesystem detail.
+ */
 export interface DiscoveredConfig {
   name: string;
   dir: string;
   meta: ScaffoldMeta;
+  /**
+   * Runs when the feature is enabled. Replaces the old `meta.setup` path
+   * string, which pointed at `${targetDir}/configs/<dir>/src/setup.ts` and so
+   * stopped existing the moment `configs/` was deleted.
+   */
+  setup?: FeatureSetup;
 }
 
 /**
- * Scans every `configs/<name>/package.json` inside `repoRoot` and returns
- * each package that declares a `scaffold` metadata field. The scaffolder has
- * zero hardcoded knowledge of individual config packages.
+ * The feature registry (R27).
+ *
+ * Every entry is a verbatim transcription of the `scaffold` block that used to
+ * live in `configs/<dir>/package.json`, generated from those 28 manifests so
+ * nothing is hand-copied. `discoverConfigs()` used to scan that directory; the
+ * scan is what tied the scaffolder to a layout that no longer exists, so the
+ * data is inlined here instead.
+ *
+ * Adding a feature means adding an entry — the scaffolder still has no
+ * hardcoded knowledge of individual features beyond the `setup` references.
+ *
+ * Two of the old `setup` values are deliberately absent here: `changeset`
+ * declared `"mchangeset init"` and `playwright` declared `"mbun x playwright
+ * install --with-deps"`. Neither is a file, so the previous
+ * `file(setupPath).exists()` gate skipped both on every run — they are covered
+ * by the real `m changeset init` and `m e2e` commands instead.
  */
-export async function discoverConfigs(repoRoot: string): Promise<DiscoveredConfig[]> {
-  const configs: DiscoveredConfig[] = [];
-  const configsDir = `${repoRoot}/configs`;
+const FEATURE_RECORD = {
+  badges: {
+    name: "@myorg/badges",
+    dir: "badges",
+    meta: {
+      default: "always",
+      flag: "badges",
+      prompt: "Include badges for CI, coverage, license in READMEs?",
+    },
+  },
+  biome: {
+    name: "@myorg/biome",
+    dir: "biome",
+    meta: {
+      default: "always",
+      flag: "biome",
+      prompt: "Configure Biome (lint + format)?",
+    },
+  },
+  "bun-config": {
+    name: "@myorg/bun-config",
+    dir: "bun-config",
+    meta: {
+      default: "always",
+      flag: "bun-config",
+      prompt: "Configure Bun (coverage, test settings)?",
+    },
+  },
+  bunup: {
+    name: "@myorg/bunup",
+    dir: "bunup",
+    meta: {
+      default: "always",
+      flag: "bunup",
+      prompt: "Configure Bunup (Bun-based package bundler)?",
+    },
+  },
+  changeset: {
+    name: "@myorg/changeset",
+    dir: "changeset",
+    meta: {
+      default: "always",
+      flag: "changeset",
+      prompt: "Configure Changesets (versioning + releases)?",
+    },
+  },
+  citty: {
+    name: "@myorg/citty",
+    dir: "citty",
+    meta: {
+      default: "always",
+      flag: "citty",
+      prompt: "Configure Citty (elegant CLI builder)?",
+    },
+  },
+  codeql: {
+    name: "@myorg/codeql",
+    dir: "codeql",
+    meta: {
+      default: true,
+      flag: "codeql",
+      prompt: "Include CodeQL (GitHub SAST for JS/TS)?",
+      type: "confirm",
+    },
+  },
+  commitlint: {
+    name: "@myorg/commitlint",
+    dir: "commitlint",
+    meta: {
+      default: "always",
+      flag: "commitlint",
+      prompt: "Configure Commitlint (Conventional Commits)?",
+    },
+  },
+  community: {
+    name: "@myorg/community",
+    dir: "community",
+    meta: {
+      default: "always",
+      flag: "community",
+      prompt:
+        "Include community health files (CODEOWNERS, PR template, issue templates, SECURITY, CODE_OF_CONDUCT, SUPPORT, FUNDING)?",
+    },
+  },
+  coverage: {
+    name: "@myorg/coverage",
+    dir: "coverage",
+    meta: {
+      default: "always",
+      flag: "coverage",
+      prompt: "Configure coverage reporting (LCOV, HTML, artifact, Pages, threshold)?",
+    },
+  },
+  dependabot: {
+    name: "@myorg/dependabot",
+    dir: "dependabot",
+    meta: {
+      default: "always",
+      flag: "dependabot",
+      prompt: "Configure Dependabot (automated dependency updates)?",
+    },
+  },
+  devcontainer: {
+    name: "@myorg/devcontainer",
+    dir: "devcontainer",
+    setup: setupDevcontainer,
+    meta: {
+      default: false,
+      flag: "devcontainer",
+      prompt: "Include devcontainer config for Codespaces / Dev Containers?",
+      type: "confirm",
+      removals: {
+        true: {},
+        false: {
+          extraRemovals: [".devcontainer"],
+          filePatternsToRemove: ["**/.devcontainer/**", ".devcontainer/**", "**/devcontainer.json"],
+          fileRegexesToRemove: ["devcontainer", "\\.devcontainer"],
+        },
+      },
+    },
+  },
+  editorconfig: {
+    name: "@myorg/editorconfig",
+    dir: "editorconfig",
+    meta: {
+      default: "always",
+      flag: "editorconfig",
+      prompt: "Include .editorconfig (consistent editor settings)?",
+    },
+  },
+  "gh-actions": {
+    name: "@myorg/gh-actions",
+    dir: "gh-actions",
+    meta: {
+      default: "always",
+      flag: "gh-actions",
+      prompt: "Configure GitHub Actions (CI + release workflows)?",
+    },
+  },
+  gitattributes: {
+    name: "@myorg/gitattributes",
+    dir: "gitattributes",
+    meta: {
+      default: "always",
+      flag: "gitattributes",
+      prompt: "Include .gitattributes (line endings, binary handling)?",
+    },
+  },
+  gitleaks: {
+    name: "@myorg/gitleaks",
+    dir: "gitleaks",
+    meta: {
+      default: "always",
+      flag: "gitleaks",
+      prompt: "Include Gitleaks (secret scanning via Lefthook + CI)?",
+    },
+  },
+  lefthook: {
+    name: "@myorg/lefthook",
+    dir: "lefthook",
+    meta: {
+      default: "always",
+      flag: "lefthook",
+      prompt: "Configure Lefthook (Git hooks)?",
+    },
+  },
+  manifest: {
+    name: "@myorg/manifest",
+    dir: "manifest",
+    meta: {
+      default: "always",
+      flag: "manifest",
+      prompt: "Configure the manifest editor (format-preserving package.json edits)?",
+    },
+  },
+  native: {
+    name: "@myorg/native-config",
+    dir: "native",
+    setup: setupNative,
+    meta: {
+      default: "none",
+      flag: "native",
+      prompt: "Set up native Node-API (NAPI-RS) bindings?",
+      type: "select",
+      options: [
+        {
+          value: "none",
+          label: "None - skip native bindings",
+        },
+        {
+          value: "publish",
+          label: "Publish a native npm package",
+        },
+        {
+          value: "docker",
+          label: "Build native bindings in Docker",
+        },
+      ],
+      removals: {
+        none: {
+          extraRemovals: ["packages/native", "apps/example/src/pages/api/native"],
+          scriptsToRemove: ["build:native", "build:wasm", "test:native", "security:audit"],
+          turboTasksToRemove: ["build:native", "build:wasm"],
+          filePatternsToRemove: [
+            "**/*.node",
+            "**/*.napi.*",
+            "**/*.wasi.cjs",
+            "**/rust-toolchain.toml",
+            "Cargo.lock",
+            ".cargo/**",
+            "**/native/**",
+            "**/api/native/**",
+          ],
+          fileRegexesToRemove: ["\\\\.node$", "napi", "rust-toolchain", "api/native"],
+          appDepsToRemove: ["@myorg/native"],
+        },
+        publish: {},
+        docker: {},
+      },
+    },
+  },
+  pages: {
+    name: "@myorg/pages",
+    dir: "pages",
+    meta: {
+      default: false,
+      flag: "pages",
+      prompt: "Set up GitHub Pages deployment (static site via Actions)?",
+      type: "confirm",
+      removals: {
+        true: {},
+        false: {
+          extraRemovals: [".github/workflows/pages.yml", "configs/pages"],
+          filePatternsToRemove: ["**/pages.yml"],
+          fileRegexesToRemove: ["pages\\.yml"],
+        },
+      },
+    },
+  },
+  playwright: {
+    name: "@myorg/playwright",
+    dir: "playwright",
+    meta: {
+      default: true,
+      flag: "playwright",
+      prompt: "Include E2E testing with Playwright?",
+      removals: {
+        true: {},
+        false: {
+          scriptsToRemove: ["test:e2e"],
+          turboTasksToRemove: ["test:e2e"],
+          extraRemovals: ["apps/example/playwright.config.ts", "apps/example/e2e"],
+          filePatternsToRemove: ["**/e2e/**", "**/*.e2e.ts", "**/playwright.config.ts"],
+          fileRegexesToRemove: ["playwright", ".*\\.spec\\.e2e\\..*"],
+          appDepsToRemove: ["@myorg/playwright", "@playwright/test"],
+        },
+      },
+    },
+  },
+  skills: {
+    name: "@myorg/skills",
+    dir: "skills",
+    meta: {
+      default: false,
+      flag: "skills",
+      prompt: "Install AI agent skills? (for Cursor, Claude, Cline)",
+      removals: {
+        false: {
+          extraRemovals: [".agents"],
+          filePatternsToRemove: [".agents/**", "**/.claude/**", "**/skills/**"],
+          fileRegexesToRemove: ["\\.agents", "skills"],
+          scriptsToRemove: ["skills"],
+        },
+      },
+    },
+  },
+  stale: {
+    name: "@myorg/stale",
+    dir: "stale",
+    meta: {
+      default: false,
+      flag: "stale",
+      prompt: "Include stale action (auto-close inactive issues/PRs)?",
+      type: "confirm",
+    },
+  },
+  template: {
+    name: "@myorg/template",
+    dir: "template",
+    meta: {
+      default: "always",
+      selfDestruct: true,
+      scriptsToRemove: ["docs:sync", "docs:site", "docs:dev", "docs:build", "docs:preview"],
+      removals: {
+        always: {
+          extraRemovals: [
+            ".github/workflows/template-docs.yml",
+            "apps/template-docs",
+            "codecov.yml",
+          ],
+          filePatternsToRemove: ["**/template-docs.yml", "**/template-docs/**", ".changeset/*.md"],
+          fileRegexesToRemove: ["template-docs"],
+        },
+      },
+    },
+  },
+  trivy: {
+    name: "@myorg/trivy",
+    dir: "trivy",
+    meta: {
+      default: false,
+      flag: "trivy",
+      prompt: "Include Trivy (container + filesystem vulnerability scanning)?",
+      type: "confirm",
+      removals: {
+        false: {
+          filePatternsToRemove: ["**/trivy*"],
+          scriptsToRemove: ["security:trivy", "security:check"],
+        },
+      },
+    },
+  },
+  ts: {
+    name: "@myorg/ts",
+    dir: "ts",
+    meta: {
+      default: "always",
+      flag: "ts",
+      prompt: "Configure TypeScript (shared tsconfigs)?",
+    },
+  },
+  turbo: {
+    name: "@myorg/turbo",
+    dir: "turbo",
+    meta: {
+      default: "always",
+      flag: "turbo",
+      prompt: "Configure Turbo (task orchestration)?",
+    },
+  },
+  unocss: {
+    name: "@myorg/unocss",
+    dir: "unocss",
+    setup: setupUnocss,
+    meta: {
+      default: false,
+      flag: "unocss",
+      marker: "unocss",
+      prompt: "Include UnoCSS (atomic CSS engine)?",
+      type: "confirm",
+      removals: {
+        true: {},
+        false: {
+          marker: "unocss",
+          extraRemovals: ["apps/example/public/uno.css", "apps/example/uno.config.ts"],
+          filePatternsToRemove: ["**/uno.css", "**/*.unocss.*"],
+          fileRegexesToRemove: [],
+          appDepsToRemove: ["@unocss/reset", "unocss", "@myorg/unocss"],
+        },
+      },
+    },
+  },
+} satisfies Record<string, DiscoveredConfig>;
 
-  // Bun.file().exists() reports false for directories, so use a shell test.
-  const isDir = await $`test -d ${configsDir}`.nothrow().quiet();
-  if (isDir.exitCode !== 0) return configs;
+/**
+ * Every scaffoldable feature, in a deterministic (alphabetical by `dir`) order.
+ *
+ * The old directory scan returned whatever order `find` produced, which is
+ * filesystem-dependent; prompt order and removal order are now reproducible.
+ */
+export const FEATURES: readonly DiscoveredConfig[] = Object.values(FEATURE_RECORD);
 
-  const entries = await $`find ${configsDir} -maxdepth 2 -name "package.json"`.text();
+/** Fast lookup by `dir` — the key removals and flags are addressed by. */
+export const FEATURES_BY_DIR: ReadonlyMap<string, DiscoveredConfig> = new Map(
+  FEATURES.map((feature) => [feature.dir, feature]),
+);
 
-  for (const pkgPath of entries.trim().split("\n").filter(Boolean)) {
-    const pkg = await file(pkgPath).json();
-    if (!pkg.scaffold) continue;
-
-    const dir = pkgPath.replace(`${configsDir}/`, "").replace("/package.json", "");
-
-    configs.push({ name: pkg.name, dir, meta: pkg.scaffold });
-  }
-
-  return configs;
+/**
+ * Returns every registered feature.
+ *
+ * The signature is unchanged so callers do not move: `repoRoot` is accepted and
+ * deliberately unused, because discovery no longer depends on the shape of the
+ * target directory. It used to read `configs/<dir>/package.json` out of the copy
+ * being scaffolded — see `FEATURES` for why that indirection is gone.
+ */
+export async function discoverConfigs(_repoRoot?: string): Promise<DiscoveredConfig[]> {
+  return [...FEATURES];
 }
 
 export interface RegisteredConfigInfo {

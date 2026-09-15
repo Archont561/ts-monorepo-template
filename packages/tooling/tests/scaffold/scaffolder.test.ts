@@ -4,12 +4,38 @@ import { join } from "node:path";
 import { $, file, write } from "bun";
 import fc from "fast-check";
 import { removeJsonEntry } from "../../src/manifest/editor";
-import { discoverConfigs, NATIVE_MODES } from "../../src/scaffold/features";
+import {
+  type DiscoveredConfig,
+  discoverConfigs,
+  NATIVE_MODES,
+  type ScaffoldMeta,
+} from "../../src/scaffold/features";
 import {
   collectScopeTargets,
   MonorepoScaffolder,
   stripMarkerBlocks,
 } from "../../src/scaffold/pipeline";
+
+/**
+ * Reads the synthetic `scaffold` blocks a test wrote into its fixture and hands
+ * them to the scaffolder as an injected feature list.
+ *
+ * Discovery stopped reading the filesystem in R27 — it returns the `FEATURES`
+ * registry — so writing `configs/<dir>/package.json` into a fixture no longer
+ * reaches the scaffolder on its own. Tests that drive the removal engine with
+ * their own metadata have to pass it explicitly; reading it back from the file
+ * the test already wrote keeps each test's metadata in exactly one place.
+ */
+async function fixtureFeatures(workDir: string, ...dirs: string[]): Promise<DiscoveredConfig[]> {
+  const features: DiscoveredConfig[] = [];
+  for (const dir of dirs) {
+    const pkg: { name: string; scaffold: ScaffoldMeta } = await file(
+      `${workDir}/configs/${dir}/package.json`,
+    ).json();
+    features.push({ name: pkg.name, dir, meta: pkg.scaffold });
+  }
+  return features;
+}
 
 describe("MonorepoScaffolder (unit)", () => {
   let workDir: string;
@@ -579,7 +605,11 @@ describe("MonorepoScaffolder (unit)", () => {
         }),
       );
 
-      const s = new MonorepoScaffolder({ targetDir: workDir, configs: { unocss: false } });
+      const s = new MonorepoScaffolder({
+        targetDir: workDir,
+        configs: { unocss: false },
+        features: await fixtureFeatures(workDir, "unocss"),
+      });
       await s.handleConfig();
 
       expect(await pathExists(`${workDir}/configs/unocss`)).toBe(false);
@@ -597,7 +627,11 @@ describe("MonorepoScaffolder (unit)", () => {
       );
       await write(`${workDir}/package.json`, JSON.stringify({ name: "test" }));
 
-      const s = new MonorepoScaffolder({ targetDir: workDir, configs: { playwright: true } });
+      const s = new MonorepoScaffolder({
+        targetDir: workDir,
+        configs: { playwright: true },
+        features: await fixtureFeatures(workDir, "playwright"),
+      });
       await s.handleConfig();
 
       expect(await pathExists(`${workDir}/configs/playwright`)).toBe(true);
@@ -625,7 +659,11 @@ describe("MonorepoScaffolder (unit)", () => {
       await write(`${workDir}/Dockerfile`, "FROM oven/bun:1");
       await write(`${workDir}/package.json`, JSON.stringify({ name: "test" }));
 
-      const s = new MonorepoScaffolder({ targetDir: workDir, configs: { native: "none" } });
+      const s = new MonorepoScaffolder({
+        targetDir: workDir,
+        configs: { native: "none" },
+        features: await fixtureFeatures(workDir, "native"),
+      });
       await s.handleConfig();
 
       expect(await pathExists(`${workDir}/Cargo.toml`)).toBe(false);
@@ -656,7 +694,11 @@ describe("MonorepoScaffolder (unit)", () => {
       );
       await write(`${workDir}/package.json`, JSON.stringify({ name: "test" }));
 
-      const s = new MonorepoScaffolder({ targetDir: workDir, configs: { playwright: false } });
+      const s = new MonorepoScaffolder({
+        targetDir: workDir,
+        configs: { playwright: false },
+        features: await fixtureFeatures(workDir, "playwright"),
+      });
       await s.handleConfig();
 
       const appPkg = await file(`${workDir}/apps/example/package.json`).json();
@@ -683,7 +725,11 @@ describe("MonorepoScaffolder (unit)", () => {
       await write(`${workDir}/apps/example/src/keep.ts`, "keep");
       await write(`${workDir}/package.json`, JSON.stringify({ name: "test" }));
 
-      const s = new MonorepoScaffolder({ targetDir: workDir, configs: { playwright: false } });
+      const s = new MonorepoScaffolder({
+        targetDir: workDir,
+        configs: { playwright: false },
+        features: await fixtureFeatures(workDir, "playwright"),
+      });
       await s.handleConfig();
 
       expect(await pathExists(`${workDir}/apps/example/e2e/test.spec.ts`)).toBe(false);
@@ -710,7 +756,11 @@ describe("MonorepoScaffolder (unit)", () => {
       await write(`${workDir}/apps/example/src/keep.ts`, "keep");
       await write(`${workDir}/package.json`, JSON.stringify({ name: "test" }));
 
-      const s = new MonorepoScaffolder({ targetDir: workDir, configs: { unocss: false } });
+      const s = new MonorepoScaffolder({
+        targetDir: workDir,
+        configs: { unocss: false },
+        features: await fixtureFeatures(workDir, "unocss"),
+      });
       await s.handleConfig();
 
       expect(await pathExists(`${workDir}/uno.config.ts`)).toBe(false);
@@ -736,7 +786,11 @@ describe("MonorepoScaffolder (unit)", () => {
       await write(`${workDir}/.agents/skills/test.md`, "skill");
       await write(`${workDir}/package.json`, JSON.stringify({ name: "test" }));
 
-      const s = new MonorepoScaffolder({ targetDir: workDir, configs: { skills: false } });
+      const s = new MonorepoScaffolder({
+        targetDir: workDir,
+        configs: { skills: false },
+        features: await fixtureFeatures(workDir, "skills"),
+      });
       await s.handleConfig();
 
       expect(await pathExists(`${workDir}/.agents/skills/test.md`)).toBe(false);
@@ -776,7 +830,10 @@ describe("MonorepoScaffolder (unit)", () => {
         }),
       );
 
-      const s = new MonorepoScaffolder({ targetDir: workDir });
+      const s = new MonorepoScaffolder({
+        targetDir: workDir,
+        features: await fixtureFeatures(workDir, "template", "biome"),
+      });
       await s.handleConfig();
 
       expect(await pathExists(`${workDir}/configs/template`)).toBe(false);
@@ -1054,7 +1111,11 @@ describe("MonorepoScaffolder (unit)", () => {
       await mkdir(`${workDir}/packages/internal`, { recursive: true });
       await write(`${workDir}/packages/internal/package.json`, '{ "name": "@myorg/internal" }\n');
 
-      const s = new MonorepoScaffolder({ targetDir: workDir, scope: "@myorg" });
+      const s = new MonorepoScaffolder({
+        targetDir: workDir,
+        scope: "@myorg",
+        features: await fixtureFeatures(workDir, "demo"),
+      });
       await s.handleConfig();
 
       const root = await file(`${workDir}/package.json`).text();
