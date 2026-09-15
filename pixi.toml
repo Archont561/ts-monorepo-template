@@ -1,0 +1,11 @@
+[workspace]
+authors = ["archont561 <archont561@github.com>"]
+channels = ["conda-forge"]
+name = "ts-monorepo-template"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+actionlint = ">=1.7.12,<2"

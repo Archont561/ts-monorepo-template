@@ -79,3 +79,6 @@ index.d.ts
 
 # Pages staging dir — assembled by `mpages build` from declared packages
 .pages/
+# pixi environments
+.pixi/*
+!.pixi/config.toml
