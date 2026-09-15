@@ -72,10 +72,23 @@ commit-msg:
   commands:
     # Conventional Commits, plus a block on wip/todo.
     #
-    # fixup!/squash! are allowed through deliberately: `git commit --fixup`
-    # exists to produce commits that `git rebase -i --autosquash` later folds in,
-    # and rejecting them here breaks that workflow. pre-push is what stops an
-    # unautosquashed fixup reaching the remote. wip/todo have no such use.
+    # This is commit-msg and not pre-commit because git gives pre-commit no
+    # arguments at all and the message does not exist yet — there is nothing to
+    # validate. `.git/COMMIT_EDITMSG` is readable at pre-commit time, but it
+    # still holds the *previous* commit's message, so checking it there would
+    # lint the wrong thing and pass or fail on history.
+    #
+    # Format itself is delegated to commitlint (`m commitlint` → @commitlint/cli
+    # with @commitlint/config-conventional), which is the specification rather
+    # than a regex that approximates it. What stays here is the policy
+    # commitlint does not express:
+    #
+    #   - fixup!/squash! are allowed through deliberately: `git commit --fixup`
+    #     exists to produce commits that `git rebase -i --autosquash` later
+    #     folds in, and rejecting them here breaks that workflow. pre-push is
+    #     what stops an unautosquashed fixup reaching the remote.
+    #   - wip/todo have no such use, and get a message naming the alternative
+    #     instead of commitlint's "type must be one of [...]".
     message:
       run: |
         msg=$(cat {1})
@@ -87,12 +100,7 @@ commit-msg:
           echo "   Use 'git commit --fixup=<sha>' for a scratch commit you intend to fold in."
           exit 1
         fi
-        if ! printf '%s' "$msg" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\([^)]+\))?!?: .+'; then
-          echo "❌ Commit message must follow Conventional Commits: type(scope): description"
-          echo "   Types: feat fix docs style refactor perf test chore ci build revert"
-          echo "   Got: $msg"
-          exit 1
-        fi
+        bun run m commitlint {1}
 
 # Sequential, not parallel: Turbo parallelises internally, and four interleaved
 # logs make a failure hard to read. Measured here: ~21s.

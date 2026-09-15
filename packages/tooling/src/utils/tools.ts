@@ -76,6 +76,12 @@ export const TOOLS = {
     purpose: "rendering the HTML coverage report",
     install: ["bun run m coverage setup"],
   },
+  commitlint: {
+    bin: "commitlint",
+    label: "commitlint",
+    purpose: "Conventional Commits validation",
+    install: ["bun install          # @commitlint/cli is a workspace devDependency"],
+  },
 } satisfies Record<string, ToolSpec>;
 
 export type ToolName = keyof typeof TOOLS;

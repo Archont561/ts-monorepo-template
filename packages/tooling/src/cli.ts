@@ -44,6 +44,7 @@ const subCommands: SubCommandsDef = {
   test: () => import("./commands/bun-test").then((m) => m.default),
   coverage: () => import("./commands/coverage").then((m) => m.default),
   changeset: () => import("./commands/changeset").then((m) => m.default),
+  commitlint: () => import("./commands/commitlint").then((m) => m.default),
   setup: () => import("./commands/setup").then((m) => m.default),
 
   // CI & security

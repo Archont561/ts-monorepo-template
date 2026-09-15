@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { $ } from "bun";
-import { TOOLS, withOptionalTool } from "../src/utils/tools";
+import { skipMissingTool, TOOLS, withOptionalTool } from "../src/utils/tools";
 import { REPO_ROOT } from "./helpers";
 
 const BASE = join(REPO_ROOT, "packages/tooling/src/configs/lefthook.base.yml");
@@ -122,6 +123,24 @@ describe("hook design rules", () => {
     }
   });
 
+  // `m` is a workspace bin, and `node_modules/.bin` is not on PATH in the shell
+  // a hook runs in — a bare `m …` dies with "m: not found" (exit 127) and fails
+  // the commit. `bun run m` resolves it from node_modules/.bin instead. This
+  // was hit for real: commit-msg reached for a bare `m commitlint`.
+  test("every m invocation in a hook goes through `bun run`, because m is not on PATH", () => {
+    const offenders: string[] = [];
+    for (const { hook, name, run: block } of runBlocks()) {
+      for (const raw of block.split("\n")) {
+        const code = raw.replace(/#.*$/, "").trim();
+        if (code.length === 0) continue;
+        if (/(^|[;&|(]\s*)m\s/.test(code) && !code.includes("bun run m")) {
+          offenders.push(`${hook}.${name}: ${code}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   // Feature-dependent hooks no-op when the feature is absent, rather than
   // requiring the scaffolder to rewrite this file per project.
   test("Rust hooks are guarded by the Cargo workspace existing", () => {
@@ -223,6 +242,56 @@ describe("commit message policy", () => {
   test("wip and todo are rejected at commit time", () => {
     expect(run("commit-msg", "message")).toMatch(/\(wip\|todo\)/i);
   });
+
+  test("message format is delegated to commitlint, not a hand-rolled regex", () => {
+    const block = run("commit-msg", "message");
+    // Through `m`, like every other external tool a hook reaches for.
+    expect(block).toContain("m commitlint {1}");
+    // The inline type-list regex is gone: config-conventional owns the spec.
+    expect(block).not.toContain("feat|fix|docs|style");
+  });
+
+  test("the message check lives in commit-msg, where the message exists", () => {
+    // git passes pre-commit no arguments, so there is nothing there to lint.
+    // Asserted structurally so the check cannot be moved by accident.
+    expect(run("commit-msg", "message")).toContain("{1}");
+    expect(run("pre-commit", "biome")).not.toContain("commitlint");
+    expect(run("pre-commit", "guards")).not.toContain("commitlint");
+    expect(run("pre-commit", "secrets")).not.toContain("commitlint");
+  });
+
+  test("commitlint accepts conventional messages and rejects the rest", async () => {
+    const cases: Array<[string, "allow" | "block"]> = [
+      ["feat: add a thing", "allow"],
+      ["fix(scope)!: breaking change", "allow"],
+      ["chore(release): 1.2.3", "allow"],
+      ["added some stuff", "block"],
+      ["feat:missing space after colon", "block"],
+      ["nonsense: not a real type", "block"],
+    ];
+    for (const [message, want] of cases) {
+      const file = join(tmpdir(), `commitlint-${Buffer.from(message).toString("hex")}`);
+      writeFileSync(file, `${message}\n`);
+      const result = await $`bun run m commitlint ${file}`.cwd(REPO_ROOT).nothrow().quiet();
+      const allowed = result.exitCode === 0;
+      expect(allowed, `${JSON.stringify(message)} should ${want}`).toBe(want === "allow");
+      unlinkSync(file);
+    }
+  }, 120_000);
+
+  test("an absent commitlint reports a skip rather than failing the commit", () => {
+    // The wrapper resolves the local bin and only then runs it; when neither
+    // the local bin nor PATH has it, this is the path taken.
+    expect(skipMissingTool(TOOLS.commitlint)).toBe(0);
+  });
+
+  test("an empty message is let through, so an editor abort is not a failure", async () => {
+    const file = join(tmpdir(), "commitlint-empty");
+    writeFileSync(file, "");
+    const result = await $`bun run m commitlint ${file}`.cwd(REPO_ROOT).nothrow().quiet();
+    expect(result.exitCode).toBe(0);
+    unlinkSync(file);
+  }, 60_000);
 
   test("the push-time rule is what actually stops an unautosquashed fixup", () => {
     const block = run("pre-push", "unsquashed");

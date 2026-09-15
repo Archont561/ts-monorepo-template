@@ -10,6 +10,11 @@ export default defineConfig({
   // other app, so the Pages artifact path is a plain dist/ reference.
   outDir: "dist",
   cleanUrls: true,
+  // CONTEXT.md is an agent-facing snapshot of the package, not a page for
+  // readers — it links out to ../../AGENTS.md, which escapes the site root, so
+  // building it as a page fails the dead-link check. Keep it on disk and out of
+  // the site.
+  srcExclude: ["CONTEXT.md"],
   // /coverage/ (mcoverage html) and /example/ (the demo app artifact) are
   // generated into the site by `mdocs site` — they are not VitePress pages, so
   // the dead-link checker would flag them. Everything else is still checked.
