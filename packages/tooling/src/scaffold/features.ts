@@ -369,7 +369,7 @@ const FEATURE_RECORD = {
       removals: {
         true: {},
         false: {
-          extraRemovals: [".github/workflows/pages.yml", "configs/pages"],
+          extraRemovals: [".github/workflows/pages.yml"],
           filePatternsToRemove: ["**/pages.yml"],
           fileRegexesToRemove: ["pages\\.yml"],
         },
@@ -438,6 +438,12 @@ const FEATURE_RECORD = {
             ".github/workflows/template-docs.yml",
             "apps/template-docs",
             "codecov.yml",
+            // The scaffolder ships in every generated project as the toolchain,
+            // but it has nothing left to scaffold there: its tests drive the
+            // harness against a template repo, and the committed bundle only
+            // exists to run `bun-create.preinstall`.
+            "packages/tooling/tests",
+            "packages/tooling/dist",
           ],
           filePatternsToRemove: ["**/template-docs.yml", "**/template-docs/**", ".changeset/*.md"],
           fileRegexesToRemove: ["template-docs"],

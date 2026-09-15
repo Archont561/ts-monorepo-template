@@ -1,5 +1,5 @@
-# AUTO-GENERATED from configs/*/coverage.steps.yml — do not edit directly
-# Edit fragments in configs/*/coverage.steps.yml then run bun run docs:sync (m docs)
+# AUTO-GENERATED from packages/tooling/src/ci/fragments/coverage-report/ — do not edit
+# Edit those fragments then run bun run docs:sync (m docs)
 # Coverage reporting: LCOV + HTML via genhtml, artifact upload, threshold check, PR comment
 # Deploys to GitHub Pages on main when Pages app not enabled (standalone coverage site)
 # When Pages app is enabled, coverage is included at /coverage/ via pages.steps.yml

@@ -19,7 +19,7 @@
           path: coverage/html/
           retention-days: 14
 
-      # Threshold comes from COVERAGE_THRESHOLD in configs/coverage/index.ts.
+      # Threshold comes from COVERAGE_THRESHOLD in packages/tooling/src/commands/coverage.ts.
       - name: Check coverage threshold (m coverage)
         run: bunx m coverage check
         shell: bash

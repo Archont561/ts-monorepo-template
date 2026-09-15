@@ -46,7 +46,7 @@ graph TD
 
 ## Config
 
-- `configs/turbo/turbo.base.json` — root task graph (no root `turbo.json`)
+- `packages/tooling/src/configs/turbo.base.json` — root task graph (no root `turbo.json`)
 - `mturbo` bakes in `--root-turbo-json`
 - Cache in `.turbo/`
 

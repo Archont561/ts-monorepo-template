@@ -47,10 +47,10 @@ export class OptionsCollector {
   /**
    * Resolves the scaffold target directory. Prefers an explicit
    * --target-dir argument; otherwise walks up from the current working
-   * directory to the repository root (the nearest ancestor that contains
-   * the configs/template marker). This keeps `bun run --filter
-   * @myorg/template scaffold` (which executes with cwd configs/template)
-   * and a direct dist invocation from the repo root both correct.
+   * directory to the repository root (the nearest ancestor that contains the
+   * `packages/tooling` marker). This keeps an invocation from inside the
+   * tooling package and a direct bundle invocation from the repo root both
+   * correct.
    */
   private async resolveTargetDir(): Promise<string> {
     const targetArgIndex = process.argv.indexOf("--target-dir");
@@ -60,7 +60,7 @@ export class OptionsCollector {
 
     let dir = process.cwd();
     for (let depth = 0; depth < 32; depth++) {
-      const marker = file(`${dir}/configs/template/package.json`);
+      const marker = file(`${dir}/packages/tooling/package.json`);
       if (await marker.exists()) return dir;
       const next = dir.split("/").slice(0, -1).join("/") || "/";
       if (next === dir) break;

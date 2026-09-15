@@ -38,7 +38,7 @@ During scaffolding you are prompted for:
 <summary>What the scaffolder changes</summary>
 
 - Replaces `@myorg` with your scope across manifests, configs, sources and docs
-- Strips `TEMPLATE-ONLY` blocks and removes template-only files (`configs/template/`, `apps/template-docs/`, `template-docs.yml`, the `docs:*` scripts)
+- Strips `TEMPLATE-ONLY` blocks and removes template-only files (`packages/tooling/tests/`, `packages/tooling/dist/`, `apps/template-docs/`, `template-docs.yml`, the `docs:*` scripts)
 - Prunes every opt-in config you declined, and regenerates the workflows from the survivors
 - Rewrites repository identity in badges and manifest URLs
 
@@ -65,7 +65,7 @@ A TypeScript library monorepo built with Bun workspaces, Turbo, and Bunup. One p
 ## Quick start
 
 > [!IMPORTANT]
-> Requires [Bun](https://bun.sh) ≥ 1.4.2. All tool configs live in `configs/*` and are reached through `m`-prefixed bins (`mbiome`, `mturbo`, `mbunup`, …) — there is no root `turbo.json`, `biome.json` or `bunfig.toml`.
+> Requires [Bun](https://bun.sh) ≥ 1.4.2. All shared tool config lives in `packages/tooling/src/configs/` and every tool is reached through the `m` CLI (`m biome`, `m turbo`, `m build`, …) — there is no root `turbo.json`, `biome.json` or `bunfig.toml`.
 
 ```bash
 bun install
@@ -82,7 +82,7 @@ bun run dev
 │   ├── external/         The published package — the installable artifact
 │   ├── internal/         Private implementation, inlined by Bunup
 │   └── native/           Optional Rust workspace (crates/* → npm/*)
-├── configs/              Every tool config; sources for all generated files
+├── packages/tooling/     The `m` CLI, the scaffolder, and every shared tool config
 ├── .agents/              Vendored agent skills (SKILL.md per skill)
 ├── AGENTS.md             Behavioral rules for AI coding agents
 ├── CONTEXT.md            Current repo state — a snapshot, not rules
@@ -90,7 +90,7 @@ bun run dev
 ```
 
 > [!NOTE]
-> `.github/workflows/*`, `turbo.json`, `lefthook.yml` and `docs/`-adjacent config are generated. Edit their sources in `configs/*` and regenerate — never the output.
+> `.github/workflows/*`, `turbo.json`, `lefthook.yml` and `docs/`-adjacent config are generated. Edit their sources in `packages/tooling/src/ci/` and `packages/tooling/src/configs/` and regenerate — never the output.
 
 ## Architecture
 
@@ -108,7 +108,7 @@ bun run dev
 graph TD
     A[apps/example<br/>Bun.serve] --> B[packages/external<br/>public API]
     B --> C[packages/internal<br/>private impl]
-    D[configs/*<br/>tooling] -.-> B
+    D[packages/tooling<br/>tooling] -.-> B
     D -.-> C
     D -.-> A
 
@@ -165,30 +165,30 @@ graph TD
 
 ## Tooling configs
 
-Every config lives in its own `configs/*` package, exposes at most one `m`-prefixed bin, and owns whatever it generates.
+Every tool is reached through a subcommand of the single `m` CLI, which lives in `packages/tooling` alongside the shared config it bakes in. R27 collapsed the 28 per-tool config packages into that one package.
 
 <details>
 <summary>Always-on (17)</summary>
 
 | Config | Bin | Purpose |
 | :--- | :--- | :--- |
-| [Badges](configs/badges/README.md) | — | CI, coverage and license badges |
-| [Biome](configs/biome/README.md) | `mbiome` | Lint and format |
-| [Bun Config](configs/bun-config/README.md) | `mbun` | Runtime, tests, coverage merge |
-| [Bunup](configs/bunup/README.md) | `mbunup` | Bundling presets |
-| [Changeset](configs/changeset/README.md) | `mchangeset` | Versioning and releases |
-| [Citty](configs/citty/README.md) | `mcitty` | CLI builder behind the `m`-bins |
-| [Commitlint](configs/commitlint/README.md) | — | Conventional Commits |
-| [Community](configs/community/README.md) | — | CODEOWNERS, issue/PR templates |
-| [Coverage](configs/coverage/README.md) | `mcoverage` | LCOV merge, HTML, threshold, PR comment |
-| [Dependabot](configs/dependabot/README.md) | — | Dependency updates |
-| [EditorConfig](configs/editorconfig/README.md) | — | `.editorconfig` |
-| [GitAttributes](configs/gitattributes/README.md) | — | `.gitattributes` |
-| [GitHub Actions](configs/gh-actions/README.md) | `mci` | Workflow skeletons, lint, `act` |
-| [Gitleaks](configs/gitleaks/README.md) | `mgitleaks` | Secret scanning |
-| [Lefthook](configs/lefthook/README.md) | `msetup` | Git hooks |
-| [TypeScript](configs/ts/README.md) | `mtsc` | Shared tsconfigs |
-| [Turbo](configs/turbo/README.md) | `mturbo` | Task orchestration |
+| Badges | — | CI, coverage and license badges |
+| Biome | `mbiome` | Lint and format |
+| Bun Config | `mbun` | Runtime, tests, coverage merge |
+| Bunup | `mbunup` | Bundling presets |
+| Changeset | `mchangeset` | Versioning and releases |
+| Citty | `mcitty` | CLI builder behind the `m`-bins |
+| Commitlint | — | Conventional Commits |
+| Community | — | CODEOWNERS, issue/PR templates |
+| Coverage | `mcoverage` | LCOV merge, HTML, threshold, PR comment |
+| Dependabot | — | Dependency updates |
+| EditorConfig | — | `.editorconfig` |
+| GitAttributes | — | `.gitattributes` |
+| GitHub Actions | `mci` | Workflow skeletons, lint, `act` |
+| Gitleaks | `mgitleaks` | Secret scanning |
+| Lefthook | `msetup` | Git hooks |
+| TypeScript | `mtsc` | Shared tsconfigs |
+| Turbo | `mturbo` | Task orchestration |
 
 </details>
 
@@ -198,15 +198,15 @@ Every config lives in its own `configs/*` package, exposes at most one `m`-prefi
 
 | Config | Bin | Default | Purpose |
 | :--- | :--- | :--- | :--- |
-| [CodeQL](configs/codeql/README.md) | `mcodeql` | on | SAST in CI |
-| [Playwright](configs/playwright/README.md) | `me2e` | on | E2E tests |
-| [Devcontainer](configs/devcontainer/README.md) | — | off | Codespaces / Dev Containers |
-| [Native](configs/native/README.md) | `mnative` | none | Rust + NAPI-RS bindings |
-| [Pages](configs/pages/README.md) | `mpages` | off | GitHub Pages deployment |
-| [Skills](configs/skills/README.md) | `mskills` | off | AI agent skills |
-| [Stale](configs/stale/README.md) | — | off | Auto-close inactive issues/PRs |
-| [Trivy](configs/trivy/README.md) | `mtrivy` | off | Container and filesystem scanning |
-| [UnoCSS](configs/unocss/README.md) | `munocss` | off | Atomic CSS |
+| CodeQL | `mcodeql` | on | SAST in CI |
+| Playwright | `me2e` | on | E2E tests |
+| Devcontainer | — | off | Codespaces / Dev Containers |
+| Native | `mnative` | none | Rust + NAPI-RS bindings |
+| Pages | `mpages` | off | GitHub Pages deployment |
+| Skills | `mskills` | off | AI agent skills |
+| Stale | — | off | Auto-close inactive issues/PRs |
+| Trivy | `mtrivy` | off | Container and filesystem scanning |
+| UnoCSS | `munocss` | off | Atomic CSS |
 
 </details>
 <!-- TEMPLATE-ONLY:END(playwright,skills,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
@@ -268,7 +268,7 @@ PRs target `main`. Before opening one:
 
 > [!IMPORTANT]
 > All checks must pass locally before pushing — CI is not a linter.
-> Run `bun run check`, `bun run test`, `bun run typecheck`, `bun run build` in that order, and `bun run docs:sync` if anything under `configs/` changed.
+> Run `bun run check`, `bun run test`, `bun run typecheck`, `bun run build` in that order, and `bun run docs:sync` if anything under `packages/tooling/src/ci/` or `packages/tooling/src/configs/` changed.
 
 The workflow in full:
 

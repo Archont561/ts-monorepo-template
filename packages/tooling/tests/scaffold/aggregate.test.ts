@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { readdirSync, statSync } from "node:fs";
-import { resolve } from "node:path";
-import { $, file } from "bun";
+import { resolve, sep } from "node:path";
+import { $, file, Glob } from "bun";
 
 /** Minimal shape of a generated workflow, used to assert YAML validity. */
 type WorkflowFile = { jobs?: Record<string, { steps?: unknown[] }> };
@@ -92,7 +92,11 @@ describe("aggregate", () => {
       cleanup = result.cleanup;
 
       const proc = Bun.spawn({
-        cmd: ["bun", `${result.templateDir}/configs/template/src/aggregate.ts`, result.templateDir],
+        cmd: [
+          "bun",
+          `${result.templateDir}/packages/tooling/src/scaffold/aggregator.ts`,
+          result.templateDir,
+        ],
         stdout: "pipe",
         stderr: "pipe",
       });
@@ -122,7 +126,7 @@ describe("aggregate", () => {
       const result = await new TemplateHarness({ skipInstall: true }).prepare();
       cleanup = result.cleanup;
 
-      const script = `${result.templateDir}/configs/template/src/aggregate.ts`;
+      const script = `${result.templateDir}/packages/tooling/src/scaffold/aggregator.ts`;
       await $`bun ${script} ${result.templateDir}`.quiet();
       const first = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
       await $`bun ${script} ${result.templateDir}`.quiet();
@@ -139,7 +143,7 @@ describe("aggregate", () => {
       const result = await new TemplateHarness({ skipInstall: true }).prepare();
       cleanup = result.cleanup;
 
-      await $`bun ${result.templateDir}/configs/template/src/aggregate.ts ${result.templateDir}`.quiet();
+      await $`bun ${result.templateDir}/packages/tooling/src/scaffold/aggregator.ts ${result.templateDir}`.quiet();
 
       for (const name of ["ci", "release", "pages", "stale"]) {
         const path = `${result.templateDir}/.github/workflows/${name}.yml`;
@@ -178,14 +182,19 @@ describe("aggregate", () => {
       const result = await new TemplateHarness({ skipInstall: true }).prepare();
       cleanup = result.cleanup;
 
-      const configsDir = `${result.templateDir}/configs`;
-      const fragments = readdirSync(configsDir, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .flatMap((entry) =>
-          readdirSync(`${configsDir}/${entry.name}`)
-            .filter((name) => name.endsWith(".steps.yml") || name === "dependabot.yml")
-            .map((name) => `${configsDir}/${entry.name}/${name}`),
+      // R27: fragments moved out of the per-feature config packages and into
+      // the tooling package's ci/ tree. The base skeletons and the bootstrap are
+      // deliberately column-0 documents, so only the spliceable fragments are
+      // checked here.
+      const ciDir = `${result.templateDir}/packages/tooling/src/ci`;
+      const fragments = [...new Glob("**/*.yml").scanSync({ cwd: ciDir, onlyFiles: true })]
+        .filter(
+          (name) =>
+            name.endsWith(".steps.yml") ||
+            name.startsWith("standalone/") ||
+            name.startsWith("sections/"),
         )
+        .map((name) => `${ciDir}/${name}`)
         .sort();
       expect(fragments.length).toBeGreaterThan(0);
 
@@ -240,8 +249,9 @@ describe("aggregate", () => {
       expect(readme).not.toContain("TEMPLATE-ONLY:START");
       expect(readme).not.toContain("TEMPLATE-ONLY:END");
       expect(readme).not.toContain("<!-- PACKAGE:biome:START -->");
-      // Should reference config docs
-      expect(readme).toContain("configs/biome/README.md");
+      // The per-config READMEs are gone with configs/ (R27); the README now
+      // points at the package that owns every shared config.
+      expect(readme).toContain("packages/tooling");
 
       const ci = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
       expect(ci).not.toContain("{{STEPS}}");
@@ -260,7 +270,7 @@ describe("aggregate", () => {
 
       const aggregate = async (dir: string) => {
         const proc = Bun.spawn({
-          cmd: ["bun", `${dir}/configs/template/src/aggregate.ts`, dir],
+          cmd: ["bun", `${dir}/packages/tooling/src/scaffold/aggregator.ts`, dir],
           stdout: "pipe",
           stderr: "pipe",
         });
@@ -398,7 +408,12 @@ async function scanForLeaks(
     } catch {
       continue;
     }
+    // TEMPLATE-ONLY markers inside the tooling package are the generator's own
+    // inputs: `m ci` regenerates workflows from those fragments later, so the
+    // markers have to survive. The placeholder scope does not get that pass.
+    const isToolingSource = path.includes(`${sep}packages${sep}tooling${sep}`);
     for (const needle of needles) {
+      if (isToolingSource && needle.startsWith("TEMPLATE-ONLY:")) continue;
       if (content.includes(needle)) leaks.push(`${path}: ${needle}`);
     }
   }

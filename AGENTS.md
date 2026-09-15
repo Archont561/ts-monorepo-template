@@ -3,7 +3,7 @@
 
 > Behavioral rules for AI coding agents working in this **template** repository.
 
-This repository is a **template**: opt-in configs plus a data-driven scaffolder (`configs/template/`) that turns it into a monorepo via `bun create`. The rules below are the ones that hold in the template repo; after scaffolding, the same file governs the generated monorepo.
+This repository is a **template**: opt-in configs plus a data-driven scaffolder (`packages/tooling/`) that turns it into a monorepo via `bun create`. The rules below are the ones that hold in the template repo; after scaffolding, the same file governs the generated monorepo.
 
 > [!NOTE]
 > Template mode: this intro is stripped after scaffolding.
@@ -33,10 +33,10 @@ State the tool, not the category — every one of these replaces a more common d
 | Runtime + package manager | **Bun** | `bun`, `bun install`, `bun add`, `bun run <script>` |
 | Test runner | **Bun** | `bun:test` via `mbun test` (Turbo runs it per package) |
 | Formatter + linter | **Biome** | `mbiome check --write` |
-| Bundler | **Bunup** | `mbunup` (config in `configs/bunup/`) |
+| Bundler | **Bunup** | `m build` (config in `packages/tooling/src/bunup.ts`) |
 | Task runner | **Turbo** | `mturbo <task>` (`turbo.base.json` → generates `turbo.json`) |
 | Type checker | **mtsc** | `mtsc --noEmit` — tsc never emits, Bunup does |
-| Git hooks | **Lefthook** | `msetup` (config in `configs/lefthook/`) |
+| Git hooks | **Lefthook** | `m setup lefthook` (config in `packages/tooling/src/configs/lefthook.yml`) |
 | Releases | **Changesets** | `mchangeset` |
 | Rust bindings | **Cargo + napi-rs** | `mnative` (opt-in) |
 
@@ -47,16 +47,16 @@ State the tool, not the category — every one of these replaces a more common d
 
 - **Bun only.** Never invoke `npm`, `npx`, `pnpm`, or `yarn`.
 - **Biome only.** Never invoke `eslint`, `prettier`, or `lint-staged`.
-- **Never add `typescript`, `bunup`, or `@types/bun` to a package's devDependencies.** They are owned by `@myorg/ts` (`configs/ts`) and hoisted from there.
+- **Never add `typescript`, `bunup`, or `@types/bun` to a package's devDependencies.** They are owned by `@myorg/tooling` and hoisted from there.
 - **Never edit anything under `dist/`.** Bunup generates it.
 - **Never use `baseUrl` in a `tsconfig.json`.** Removed in TypeScript 7.0 (TS5102) — use `paths` only.
-- **No root tool configs.** Do not create root `turbo.json`, `biome.json`, `bunfig.toml`, `commitlint.config.js`, or `.actrc`; all config lives in `configs/*`.
+- **No root tool configs.** Do not create root `turbo.json`, `biome.json`, `bunfig.toml`, `commitlint.config.js`, or `.actrc`; all shared config lives in `packages/tooling/src/configs/`.
 - **Never commit** `node_modules/`, `dist/`, `.turbo/`, `test-results/`, `coverage/`, or `.env` files.
 - **Never edit a generated file** — see the table below.
 - **Never use `export *` in `@myorg/external`.** Re-export named symbols explicitly.
 - **Never add runtime dependencies to `@myorg/external`.** Internal code is inlined by Bunup.
 - **Never run `bun test` at the repo root** for package work — use `bun run test` (Turbo) or `--filter <pkg>`.
-- **Never hand-write a workflow.** Edit `configs/*/*.base.yml` + `*.steps.yml`, then run `bun run docs:sync`.
+- **Never hand-write a workflow.** Edit `packages/tooling/src/ci/`, then run `bun run docs:sync`.
 
 ## Command conventions
 
@@ -65,13 +65,13 @@ Every tool is reached through an `m`-prefixed bin that bakes in its config path.
 | Alias | Wraps | Notes |
 | :--- | :--- | :--- |
 | `mturbo` | `turbo` | `turbo.base.json`, DAG order, caching |
-| `mbiome` | `biome` | Shared config from `configs/biome` |
+| `mbiome` | `biome` | Shared config from `packages/tooling/src/configs/biome.json` |
 | `mbun` | `bun` | Injects `bunfig.toml`; `mbun coverage` merges LCOV |
 | `mbunup` | `bunup` | `mbunup health` = publint + arethetypeswrong |
 | `mtsc` | `tsc` | `--noEmit` only |
 | `mchangeset` | `changeset` | `init` ensures `.changeset/config.json` |
 | `msetup` | citty | Links `m`-bins, regenerates `lefthook.yml`, installs hooks |
-| `mdocs` | citty | Regenerates generated files from `configs/*` |
+| `mdocs` | citty | Regenerates generated files from `packages/tooling/src/ci/` |
 | `mci` | actionlint + act | `lint` validates workflows, `act` runs them locally |
 | `mgitleaks` | gitleaks | `detect` + `protect --staged` |
 | `mcoverage` | genhtml/lcov | `setup`, `collect`, `merge`, `html`, `check`, `summary`, `sync`, `pages` |
@@ -84,83 +84,31 @@ Every tool is reached through an `m`-prefixed bin that bakes in its config path.
 
 Per-package work (`build`, `test`, `dev`, `coverage`, `typecheck`) belongs to each package's own script and is orchestrated by Turbo. Monorepo-wide concerns stay at the root: git hooks, workflow generation, skills, and the coverage merge that runs after the per-package reports exist.
 
-## Configs
+## Shared configuration
 
-Each config owns the rules for its area — read the linked file before changing it. Rows for pruned configs are stripped by the scaffolder.
+Everything the toolchain needs lives in **`packages/tooling`** — there are no
+per-feature config packages any more (R27 collapsed all 28 into this one
+package).
 
-<details>
-<summary>Always-on</summary>
-
-| Config | Rules |
+| Area | Where it lives |
 | :--- | :--- |
-| Badges | [AGENTS.md](configs/badges/AGENTS.md) |
-| Biome | [AGENTS.md](configs/biome/AGENTS.md) |
-| Bun Config | [AGENTS.md](configs/bun-config/AGENTS.md) |
-| Bunup | [AGENTS.md](configs/bunup/AGENTS.md) |
-| Changeset | [AGENTS.md](configs/changeset/AGENTS.md) |
-| Citty | [AGENTS.md](configs/citty/AGENTS.md) |
-| Commitlint | [AGENTS.md](configs/commitlint/AGENTS.md) |
-| Community | [AGENTS.md](configs/community/AGENTS.md) |
-| Coverage | [AGENTS.md](configs/coverage/AGENTS.md) |
-| Dependabot | [AGENTS.md](configs/dependabot/AGENTS.md) |
-| EditorConfig | [AGENTS.md](configs/editorconfig/AGENTS.md) |
-| GitAttributes | [AGENTS.md](configs/gitattributes/AGENTS.md) |
-| GitHub Actions | [AGENTS.md](configs/gh-actions/AGENTS.md) |
-| Gitleaks | [AGENTS.md](configs/gitleaks/AGENTS.md) |
-| Lefthook | [AGENTS.md](configs/lefthook/AGENTS.md) |
-| TypeScript | [AGENTS.md](configs/ts/AGENTS.md) |
-| Turbo | [AGENTS.md](configs/turbo/AGENTS.md) |
+| Shared tool config (`biome.json`, `bunfig.toml`, `turbo.base.json`, `uno.config.ts`, `changeset.config.json`, `lefthook.yml`, …) | `packages/tooling/src/configs/` |
+| Workflow skeletons and step fragments | `packages/tooling/src/ci/` (`ci.base.yml`, `sections/`, `fragments/`, `standalone/`) |
+| The `m` CLI and its wrappers | `packages/tooling/src/cli.ts`, `src/commands/` |
+| The scaffolder | `packages/tooling/src/scaffold/` |
 
-</details>
-
-<!-- TEMPLATE-ONLY:START(playwright,skills,template,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
-<details>
-<summary>Opt-in</summary>
-
-| Config | Rules |
-| :--- | :--- |
-<!-- TEMPLATE-ONLY:END(playwright,skills,template,unocss,native,devcontainer,pages,codeql,trivy,stale) -->
-<!-- TEMPLATE-ONLY:START(codeql) -->
-| CodeQL | [AGENTS.md](configs/codeql/AGENTS.md) |
-<!-- TEMPLATE-ONLY:END(codeql) -->
-<!-- TEMPLATE-ONLY:START(devcontainer) -->
-| Devcontainer | [AGENTS.md](configs/devcontainer/AGENTS.md) |
-<!-- TEMPLATE-ONLY:END(devcontainer) -->
-<!-- TEMPLATE-ONLY:START(native) -->
-| Native | [AGENTS.md](configs/native/AGENTS.md) |
-<!-- TEMPLATE-ONLY:END(native) -->
-<!-- TEMPLATE-ONLY:START(pages) -->
-| Pages | [AGENTS.md](configs/pages/AGENTS.md) |
-<!-- TEMPLATE-ONLY:END(pages) -->
-<!-- TEMPLATE-ONLY:START(playwright) -->
-| Playwright | [AGENTS.md](configs/playwright/AGENTS.md) |
-<!-- TEMPLATE-ONLY:END(playwright) -->
-<!-- TEMPLATE-ONLY:START(skills) -->
-| Skills | [AGENTS.md](configs/skills/AGENTS.md) |
-<!-- TEMPLATE-ONLY:END(skills) -->
-<!-- TEMPLATE-ONLY:START(stale) -->
-| Stale | [AGENTS.md](configs/stale/AGENTS.md) |
-<!-- TEMPLATE-ONLY:END(stale) -->
-<!-- TEMPLATE-ONLY:START(trivy) -->
-| Trivy | [AGENTS.md](configs/trivy/AGENTS.md) |
-<!-- TEMPLATE-ONLY:END(trivy) -->
-<!-- TEMPLATE-ONLY:START(unocss) -->
-| UnoCSS | [AGENTS.md](configs/unocss/AGENTS.md) |
-<!-- TEMPLATE-ONLY:END(unocss) -->
-<!-- TEMPLATE-ONLY:START(template) -->
-| Template | [AGENTS.md](configs/template/AGENTS.md) |
-<!-- TEMPLATE-ONLY:END(template) -->
-
-</details>
+Resolve a shared asset with `resolveConfig("<file>")` from `src/utils/paths.ts`
+rather than hardcoding a path — it works both in this repo and in a generated
+project.
 
 ## Generated files — never edit directly
 
 | Generated | Edit this source instead | Regenerate with |
 | :--- | :--- | :--- |
-| `.github/workflows/*.yml` | `configs/*/*.base.yml` + `configs/*/*.steps.yml` | `bun run docs:sync` |
-| `.github/dependabot.yml` | `configs/dependabot/dependabot.base.yml` + fragments | `bun run docs:sync` |
-| `turbo.json` | `turbo.base.json` (in `configs/turbo`) | `bun run docs:sync` |
-| `lefthook.yml` | `configs/lefthook/lefthook.yml` | `bun install` (`prepare`) |
+| `.github/workflows/*.yml` | `packages/tooling/src/ci/` (`ci.base.yml` + `sections/` + `fragments/`) | `bun run docs:sync` |
+| `.github/dependabot.yml` | `packages/tooling/src/ci/fragments/dependabot/` | `bun run docs:sync` |
+| `turbo.json` | `packages/tooling/src/configs/turbo.base.json` | `bun run docs:sync` |
+| `lefthook.yml` | `packages/tooling/src/configs/lefthook.yml` | `bun install` (`prepare`) |
 | `packages/native/npm/*-*/` | nothing — generated in CI by `napi create-npm-dirs` | CI only, never committed |
 
 Editing generated output is silent data loss: the next regeneration overwrites it.
@@ -194,7 +142,7 @@ Enforced by Biome `noRestrictedImports` and the dependency graph:
 - [ ] `bun run typecheck` — 14/14
 - [ ] `bun run build` — 19/19
 - [ ] `bun run coverage` — line coverage ≥ 80% (currently 99.52%, config packages included)
-- [ ] Any `configs/` change → `bun run docs:sync` run **and** generated files committed
+- [ ] Any `packages/tooling/src/ci/` change → `bun run docs:sync` run **and** generated files committed
 - [ ] Any published package change → `bun run changeset` with the right bump
 - [ ] Any published package change → `publint` + `attw --profile esm-only` clean (`mbunup health`)
 - [ ] Any `packages/native` change → `mnative check` + `mnative clippy` clean when a Rust toolchain is present

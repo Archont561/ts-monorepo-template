@@ -47,7 +47,7 @@ sequenceDiagram
 
 ## Config
 
-- `configs/changeset/config.json` — ignores `internal`, `example`, `configs/*`
+- `packages/tooling/src/configs/changeset.config.json` — ignores the private packages
 - `mchangeset` bakes in config path
 - `.changeset/` dir contains markdown changesets
 

@@ -1,9 +1,0 @@
-# SECTION: quality
-      # Package health — catch a broken exports map or unresolvable types
-      # before they reach npm. Builds first (Turbo makes the repeat call a
-      # cache hit) so dist/ exists for both tools. Only non-private packages
-      # are checked; private ones are never published.
-      # attw runs with --profile esm-only: the template ships ESM-only
-      # packages, so the strict profile's CJS resolutions are intentional.
-      - name: Package health (publint + arethetypeswrong, via m build)
-        run: bunx m health

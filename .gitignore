@@ -5,7 +5,6 @@ dist/
 .turbo/**
 apps/*/.turbo/
 packages/*/.turbo/
-configs/*/.turbo/
 *.log
 *.log.*
 .env
@@ -18,12 +17,11 @@ coverage/
 # (and a scaffolded project needs its own). Prefer not naming source
 # directories "coverage": packages/tooling/src/ci/fragments/coverage-report/
 # is spelled that way for exactly this reason.
-!configs/coverage/
-!configs/coverage/**
-# Keep the tracked coverage config package visible, but not its generated output
-configs/coverage/node_modules/
-configs/coverage/dist/
-configs/coverage/.turbo/
+# The scaffold bundle under packages/tooling/dist/ is committed on purpose:
+# bun-create.preinstall runs it before node_modules exists, so it cannot be
+# built on the consumer's machine. `dist/` above would otherwise hide it.
+!packages/tooling/dist/
+!packages/tooling/dist/**
 # Bun coverage temp files
 **/coverage/.lcov.info.*.tmp
 **/coverage/lcov.info.tmp

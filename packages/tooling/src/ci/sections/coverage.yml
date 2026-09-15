@@ -1,6 +1,6 @@
 # SECTION: coverage
       # Coverage reporting — all logic lives in the m coverage CLI
-      # (configs/coverage/src/cli.ts): setup installs genhtml, html renders the
+      # (packages/tooling/src/commands/coverage.ts): setup installs genhtml, html renders the
       # report, check enforces the threshold by parsing LCOV directly.
       - name: Setup coverage tooling
         run: bunx m coverage setup
@@ -17,7 +17,7 @@
           path: coverage/html/
           retention-days: 14
 
-      # Threshold comes from COVERAGE_THRESHOLD in configs/coverage/index.ts.
+      # Threshold comes from COVERAGE_THRESHOLD in packages/tooling/src/commands/coverage.ts.
       - name: Check coverage threshold (m coverage)
         run: bunx m coverage check
         shell: bash

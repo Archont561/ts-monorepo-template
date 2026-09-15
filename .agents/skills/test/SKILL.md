@@ -21,7 +21,7 @@ Generate and maintain tests using `bun:test` for unit and Playwright for E2E.
 - `packages/external/tests/` — external package tests
 - `packages/internal/tests/` — internal tests
 - `apps/example/tests/` — example app tests
-- `configs/template/tests/` — template tests
+- `packages/tooling/tests/` — tooling tests
 
 ### Format
 
@@ -90,7 +90,7 @@ me2e --ui              # UI mode
 ## Coverage
 
 - `bunfig.toml` — 80% line/function threshold
-- Ignores: `*.test.ts`, `dist`, `node_modules`, `configs/*`
+- Ignores: `*.test.ts`, `dist`, `node_modules`
 - `mbun coverage` merges per-package LCOV
 
 ## References

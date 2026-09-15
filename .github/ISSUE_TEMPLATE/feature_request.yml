@@ -21,7 +21,7 @@ body:
       label: Proposed solution
       description: How should it work? Any alternatives considered?
       placeholder: |
-        - Add config in `configs/<tool>/`
+        - Add it to the tooling package (`packages/tooling/`)
         - Expose via `m`-bin
         - Update docs:sync
     validations:
@@ -32,7 +32,7 @@ body:
       label: Area
       description: Which part of the template?
       options:
-        - Tooling (configs/*)
+        - Tooling (packages/tooling)
         - CI / Workflows
         - Packages (external/internal/native)
         - Apps (example)

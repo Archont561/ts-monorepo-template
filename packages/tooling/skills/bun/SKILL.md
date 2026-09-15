@@ -38,7 +38,7 @@ bun --hot src/index.ts   # hot reload
 
 ## Config
 
-- `configs/bun-config/bunfig.toml` — single source of truth for test + coverage
+- `packages/tooling/src/configs/bunfig.toml` — single source of truth for test + coverage
 - `mbun` bin wraps `bun` and injects config for `bun test`
 - `mbun coverage` runs `mturbo coverage` then merges LCOV
 

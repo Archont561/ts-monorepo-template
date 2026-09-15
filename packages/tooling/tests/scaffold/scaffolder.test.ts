@@ -30,7 +30,7 @@ async function fixtureFeatures(workDir: string, ...dirs: string[]): Promise<Disc
   const features: DiscoveredConfig[] = [];
   for (const dir of dirs) {
     const pkg: { name: string; scaffold: ScaffoldMeta } = await file(
-      `${workDir}/configs/${dir}/package.json`,
+      `${workDir}/packages/${dir}/package.json`,
     ).json();
     features.push({ name: pkg.name, dir, meta: pkg.scaffold });
   }
@@ -151,7 +151,7 @@ describe("MonorepoScaffolder (unit)", () => {
         `${workDir}/package.json`,
         JSON.stringify({
           name: "test",
-          workspaces: ["apps/*", "packages/*", "configs/*", "configs/template", "template"],
+          workspaces: ["apps/*", "packages/*", "packages/template", "template"],
         }),
       );
 
@@ -159,7 +159,7 @@ describe("MonorepoScaffolder (unit)", () => {
       await s.sanitizePackageJson();
 
       const pkg = await file(`${workDir}/package.json`).json();
-      expect(pkg.workspaces).not.toContain("configs/template");
+      expect(pkg.workspaces).not.toContain("packages/template");
       expect(pkg.workspaces).not.toContain("template");
       expect(pkg.workspaces).toContain("apps/*");
     });
@@ -263,9 +263,9 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("replaces scope in config package contents", async () => {
-      await mkdir(`${workDir}/configs/changeset`, { recursive: true });
+      await mkdir(`${workDir}/packages/tooling/src/configs`, { recursive: true });
       await write(
-        `${workDir}/configs/changeset/config.json`,
+        `${workDir}/packages/tooling/src/configs/changeset.config.json`,
         JSON.stringify({
           ignore: ["@myorg/internal", "@myorg/bunup"],
         }),
@@ -274,19 +274,24 @@ describe("MonorepoScaffolder (unit)", () => {
       const s = new MonorepoScaffolder({ targetDir: workDir, scope: "@acme" });
       await s.replaceScopePlaceholders();
 
-      const config = await file(`${workDir}/configs/changeset/config.json`).json();
+      const config = await file(
+        `${workDir}/packages/tooling/src/configs/changeset.config.json`,
+      ).json();
       expect(config.ignore).toContain("@acme/internal");
       expect(config.ignore).toContain("@acme/bunup");
     });
 
     test("replaces scope in lefthook setup script", async () => {
-      await mkdir(`${workDir}/configs/lefthook`, { recursive: true });
-      await write(`${workDir}/configs/lefthook/setup.ts`, "// hardcoding `@myorg` no more\n");
+      await mkdir(`${workDir}/packages/tooling/src/configs`, { recursive: true });
+      await write(
+        `${workDir}/packages/tooling/src/configs/lefthook.yml`,
+        "# hardcoding `@myorg` no more\n",
+      );
 
       const s = new MonorepoScaffolder({ targetDir: workDir, scope: "@acme" });
       await s.replaceScopePlaceholders();
 
-      const content = await file(`${workDir}/configs/lefthook/setup.ts`).text();
+      const content = await file(`${workDir}/packages/tooling/src/configs/lefthook.yml`).text();
       expect(content).toContain("@acme");
       expect(content).not.toContain("@myorg");
     });
@@ -514,35 +519,36 @@ describe("MonorepoScaffolder (unit)", () => {
   // ── sanitizeTemplateRefs ─────────────────────────
 
   describe("sanitizeTemplateRefs", () => {
-    test("strips configs/template refs from .gitignore", async () => {
+    test("strips the committed scaffold bundle refs from .gitignore", async () => {
       await write(
         `${workDir}/.gitignore`,
-        ["node_modules/", "!configs/template/dist/", "dist/", "TODO"].join("\n"),
+        ["node_modules/", "!packages/tooling/dist/", "dist/", "TODO"].join("\n"),
       );
 
       const s = new MonorepoScaffolder({ targetDir: workDir });
       await s.sanitizeTemplateRefs();
 
       const content = await file(`${workDir}/.gitignore`).text();
-      expect(content).not.toContain("configs/template");
+      expect(content).not.toContain("packages/tooling/dist");
       expect(content).toContain("node_modules/");
       expect(content).toContain("dist/");
       expect(content).toContain("TODO");
     });
 
-    test("strips configs/template refs from bunfig ignore patterns", async () => {
-      await mkdir(`${workDir}/configs/bun-config`, { recursive: true });
-      await write(
-        `${workDir}/configs/bun-config/bunfig.toml`,
-        ["ignore = [", '  "**/configs/template/**",', '  "dist",', "]"].join("\n"),
-      );
+    test("leaves the shared bunfig alone", async () => {
+      // It used to carry `**/configs/template/**` coverage ignores that a
+      // generated project had no use for. R27 dropped those with `configs/`, so
+      // nothing in the shared bunfig is template-specific any more and the
+      // sanitiser must not touch it.
+      await mkdir(`${workDir}/packages/tooling/src/configs`, { recursive: true });
+      const bunfig = ["ignore = [", '  "**/dist/**",', '  "dist",', "]"].join("\n");
+      await write(`${workDir}/packages/tooling/src/configs/bunfig.toml`, bunfig);
 
       const s = new MonorepoScaffolder({ targetDir: workDir });
       await s.sanitizeTemplateRefs();
 
-      const content = await file(`${workDir}/configs/bun-config/bunfig.toml`).text();
-      expect(content).not.toContain("configs/template");
-      expect(content).toContain("dist");
+      const content = await file(`${workDir}/packages/tooling/src/configs/bunfig.toml`).text();
+      expect(content).toBe(bunfig);
     });
   });
 
@@ -550,20 +556,20 @@ describe("MonorepoScaffolder (unit)", () => {
 
   describe("regenerateCI", () => {
     test("splices step fragments into the base skeletons", async () => {
-      await mkdir(`${workDir}/configs/gh-actions`, { recursive: true });
-      await mkdir(`${workDir}/configs/apply`, { recursive: true });
-      await mkdir(`${workDir}/configs/changeset`, { recursive: true });
+      await mkdir(`${workDir}/packages/gh-actions`, { recursive: true });
+      await mkdir(`${workDir}/packages/apply`, { recursive: true });
+      await mkdir(`${workDir}/packages/changeset`, { recursive: true });
       await write(
-        `${workDir}/configs/gh-actions/ci.base.yml`,
+        `${workDir}/packages/gh-actions/ci.base.yml`,
         "name: CI\n\njobs:\n  verify:\n    steps:\n{{STEPS}}",
       );
       await write(
-        `${workDir}/configs/gh-actions/release.base.yml`,
+        `${workDir}/packages/gh-actions/release.base.yml`,
         "name: Release\n\njobs:\n  release:\n    steps:\n{{STEPS}}",
       );
-      await write(`${workDir}/configs/apply/ci.steps.yml`, "      - run: bun run check");
+      await write(`${workDir}/packages/apply/ci.steps.yml`, "      - run: bun run check");
       await write(
-        `${workDir}/configs/changeset/release.steps.yml`,
+        `${workDir}/packages/changeset/release.steps.yml`,
         "      - uses: changesets/action@v1",
       );
 
@@ -583,10 +589,10 @@ describe("MonorepoScaffolder (unit)", () => {
   // ── handleConfig ─────────────────────────────────
 
   describe("handleConfig", () => {
-    test("removes disabled confirm config directory and extra removals", async () => {
-      await mkdir(`${workDir}/configs/unocss`, { recursive: true });
+    test("removes a disabled feature\u2019s extra removals", async () => {
+      await mkdir(`${workDir}/packages/unocss`, { recursive: true });
       await write(
-        `${workDir}/configs/unocss/package.json`,
+        `${workDir}/packages/unocss/package.json`,
         JSON.stringify({
           name: "@myorg/unocss",
           scaffold: {
@@ -612,14 +618,13 @@ describe("MonorepoScaffolder (unit)", () => {
       });
       await s.handleConfig();
 
-      expect(await pathExists(`${workDir}/configs/unocss`)).toBe(false);
       expect(await pathExists(`${workDir}/uno.config.ts`)).toBe(false);
     });
 
     test("keeps enabled config intact", async () => {
-      await mkdir(`${workDir}/configs/playwright`, { recursive: true });
+      await mkdir(`${workDir}/packages/playwright`, { recursive: true });
       await write(
-        `${workDir}/configs/playwright/package.json`,
+        `${workDir}/packages/playwright/package.json`,
         JSON.stringify({
           name: "@myorg/playwright",
           scaffold: { default: true, flag: "playwright" },
@@ -634,14 +639,14 @@ describe("MonorepoScaffolder (unit)", () => {
       });
       await s.handleConfig();
 
-      expect(await pathExists(`${workDir}/configs/playwright`)).toBe(true);
+      expect(await pathExists(`${workDir}/packages/playwright`)).toBe(true);
     });
 
     test("handles select-type with 'none' selection", async () => {
-      await mkdir(`${workDir}/configs/native`, { recursive: true });
+      await mkdir(`${workDir}/packages/native`, { recursive: true });
       await mkdir(`${workDir}/crates/core`, { recursive: true });
       await write(
-        `${workDir}/configs/native/package.json`,
+        `${workDir}/packages/native/package.json`,
         JSON.stringify({
           name: "@myorg/native",
           scaffold: {
@@ -672,10 +677,10 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("removes app deps when config disabled", async () => {
-      await mkdir(`${workDir}/configs/playwright`, { recursive: true });
+      await mkdir(`${workDir}/packages/playwright`, { recursive: true });
       await mkdir(`${workDir}/apps/example`, { recursive: true });
       await write(
-        `${workDir}/configs/playwright/package.json`,
+        `${workDir}/packages/playwright/package.json`,
         JSON.stringify({
           name: "@myorg/playwright",
           scaffold: {
@@ -706,11 +711,11 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("removes files matching glob patterns when config disabled", async () => {
-      await mkdir(`${workDir}/configs/playwright`, { recursive: true });
+      await mkdir(`${workDir}/packages/playwright`, { recursive: true });
       await mkdir(`${workDir}/apps/example/e2e`, { recursive: true });
       await mkdir(`${workDir}/apps/example/src`, { recursive: true });
       await write(
-        `${workDir}/configs/playwright/package.json`,
+        `${workDir}/packages/playwright/package.json`,
         JSON.stringify({
           name: "@myorg/playwright",
           scaffold: {
@@ -738,10 +743,10 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("removes files matching regex patterns when config disabled", async () => {
-      await mkdir(`${workDir}/configs/unocss`, { recursive: true });
+      await mkdir(`${workDir}/packages/unocss`, { recursive: true });
       await mkdir(`${workDir}/apps/example/src`, { recursive: true });
       await write(
-        `${workDir}/configs/unocss/package.json`,
+        `${workDir}/packages/unocss/package.json`,
         JSON.stringify({
           name: "@myorg/unocss",
           scaffold: {
@@ -769,10 +774,10 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("removes files via both glob and regex in same config", async () => {
-      await mkdir(`${workDir}/configs/skills`, { recursive: true });
+      await mkdir(`${workDir}/packages/skills`, { recursive: true });
       await mkdir(`${workDir}/.agents/skills`, { recursive: true });
       await write(
-        `${workDir}/configs/skills/package.json`,
+        `${workDir}/packages/skills/package.json`,
         JSON.stringify({
           name: "@myorg/skills",
           scaffold: {
@@ -797,21 +802,25 @@ describe("MonorepoScaffolder (unit)", () => {
     });
 
     test("self-destructs template-only configs and their scripts", async () => {
-      await mkdir(`${workDir}/configs/template/src`, { recursive: true });
-      await mkdir(`${workDir}/configs/biome`, { recursive: true });
+      await mkdir(`${workDir}/packages/template/src`, { recursive: true });
+      await mkdir(`${workDir}/packages/tooling/tests`, { recursive: true });
+      await mkdir(`${workDir}/packages/tooling/dist`, { recursive: true });
+      await write(`${workDir}/packages/tooling/tests/harness.test.ts`, "test(() => {});\n");
+      await mkdir(`${workDir}/packages/biome`, { recursive: true });
       await write(
-        `${workDir}/configs/template/package.json`,
+        `${workDir}/packages/template/package.json`,
         JSON.stringify({
           name: "@myorg/template",
           scaffold: {
             default: "always",
             selfDestruct: true,
             scriptsToRemove: ["docs:sync", "docs:site", "docs:dev", "docs:build", "docs:preview"],
+            extraRemovals: ["packages/tooling/tests", "packages/tooling/dist"],
           },
         }),
       );
       await write(
-        `${workDir}/configs/biome/package.json`,
+        `${workDir}/packages/biome/package.json`,
         JSON.stringify({
           name: "@myorg/biome",
           scaffold: { default: "always", flag: "biome" },
@@ -821,8 +830,9 @@ describe("MonorepoScaffolder (unit)", () => {
         `${workDir}/package.json`,
         JSON.stringify({
           name: "test",
+          workspaces: ["packages/*"],
           scripts: {
-            "docs:sync": "bun configs/template/src/aggregate.ts",
+            "docs:sync": "bun packages/tooling/src/scaffold/aggregator.ts",
             "docs:site": "m docs site",
             "docs:dev": "m turbo dev --filter=@myorg/template-docs",
           },
@@ -836,8 +846,12 @@ describe("MonorepoScaffolder (unit)", () => {
       });
       await s.handleConfig();
 
-      expect(await pathExists(`${workDir}/configs/template`)).toBe(false);
-      expect(await pathExists(`${workDir}/configs/biome`)).toBe(true);
+      // The feature's extraRemovals are the template-only parts of the tooling
+      // package: the harness's own tests and the committed bundle.
+      expect(await pathExists(`${workDir}/packages/tooling/tests`)).toBe(false);
+      expect(await pathExists(`${workDir}/packages/tooling/dist`)).toBe(false);
+      // A surviving feature's files are untouched.
+      expect(await pathExists(`${workDir}/packages/biome`)).toBe(true);
 
       const pkg = await file(`${workDir}/package.json`).json();
       expect(pkg.scripts["docs:sync"]).toBeUndefined();
@@ -1086,9 +1100,9 @@ describe("MonorepoScaffolder (unit)", () => {
 
   describe("handleConfig formatting", () => {
     test("removals leave the surrounding manifests formatted as committed", async () => {
-      await mkdir(`${workDir}/configs/demo`, { recursive: true });
+      await mkdir(`${workDir}/packages/tooling/src/configs`, { recursive: true });
       await write(
-        `${workDir}/configs/demo/package.json`,
+        `${workDir}/packages/demo/package.json`,
         `${JSON.stringify({
           name: "@myorg/demo",
           scaffold: {
@@ -1098,15 +1112,14 @@ describe("MonorepoScaffolder (unit)", () => {
           },
         })}\n`,
       );
-      await mkdir(`${workDir}/configs/turbo`, { recursive: true });
-      await write(`${workDir}/configs/turbo/package.json`, '{ "name": "@myorg/turbo" }\n');
+      await mkdir(`${workDir}/packages/tooling/src/configs`, { recursive: true });
       await write(
-        `${workDir}/configs/turbo/turbo.base.json`,
+        `${workDir}/packages/tooling/src/configs/turbo.base.json`,
         '{\n  "tasks": {\n    "build": {\n      "dependsOn": ["^build"],\n      "outputs": ["dist/**"]\n    },\n    "demo": {\n      "dependsOn": ["build"]\n    }\n  }\n}\n',
       );
       await write(
         `${workDir}/package.json`,
-        '{\n  "name": "demo",\n  "workspaces": ["packages/*", "configs/*"],\n  "scripts": {\n    "build": "m turbo build",\n    "demo": "mdemo"\n  },\n  "devDependencies": {\n    "@myorg/demo": "workspace:*",\n    "@myorg/internal": "workspace:*"\n  }\n}\n',
+        '{\n  "name": "demo",\n  "workspaces": ["packages/*"],\n  "scripts": {\n    "build": "m turbo build",\n    "demo": "mdemo"\n  },\n  "devDependencies": {\n    "@myorg/demo": "workspace:*",\n    "@myorg/internal": "workspace:*"\n  }\n}\n',
       );
       await mkdir(`${workDir}/packages/internal`, { recursive: true });
       await write(`${workDir}/packages/internal/package.json`, '{ "name": "@myorg/internal" }\n');
@@ -1119,13 +1132,13 @@ describe("MonorepoScaffolder (unit)", () => {
       await s.handleConfig();
 
       const root = await file(`${workDir}/package.json`).text();
-      expect(root).toContain('"workspaces": ["packages/*", "configs/*"]');
+      expect(root).toContain('"workspaces": ["packages/*"]');
       expect(root).not.toContain("mdemo");
       expect(root).not.toContain("@myorg/demo");
       expect(root).toContain('"@myorg/internal": "workspace:*"');
       expect(JSON.parse(root).scripts).toEqual({ build: "m turbo build" });
 
-      const turbo = await file(`${workDir}/configs/turbo/turbo.base.json`).text();
+      const turbo = await file(`${workDir}/packages/tooling/src/configs/turbo.base.json`).text();
       expect(turbo).toContain('"dependsOn": ["^build"]');
       expect(turbo).toContain('"outputs": ["dist/**"]');
       expect(turbo).not.toContain("demo");
@@ -1183,14 +1196,14 @@ describe("MonorepoScaffolder (unit)", () => {
       expect(targets).toContain("packages/external/src/native.ts");
     });
 
-    test("discovers package docs, config packages and the agents tree", async () => {
+    test("discovers package docs, the shared config assets and the agents tree", async () => {
       await mkdir(`${workDir}/packages/demo`, { recursive: true });
       await mkdir(`${workDir}/apps/demo`, { recursive: true });
-      await mkdir(`${workDir}/configs/demo`, { recursive: true });
+      await mkdir(`${workDir}/packages/tooling/src/configs`, { recursive: true });
       await mkdir(`${workDir}/.agents/skills/demo`, { recursive: true });
       await write(`${workDir}/packages/demo/README.md`, "@myorg/demo\n");
       await write(`${workDir}/apps/demo/AGENTS.md`, "@myorg/demo\n");
-      await write(`${workDir}/configs/demo/package.json`, '{ "name": "@myorg/demo" }\n');
+      await write(`${workDir}/packages/tooling/src/configs/demo.json`, '{ "a": "@myorg/demo" }\n');
       await write(`${workDir}/.agents/skills/demo/SKILL.md`, "@myorg/demo\n");
       // Non-text files are never rewritten, and node_modules is not walked.
       await write(`${workDir}/packages/demo/logo.png`, "@myorg/demo\n");
@@ -1200,7 +1213,7 @@ describe("MonorepoScaffolder (unit)", () => {
       const targets = await collectScopeTargets(workDir);
       expect(targets).toContain("packages/demo/README.md");
       expect(targets).toContain("apps/demo/AGENTS.md");
-      expect(targets).toContain("configs/demo/package.json");
+      expect(targets).toContain("packages/tooling/src/configs/demo.json");
       expect(targets).toContain(".agents/skills/demo/SKILL.md");
       expect(targets).not.toContain("packages/demo/logo.png");
       expect(targets.some((p) => p.includes("node_modules"))).toBe(false);

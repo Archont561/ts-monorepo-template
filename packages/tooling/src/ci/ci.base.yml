@@ -21,7 +21,7 @@ concurrency:
 # bootstrap is dropped and the gate's `needs` is rewritten to match. The
 # BOOTSTRAP placeholder is the checkout/setup/cache/install preamble, kept in
 # ci.bootstrap.yml as a single copy so a version or cache change lands in every
-# job at once. See configs/template/src/aggregate.ts.
+# job at once. See packages/tooling/src/scaffold/aggregator.ts.
 # TEMPLATE-ONLY:END(template)
 jobs:
   quality:

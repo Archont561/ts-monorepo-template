@@ -1,5 +1,5 @@
-# AUTO-GENERATED from configs/*/dependabot.yml — do not edit directly
-# Edit fragments in configs/*/dependabot.yml then run bun run docs:sync (m docs)
+# AUTO-GENERATED from packages/tooling/src/ci/fragments/dependabot/ — do not edit directly
+# Edit those fragments then run bun run docs:sync (m docs)
 version: 2
 updates:
 {{UPDATES}}

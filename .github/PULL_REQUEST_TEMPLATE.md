@@ -15,8 +15,8 @@
 - [ ] `bun run test` passes
 - [ ] `bun run coverage` — coverage not decreased (80% threshold)
 - [ ] Added tests for new functionality
-- [ ] Updated docs (`README.md`, `AGENTS.md`, `configs/*/README.md`) if needed
-- [ ] `bun run docs:sync` if you edited `configs/*/*.steps.yml` or `*.base.yml`
+- [ ] Updated docs (`README.md`, `AGENTS.md`) if needed
+- [ ] `bun run docs:sync` if you edited `packages/tooling/src/ci/`
 - [ ] Conventional Commit format (`feat:`, `fix:`, `chore:`, etc.) — checked by commitlint
 
 ## Screenshots / Demo (if UI)

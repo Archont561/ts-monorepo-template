@@ -6,6 +6,7 @@ import {
   setJsonBlock,
   updateManifestFile,
 } from "../manifest/editor";
+import { CONFIGS_RELATIVE, TOOLING_RELATIVE } from "../utils/paths";
 import { regenerateAll } from "./aggregator";
 import type {
   DiscoveredConfig,
@@ -211,11 +212,21 @@ export async function collectScopeTargets(targetDir: string): Promise<string[]> 
     targets.add(relativePath);
   }
 
-  // Config package manifests and config files.
-  const configs = await findTextFiles(targetDir, [`${targetDir}/configs`], {
-    exclude: ["*/node_modules/*", "*/dist/*", "*/configs/template/*"],
+  // The whole tooling package, not just its shared config assets. R27 made it
+  // the toolchain every generated project ships, so the placeholder scope
+  // appears throughout it: the shared assets (biome's restricted-dependency
+  // messages, the changeset ignore list), the `m` command wrappers that filter
+  // workspace packages by name, and the CI fragments those wrappers drive.
+  // A project scaffolded as `@acme` must not be left referencing `@myorg`.
+  //
+  // Its `src/ci/` files also carry TEMPLATE-ONLY markers. Those are the
+  // generator's own inputs and are deliberately preserved (see markers.ts) —
+  // they are not scope placeholders, and the leak scanner treats them
+  // differently for exactly that reason.
+  const tooling = await findTextFiles(targetDir, [`${targetDir}/${TOOLING_RELATIVE}`], {
+    exclude: ["*/node_modules/*", "*/dist/*", "*/target/*", "*/.turbo/*"],
   });
-  for (const relativePath of configs) targets.add(relativePath);
+  for (const relativePath of tooling) targets.add(relativePath);
 
   // Skills setup copies files to .agents/skills after this method runs.
   const agents = await findTextFiles(targetDir, [`${targetDir}/.agents`], {
@@ -308,7 +319,7 @@ export class MonorepoScaffolder {
     // Remove template from workspaces
     if (pkg.workspaces) {
       pkg.workspaces = pkg.workspaces.filter(
-        (w: string) => w !== "template" && w !== "packages/template" && w !== "configs/template",
+        (w: string) => w !== "template" && w !== "packages/template",
       );
     }
 
@@ -327,26 +338,18 @@ export class MonorepoScaffolder {
         .split("\n")
         .filter(
           (line) =>
-            !/configs\/template/.test(line) &&
+            !/packages\/tooling\/dist/.test(line) &&
             !/packages\/template/.test(line) &&
             !/template bundle is committed on purpose/.test(line) &&
-            !/bun-create\.postinstall runs/.test(line),
+            !/bun-create\.preinstall runs/.test(line),
         );
       await write(gitignorePath, `${lines.join("\n")}\n`);
     }
 
-    const bunfigPath = `${this.targetDir}/configs/bun-config/bunfig.toml`;
-    const bunfig = file(bunfigPath);
-    if (await bunfig.exists()) {
-      const lines = (await bunfig.text())
-        .split("\n")
-        .filter(
-          (line) =>
-            !/"\*\*\/configs\/template\/\*\*"/.test(line) &&
-            !/"\*\*\/packages\/template\/\*\*"/.test(line),
-        );
-      await write(bunfigPath, `${lines.join("\n")}\n`);
-    }
+    // The shared bunfig ships inside the tooling package, which a generated
+    // project keeps — nothing in it is template-specific any more (R27 dropped
+    // the `**/configs/**` coverage ignore along with `configs/`), so there is
+    // no longer a line to strip here.
   }
 
   /**
@@ -595,10 +598,9 @@ export class MonorepoScaffolder {
     const removals = this.removalsFor(meta, this.selectedFor(meta));
     let next = source;
 
-    // 1. Remove the config package directory
-    await $`rm -rf ${this.targetDir}/configs/${config.dir}`.quiet();
-
-    // 2. Remove the workspace dependency from root
+    // 1. Remove the workspace dependency from root. There is no per-feature
+    //    package directory to delete: features are registry entries now, not
+    //    workspace packages (R27).
     next = removeJsonEntry(next, `devDependencies.${config.name}`);
 
     // 3. Extra removals (exact paths, backward compat)
@@ -624,7 +626,8 @@ export class MonorepoScaffolder {
     // 5. Turbo tasks live in their own manifest and keep its formatting too.
     if (removals.turboTasksToRemove) {
       const tasks = removals.turboTasksToRemove;
-      await updateManifestFile(`${this.targetDir}/configs/turbo/turbo.base.json`, (turbo) => {
+      const turboBase = `${this.targetDir}/${CONFIGS_RELATIVE}/turbo.base.json`;
+      await updateManifestFile(turboBase, (turbo) => {
         let edited = turbo;
         for (const task of tasks) edited = removeJsonEntry(edited, `tasks.${task}`);
         return edited;
@@ -689,7 +692,7 @@ export class MonorepoScaffolder {
     // imprecise enough that a manifest is missed still resolves, and dropping
     // it would break `bun install` in the other direction.
     const names = new Set<string>();
-    const manifests = new Glob("{apps,packages,configs}/**/package.json").scanSync({
+    const manifests = new Glob("{apps,packages}/**/package.json").scanSync({
       cwd: this.targetDir,
       onlyFiles: true,
     });

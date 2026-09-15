@@ -5,42 +5,15 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "configs/*",
     "packages/native/npm/*",
     "packages/native/crates"
   ],
   "devDependencies": {
-    "@myorg/badges": "workspace:*",
-    "@myorg/biome": "workspace:*",
-    "@myorg/bun-config": "workspace:*",
-    "@myorg/bunup": "workspace:*",
-    "@myorg/changeset": "workspace:*",
-    "@myorg/citty": "workspace:*",
-    "@myorg/codeql": "workspace:*",
-    "@myorg/community": "workspace:*",
-    "@myorg/coverage": "workspace:*",
-    "@myorg/dependabot": "workspace:*",
-    "@myorg/devcontainer": "workspace:*",
-    "@myorg/editorconfig": "workspace:*",
-    "@myorg/gh-actions": "workspace:*",
-    "@myorg/gitattributes": "workspace:*",
-    "@myorg/gitleaks": "workspace:*",
-    "@myorg/lefthook": "workspace:*",
     "@myorg/native": "workspace:*",
-    "@myorg/native-config": "workspace:*",
-    "@myorg/pages": "workspace:*",
-    "@myorg/playwright": "workspace:*",
-    "@myorg/skills": "workspace:*",
-    "@myorg/stale": "workspace:*",
-    "@myorg/template": "workspace:*",
-    "@myorg/tooling": "workspace:*",
-    "@myorg/trivy": "workspace:*",
-    "@myorg/ts": "workspace:*",
-    "@myorg/turbo": "workspace:*",
-    "@myorg/unocss": "workspace:*"
+    "@myorg/tooling": "workspace:*"
   },
   "bun-create": {
-    "preinstall": "bun configs/template/dist/index.js",
+    "preinstall": "bun packages/tooling/dist/scaffold/run.js",
     "start": "bun run dev"
   },
   "scripts": {

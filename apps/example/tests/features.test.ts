@@ -39,8 +39,8 @@ describe("app paths", () => {
   });
 
   test("repoFile resolves to the monorepo root", () => {
-    const path = repoFile("configs/coverage/index.ts").name;
-    expect(path).toContain("/configs/coverage/index.ts");
+    const path = repoFile("packages/tooling/src/commands/coverage.ts").name;
+    expect(path).toContain("/packages/tooling/src/commands/coverage.ts");
     expect(path).not.toContain("/apps/");
   });
 
@@ -74,7 +74,9 @@ describe("feature detection", () => {
   });
 
   test("hasUnoConfig matches the config package on disk", async () => {
-    expect(await hasUnoConfig()).toBe(await repoFile("configs/unocss/uno.config.ts").exists());
+    expect(await hasUnoConfig()).toBe(
+      await repoFile("packages/tooling/src/configs/uno.config.ts").exists(),
+    );
   });
 
   test("hasNative matches the native routes on disk", async () => {
@@ -151,7 +153,7 @@ describe("feature providers", () => {
     const provider = unocssProvider(
       fixtureFiles({
         "app/public/index.html": "<title>plain</title>",
-        "repo/configs/unocss/uno.config.ts": "export default {};",
+        "repo/packages/tooling/src/configs/uno.config.ts": "export default {};",
       }),
     );
     expect(await provider.enabled()).toBe(true);

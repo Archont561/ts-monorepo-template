@@ -55,7 +55,7 @@ npx skills update -p -y
 
 ### Curated vs Vendored
 
-- **Curated**: `configs/skills/skills/<name>/SKILL.md` — committed, template source of truth, synced via `mskills sync`
+- **Curated**: `packages/tooling/skills/<name>/SKILL.md` — committed, template source of truth, synced via `mskills sync`
 - **Vendored**: `.agents/skills/<name>/SKILL.md` — committed for reproducibility, may include skills.sh installs
 - **Index**: `.agents/skills.index.json` — generated, lists all valid skills with metadata
 
@@ -101,5 +101,5 @@ for await (const path of glob.scan({ cwd: process.cwd() })) {
 
 - [skills.sh Docs](https://skills.sh)
 - [skills CLI](https://www.npmjs.com/package/skills)
-- [Curated Skills README](../configs/skills/README.md)
-- [Skills AGENT](../configs/skills/AGENTS.md)
+- Curated sources: `packages/tooling/skills/`
+

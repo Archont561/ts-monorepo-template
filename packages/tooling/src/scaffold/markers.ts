@@ -70,9 +70,13 @@ export function markerFindArgs(root: string): string[] {
     "-not",
     "-path",
     "*/dist/*",
+    // The tooling package is the generator, not the project: its `src/ci/`
+    // fragments carry TEMPLATE-ONLY markers on purpose, and stripping them here
+    // would destroy the inputs a later `m docs` reads. This replaces the old
+    // `*/configs/template/*` exclusion — same role, new location (R27).
     "-not",
     "-path",
-    "*/configs/template/*",
+    "*/packages/tooling/*",
   ];
 }
 

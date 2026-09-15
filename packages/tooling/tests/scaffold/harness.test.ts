@@ -44,8 +44,13 @@ describe("TemplateHarness (unit)", () => {
     completed.push(result.registryDir, result.outputDir);
 
     // The scaffolder runs from this bundle (bun-create.preinstall), so it
-    // must survive the rsync excludes.
-    expect(await pathExists(`${result.templateDir}/configs/template/dist/index.js`)).toBe(true);
+    // must survive the rsync excludes — including the global `dist/` ignore.
+    expect(await pathExists(`${result.templateDir}/packages/tooling/dist/scaffold/run.js`)).toBe(
+      true,
+    );
+    // The package it belongs to travels with it; only a generated project drops
+    // the tests and the bundle (the template feature's extraRemovals).
+    expect(await pathExists(`${result.templateDir}/packages/tooling/tests`)).toBe(true);
   });
 
   test("excludes node_modules and .git by default", async () => {

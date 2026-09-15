@@ -10,16 +10,6 @@
     "path": ".agents/skills/bun/SKILL.md"
   },
   {
-    "name": "playwright",
-    "description": "E2E testing with Playwright — browser detection and auto-skip",
-    "path": ".agents/skills/playwright/SKILL.md"
-  },
-  {
-    "name": "turbo",
-    "description": "Turborepo task orchestration — build ordering, caching, and dev watch",
-    "path": ".agents/skills/turbo/SKILL.md"
-  },
-  {
     "name": "changeset",
     "description": "Versioning and releases with Changesets — create, version, publish",
     "path": ".agents/skills/changeset/SKILL.md"
@@ -30,6 +20,11 @@
     "path": ".agents/skills/commit/SKILL.md"
   },
   {
+    "name": "playwright",
+    "description": "E2E testing with Playwright — browser detection and auto-skip",
+    "path": ".agents/skills/playwright/SKILL.md"
+  },
+  {
     "name": "review",
     "description": "Code review checklist — ensure quality before PR",
     "path": ".agents/skills/review/SKILL.md"
@@ -38,5 +33,10 @@
     "name": "test",
     "description": "Test generation and best practices — unit tests with bun:test and E2E with Playwright",
     "path": ".agents/skills/test/SKILL.md"
+  },
+  {
+    "name": "turbo",
+    "description": "Turborepo task orchestration — build ordering, caching, and dev watch",
+    "path": ".agents/skills/turbo/SKILL.md"
   }
 ]

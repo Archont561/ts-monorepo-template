@@ -25,7 +25,7 @@ mbiome check --write # fix in place
 
 ## Config
 
-- `configs/biome/biome.json` — single shared config (no root `biome.json`)
+- `packages/tooling/src/configs/biome.json` — single shared config (no root `biome.json`)
 - Rules: `recommended` preset, unused imports as errors, 2-space indent, 100 cols, double quotes
 - Ignores: `node_modules`, `dist`, `.turbo`, `coverage`, `test-results`
 

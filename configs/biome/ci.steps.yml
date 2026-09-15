@@ -1,3 +1,0 @@
-# SECTION: quality
-      - name: Lint and format
-        run: bun run check

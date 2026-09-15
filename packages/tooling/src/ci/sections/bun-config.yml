@@ -25,18 +25,18 @@
 
 # SECTION: quality
       # TEMPLATE-ONLY:START(template)
-      # configs/template/dist/index.js is committed because `bun-create` runs it
-      # straight off the tarball. Nothing else in CI would notice it drifting
-      # from src/, so rebuild and require a clean diff. Runs after install (deps
-      # resolved) and after check/test (source is known good), and before
-      # anything downstream consumes the scaffolder.
-      # Scoped `template` — the scaffolder always disables that scope and deletes
-      # configs/template, so this step must not survive into generated projects.
+      # packages/tooling/dist/ is committed because `bun-create.preinstall` runs
+      # it straight off the tarball, before node_modules exists. Nothing else in
+      # CI would notice it drifting from src/, so rebuild and require a clean
+      # diff. Runs after install (deps resolved) and after check/test (source is
+      # known good), and before anything downstream consumes the scaffolder.
+      # Scoped `template` — a generated project keeps the tooling package but
+      # drops the bundle, so this step must not survive into one.
       - name: Validate Scaffolder Bundle Integrity
         run: |
-          bun run --filter @myorg/template build
-          if ! git diff --exit-code configs/template/dist/index.js; then
-            echo "::error::Scaffolder bundle is out of sync with source. Run 'bun run --filter @myorg/template build' and commit the result."
+          bun run --filter @myorg/tooling build
+          if ! git diff --exit-code packages/tooling/dist; then
+            echo "::error::Scaffolder bundle is out of sync with source. Run 'bun run --filter @myorg/tooling build' and commit the result."
             exit 1
           fi
       # TEMPLATE-ONLY:END(template)

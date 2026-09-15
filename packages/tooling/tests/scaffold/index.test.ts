@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { sep } from "node:path";
 import { $, file } from "bun";
 import { TemplateHarness } from "../../src/scaffold/harness";
 import { MonorepoScaffolder } from "../../src/scaffold/pipeline";
@@ -39,8 +40,11 @@ describe("Scaffolder integration", () => {
       });
       await scaffolder.execute();
 
-      // 1. Template package is fully removed.
-      expect(await pathExists(`${result.templateDir}/configs/template`)).toBe(false);
+      // 1. The toolchain ships, minus its template-only half: the harness's own
+      //    tests and the committed bundle (the template feature's extraRemovals).
+      expect(await pathExists(`${result.templateDir}/packages/tooling/src`)).toBe(true);
+      expect(await pathExists(`${result.templateDir}/packages/tooling/tests`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/packages/tooling/dist`)).toBe(false);
 
       // 2. Root package.json is sanitized.
       const rootPkg = await file(`${result.templateDir}/package.json`).json();
@@ -61,7 +65,7 @@ describe("Scaffolder integration", () => {
       expect(await pathExists(`${result.templateDir}/.github/workflows/template-docs.yml`)).toBe(
         false,
       );
-      expect(rootPkg.workspaces).not.toContain("configs/template");
+      expect(rootPkg.workspaces).not.toContain("packages/template");
 
       // 3. Prepare script still wires up lefthook + changeset on install.
       expect(rootPkg.scripts?.prepare).toContain("m setup");
@@ -72,12 +76,11 @@ describe("Scaffolder integration", () => {
       expect(internalPkg.name).toBe("@integration-test/internal");
 
       // 5. Enabled configs survive; disabled configs are removed.
-      expect(await pathExists(`${result.templateDir}/configs/playwright`)).toBe(true);
-      expect(await pathExists(`${result.templateDir}/configs/unocss`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/apps/example/e2e`)).toBe(true);
 
-      // 6. Scope replacement reached config package contents too.
+      // 6. Scope replacement reached the shared config assets too.
       const changesetConfig = await file(
-        `${result.templateDir}/configs/changeset/config.json`,
+        `${result.templateDir}/packages/tooling/src/configs/changeset.config.json`,
       ).text();
       expect(changesetConfig).not.toContain("@myorg");
 
@@ -94,7 +97,7 @@ describe("Scaffolder integration", () => {
 
       // 8. Docs and workflows are regenerated from the surviving config set.
       const readmeMd = await file(`${result.templateDir}/README.md`).text();
-      expect(readmeMd).not.toContain("configs/template");
+      expect(readmeMd).not.toContain("packages/tooling/dist");
       const ciYml = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
       expect(ciYml).not.toContain("{{STEPS}}");
       expect(ciYml).toContain("bun run check");
@@ -123,7 +126,7 @@ describe("Scaffolder integration", () => {
         "packages/external/package.json",
         "apps/example/package.json",
         "apps/example/tsconfig.json",
-        "configs/changeset/config.json",
+        "packages/tooling/src/configs/changeset.config.json",
       ];
       for (const relPath of files) {
         const filePath = `${result.templateDir}/${relPath}`;
@@ -151,28 +154,25 @@ describe("Scaffolder integration", () => {
       });
       await scaffolder.execute();
 
-      expect(await pathExists(`${result.templateDir}/configs/playwright`)).toBe(false);
-      expect(await pathExists(`${result.templateDir}/configs/unocss`)).toBe(false);
-      expect(await pathExists(`${result.templateDir}/configs/native`)).toBe(false);
-      expect(await pathExists(`${result.templateDir}/configs/skills`)).toBe(false);
-      expect(await pathExists(`${result.templateDir}/configs/devcontainer`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/apps/example/e2e`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/packages/native`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/.agents/skills`)).toBe(false);
       expect(await pathExists(`${result.templateDir}/.devcontainer`)).toBe(false);
 
-      // Always-on configs remain.
-      expect(await pathExists(`${result.templateDir}/configs/ts`)).toBe(true);
-      expect(await pathExists(`${result.templateDir}/configs/bunup`)).toBe(true);
-      expect(await pathExists(`${result.templateDir}/configs/biome`)).toBe(true);
-      expect(await pathExists(`${result.templateDir}/configs/turbo`)).toBe(true);
+      // Always-on shared assets remain, now inside the tooling package.
+      for (const asset of ["biome.json", "bunfig.toml", "turbo.base.json", "uno.config.ts"]) {
+        expect(
+          await pathExists(`${result.templateDir}/packages/tooling/src/configs/${asset}`),
+        ).toBe(true);
+      }
 
       // Docs and workflows reflect the pruned set: e2e steps disappear with
       // Playwright, actionlint/lint steps stay. AGENTS.md is now reference-based.
       const agentsMd = await file(`${result.templateDir}/AGENTS.md`).text();
-      expect(agentsMd).not.toContain("configs/playwright/AGENTS.md");
-      expect(agentsMd).not.toContain("configs/skills/AGENTS.md");
-      expect(agentsMd).not.toContain("configs/unocss/AGENTS.md");
-      expect(agentsMd).not.toContain("configs/native/AGENTS.md");
-      expect(agentsMd).not.toContain("configs/devcontainer/AGENTS.md");
-      expect(agentsMd).toContain("configs/biome/AGENTS.md");
+      // No dead links into the deleted config packages. The shared-config path
+      // `packages/tooling/src/configs/` is legitimate and stays.
+      expect(agentsMd).not.toContain("](configs/");
+      expect(agentsMd).toContain("packages/tooling");
 
       const ciYml = await file(`${result.templateDir}/.github/workflows/ci.yml`).text();
       expect(ciYml).not.toContain("test:e2e");
@@ -196,7 +196,7 @@ describe("Scaffolder integration", () => {
       // Drive the committed dist bundle — the exact artifact bun-create.preinstall
       // runs — against the copied repo, as the lifecycle hook does.
       const proc = Bun.spawn({
-        cmd: ["bun", `${result.templateDir}/configs/template/dist/index.js`],
+        cmd: ["bun", `${result.templateDir}/packages/tooling/dist/scaffold/run.js`],
         cwd: result.templateDir,
         stdout: "pipe",
         stderr: "pipe",
@@ -205,13 +205,14 @@ describe("Scaffolder integration", () => {
       const exitCode = await proc.exited;
       expect(exitCode, stderr).toBe(0);
 
-      // Template package is fully removed.
-      expect(await pathExists(`${result.templateDir}/configs/template`)).toBe(false);
+      // The template-only half of the toolchain is gone.
+      expect(await pathExists(`${result.templateDir}/packages/tooling/tests`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/packages/tooling/dist`)).toBe(false);
 
       // Root package.json is sanitized; prepare still wires up lefthook + changeset.
       const rootPkg = await file(`${result.templateDir}/package.json`).json();
       expect(rootPkg["bun-create"]).toBeUndefined();
-      expect(rootPkg.workspaces).not.toContain("configs/template");
+      expect(rootPkg.workspaces).not.toContain("packages/template");
       expect(rootPkg.scripts?.prepare).toContain("m setup");
       expect(rootPkg.scripts?.prepare).toContain("m changeset");
       expect(rootPkg.scripts?.["docs:sync"]).toBeUndefined();
@@ -224,10 +225,8 @@ describe("Scaffolder integration", () => {
       expect(await pathExists(`${result.templateDir}/apps/example/playwright.config.ts`)).toBe(
         true,
       );
-      expect(await pathExists(`${result.templateDir}/configs/unocss`)).toBe(false);
-      expect(await pathExists(`${result.templateDir}/configs/native`)).toBe(false);
-      expect(await pathExists(`${result.templateDir}/configs/skills`)).toBe(false);
-      expect(await pathExists(`${result.templateDir}/configs/devcontainer`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/packages/native`)).toBe(false);
+      expect(await pathExists(`${result.templateDir}/.agents/skills`)).toBe(false);
       expect(await pathExists(`${result.templateDir}/.devcontainer`)).toBe(false);
 
       // The bundle scopes to @myorg by default, so template artifacts — not
@@ -239,7 +238,11 @@ describe("Scaffolder integration", () => {
         await scanForLeaks(result.templateDir, [
           "TEMPLATE-ONLY:START",
           "TEMPLATE-ONLY:END",
-          "configs/template",
+          // No bare "configs/" needle: since R27 the shared config assets live at
+          // `packages/tooling/src/configs/`, so the string is a substring of a
+          // real path, and the R27 migration notes in this package legitimately
+          // discuss the deleted tree. Dead references were swept and checked by
+          // hand instead.
           "github.com/Archont561/ts-monorepo-template",
           "@Archont561",
         ]),
@@ -294,8 +297,19 @@ async function scanForLeaks(
     } catch {
       continue; // binary file
     }
+    // TEMPLATE-ONLY markers inside the tooling package are the generator's own
+    // inputs: `m ci` regenerates workflows from those fragments in the generated
+    // project too, so the markers have to survive. The aggregator strips the
+    // marked blocks at generate time using the recorded selections.
+    const isToolingSource = path.includes(`${sep}packages${sep}tooling${sep}`);
+    // `packages/tooling/src/configs/` is the real home of the shared tool
+    // config, so the bare `configs/` needle must not fire on it. Mask it out
+    // before matching rather than special-casing every needle.
+    const NEUTRALISED_CONFIGS_PATH = "packages/tooling/src/configs/";
+    const masked = content.split(NEUTRALISED_CONFIGS_PATH).join("\u0000");
     for (const needle of needles) {
-      if (content.includes(needle)) {
+      if (isToolingSource && needle.startsWith("TEMPLATE-ONLY:")) continue;
+      if (masked.includes(needle)) {
         leaks.push(`${path}: ${needle}`);
       }
     }

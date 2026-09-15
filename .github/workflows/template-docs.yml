@@ -1,10 +1,10 @@
 # TEMPLATE-ONLY:START(template)
 # Template-only docs Pages — deploys the docs app to GitHub Pages
-# Removed during scaffolding via configs/template extraRemovals
+# Removed during scaffolding via the template feature's extraRemovals
 # This is the ONLY Pages deployment for this repository: `m docs site` assembles
 # the docs app + the coverage report (/coverage/) + the demo app (/example/)
 # into one artifact, so pages.yml and coverage.yml are not generated here (see
-# configs/template/src/aggregate.ts). Generated monorepos, which have no docs
+# packages/tooling/src/scaffold/aggregator.ts). Generated monorepos, which have no docs
 # app, get pages.yml (and coverage.yml when Pages is off) as usual.
 name: Template Docs
 
@@ -14,7 +14,7 @@ on:
     paths:
       - "packages/**"
       - "apps/**"
-      - "configs/**"
+      - "packages/tooling/**"
       - ".github/workflows/template-docs.yml"
       - "README.md"
       - "AGENTS.md"

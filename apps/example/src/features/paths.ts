@@ -13,7 +13,7 @@ import { file } from "bun";
 /** `apps/example/` — the app root that owns `public/` and `src/`. */
 const APP_ROOT = new URL(import.meta.url.includes("/dist/") ? "../" : "../../", import.meta.url);
 
-/** Repository root — the monorepo that owns `configs/`. */
+/** Repository root — the monorepo that owns `packages/` and `apps/`. */
 const REPO_ROOT = new URL(
   import.meta.url.includes("/dist/") ? "../../../" : "../../../../",
   import.meta.url,
@@ -24,7 +24,7 @@ export function appFile(path: string): ReturnType<typeof file> {
   return file(new URL(path, APP_ROOT));
 }
 
-/** A file at the repo root, e.g. `repoFile("configs/unocss/uno.config.ts")`. */
+/** A file at the repo root, e.g. `repoFile("packages/tooling/src/configs/uno.config.ts")`. */
 export function repoFile(path: string): ReturnType<typeof file> {
   return file(new URL(path, REPO_ROOT));
 }

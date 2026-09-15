@@ -74,6 +74,6 @@ mnative napi:build        # build every package's addon
 
 ## Where to go next
 
-- [configs/native](../../configs/native/README.md) — the config that scaffolds this layout, the CLI and the CI matrix
+- [packages/tooling](../tooling/README.md) — the CLI and the CI matrix that drive this layout
 - [npm/native](npm/native/README.md) — the npm package built from the `native` crate
 - [Cargo Book — workspaces](https://doc.rust-lang.org/cargo/reference/workspaces.html)

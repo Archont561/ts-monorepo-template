@@ -106,14 +106,15 @@ export class TemplateHarness {
       "playwright-report",
       "apps/*/dist",
       "packages/*/dist",
-      "configs/*/dist",
       "apps/*/coverage",
       "target",
       "dist",
-      // packages/tooling is the consolidated toolchain package (R24-R25). Until
-      // the scaffolder learns to process it (Phase 4) it is template-only
-      // source that no scaffolded project consumes yet, so it is not copied.
-      "packages/tooling",
+      // `packages/tooling` is copied: since R27 it is the toolchain every
+      // generated project runs, not template-only source. Two of its
+      // subtrees are force-included below, because the bare `coverage` and
+      // `dist` patterns match any path segment and would otherwise swallow
+      // them — `src/ci/fragments/coverage/` holds the coverage feature's CI
+      // fragments, and `dist/` holds the committed scaffold bundle.
       ...(options.excludes ?? []),
     ];
     this.skipInstall = options.skipInstall ?? true;
@@ -132,19 +133,24 @@ export class TemplateHarness {
     // Copy the template repo into the registry, dropping build outputs and VCS
     // metadata. This replaces the previous `rsync` dependency with Bun's native
     // fs.cp (no external binary), keeping the harness portable across every
-    // environment. The committed template bundle (configs/template/dist) is
-    // explicitly included so it survives even if an exclude would drop it.
-    // Also include configs/coverage which would otherwise be excluded by the
-    // generic "coverage" basename exclude.
+    // environment.
+    //
+    // Two subtrees are force-included because the bare `coverage` and `dist`
+    // excludes match any path segment, not just a top-level one:
+    //   - `packages/tooling/dist/` — the committed scaffold bundle that
+    //     `bun-create.preinstall` runs before `node_modules` exists.
+    //   - `packages/tooling/src/ci/fragments/coverage/` — the coverage
+    //     feature's workflow fragments, without which `m docs` renders a
+    //     coverage workflow with an empty job.
     const includePatterns = [
-      "configs/template/dist/",
-      "configs/template/dist/index.js",
-      "configs/coverage/",
+      "packages/tooling/dist/",
+      "packages/tooling/src/ci/fragments/coverage/",
     ];
     const isIncluded = makeMatcher(includePatterns);
     const isExcluded = makeMatcher(this.excludes);
     const isForcedInclude = (rel: string) =>
-      rel.startsWith("configs/coverage") || rel.startsWith("configs/template/dist");
+      rel.startsWith("packages/tooling/dist") ||
+      rel.startsWith("packages/tooling/src/ci/fragments/coverage");
     await rm(templateDir, { recursive: true, force: true });
     await cp(this.templateRoot, templateDir, {
       recursive: true,

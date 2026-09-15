@@ -21,7 +21,7 @@ concurrency:
 # bootstrap is dropped and the gate's `needs` is rewritten to match. The
 # BOOTSTRAP placeholder is the checkout/setup/cache/install preamble, kept in
 # ci.bootstrap.yml as a single copy so a version or cache change lands in every
-# job at once. See configs/template/src/aggregate.ts.
+# job at once. See packages/tooling/src/scaffold/aggregator.ts.
 # TEMPLATE-ONLY:END(template)
 jobs:
   quality:
@@ -59,18 +59,18 @@ jobs:
         run: bun run test
 
       # TEMPLATE-ONLY:START(template)
-      # configs/template/dist/index.js is committed because `bun-create` runs it
-      # straight off the tarball. Nothing else in CI would notice it drifting
-      # from src/, so rebuild and require a clean diff. Runs after install (deps
-      # resolved) and after check/test (source is known good), and before
-      # anything downstream consumes the scaffolder.
-      # Scoped `template` — the scaffolder always disables that scope and deletes
-      # configs/template, so this step must not survive into generated projects.
+      # packages/tooling/dist/ is committed because `bun-create.preinstall` runs
+      # it straight off the tarball, before node_modules exists. Nothing else in
+      # CI would notice it drifting from src/, so rebuild and require a clean
+      # diff. Runs after install (deps resolved) and after check/test (source is
+      # known good), and before anything downstream consumes the scaffolder.
+      # Scoped `template` — a generated project keeps the tooling package but
+      # drops the bundle, so this step must not survive into one.
       - name: Validate Scaffolder Bundle Integrity
         run: |
-          bun run --filter @myorg/template build
-          if ! git diff --exit-code configs/template/dist/index.js; then
-            echo "::error::Scaffolder bundle is out of sync with source. Run 'bun run --filter @myorg/template build' and commit the result."
+          bun run --filter @myorg/tooling build
+          if ! git diff --exit-code packages/tooling/dist; then
+            echo "::error::Scaffolder bundle is out of sync with source. Run 'bun run --filter @myorg/tooling build' and commit the result."
             exit 1
           fi
       # TEMPLATE-ONLY:END(template)
@@ -145,7 +145,7 @@ jobs:
         shell: bash
 
       # Coverage reporting — all logic lives in the m coverage CLI
-      # (configs/coverage/src/cli.ts): setup installs genhtml, html renders the
+      # (packages/tooling/src/commands/coverage.ts): setup installs genhtml, html renders the
       # report, check enforces the threshold by parsing LCOV directly.
       - name: Setup coverage tooling
         run: bunx m coverage setup
@@ -162,7 +162,7 @@ jobs:
           path: coverage/html/
           retention-days: 14
 
-      # Threshold comes from COVERAGE_THRESHOLD in configs/coverage/index.ts.
+      # Threshold comes from COVERAGE_THRESHOLD in packages/tooling/src/commands/coverage.ts.
       - name: Check coverage threshold (m coverage)
         run: bunx m coverage check
         shell: bash

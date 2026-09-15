@@ -65,7 +65,10 @@ export function repoRoot(start: string = process.cwd()): string {
  * tooling with `cwd` set to the project being scaffolded, so `pkgRoot()` would
  * resolve to the wrong tree.
  */
-export const CONFIGS_RELATIVE = "packages/tooling/src/configs";
+export const TOOLING_RELATIVE = "packages/tooling";
+
+/** The shared config assets, relative to a repo root. */
+export const CONFIGS_RELATIVE = `${TOOLING_RELATIVE}/src/configs`;
 
 /** Directory holding the consolidated config assets. */
 export function configDir(): string {

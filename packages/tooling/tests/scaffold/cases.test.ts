@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
+import { resolve, sep } from "node:path";
 import { $, file } from "bun";
 import fc from "fast-check";
 import {
@@ -20,13 +20,7 @@ import { MonorepoScaffolder } from "../../src/scaffold/pipeline";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 const registry = await getRegisteredConfigs(REPO_ROOT);
-const {
-  optInConfigs,
-  alwaysConfigs,
-  buildDisabledConfigs,
-  buildEnabledConfigs,
-  buildDefaultConfigs,
-} = registry;
+const { optInConfigs, buildDisabledConfigs, buildEnabledConfigs, buildDefaultConfigs } = registry;
 
 type ConfigMap = Record<string, ScaffoldSelection>;
 
@@ -55,7 +49,6 @@ const COMMON_CASES: TemplateCase[] = [
     configs: buildDisabledConfigs(),
     expectations: {
       notHasFiles: [
-        ...optInConfigs.map((c) => `configs/${c.dir}`),
         "packages/native",
         "apps/example/src/pages/api/native",
         "apps/example/e2e",
@@ -63,7 +56,6 @@ const COMMON_CASES: TemplateCase[] = [
         ".github/workflows/template-docs.yml",
       ],
       hasFiles: [
-        ...alwaysConfigs.map((c) => `configs/${c.dir}`),
         ".editorconfig",
         ".gitattributes",
         ".github/CODEOWNERS",
@@ -83,8 +75,8 @@ const COMMON_CASES: TemplateCase[] = [
     scope: "@default",
     configs: buildDefaultConfigs(),
     expectations: {
-      hasFiles: ["configs/playwright", "configs/codeql", "apps/example/e2e"],
-      notHasFiles: ["configs/unocss", "packages/native", "configs/pages"],
+      hasFiles: ["apps/example/e2e", "apps/example/playwright.config.ts"],
+      notHasFiles: ["packages/native", "apps/example/src/pages/api/native"],
       ciContains: ["test:e2e", "CodeQL", "Gitleaks", "bun run check"],
       ciNotContains: ["trivy"],
       hasWorkflows: ["ci.yml", "coverage.yml"],
@@ -98,7 +90,6 @@ const COMMON_CASES: TemplateCase[] = [
     configs: buildEnabledConfigs(),
     expectations: {
       hasFiles: [
-        ...optInConfigs.map((c) => `configs/${c.dir}`),
         "packages/native",
         "apps/example/src/pages/api/native",
         "packages/native/rust-toolchain.toml",
@@ -136,7 +127,6 @@ const COMMON_CASES: TemplateCase[] = [
       pages: true,
     },
     expectations: {
-      hasFiles: ["configs/pages"],
       hasWorkflows: ["pages.yml"],
       notHasWorkflows: ["coverage.yml"],
       ciContains: ["coverage"],
@@ -151,14 +141,7 @@ const COMMON_CASES: TemplateCase[] = [
       trivy: true,
     },
     expectations: {
-      hasFiles: [
-        "configs/gitleaks",
-        "configs/codeql",
-        "configs/trivy",
-        "configs/community",
-        ".github/CODEOWNERS",
-        ".github/ISSUE_TEMPLATE/bug_report.yml",
-      ],
+      hasFiles: [".github/CODEOWNERS", ".github/ISSUE_TEMPLATE/bug_report.yml"],
       ciContains: ["Gitleaks", "CodeQL", "Trivy"],
       hasWorkflows: ["ci.yml"],
     },
@@ -171,7 +154,7 @@ const COMMON_CASES: TemplateCase[] = [
       unocss: true,
     },
     expectations: {
-      hasFiles: ["configs/unocss", "apps/example/public/index.html"],
+      hasFiles: ["apps/example/public/index.html"],
       rootScriptsNot: ["build:css"],
       appScripts: ["build", "build:css"],
     },
@@ -185,7 +168,7 @@ const COMMON_CASES: TemplateCase[] = [
       devcontainer: true,
     },
     expectations: {
-      hasFiles: ["configs/skills", "configs/devcontainer", ".devcontainer", ".agents/skills"],
+      hasFiles: [".devcontainer", ".agents/skills"],
       notHasFiles: ["packages/native"],
     },
   },
@@ -197,7 +180,6 @@ const COMMON_CASES: TemplateCase[] = [
       stale: true,
     },
     expectations: {
-      hasFiles: ["configs/stale"],
       hasWorkflows: ["stale.yml"],
     },
   },
@@ -207,10 +189,6 @@ const COMMON_CASES: TemplateCase[] = [
     configs: buildDisabledConfigs(),
     expectations: {
       hasFiles: [
-        "configs/badges",
-        "configs/community",
-        "configs/editorconfig",
-        "configs/gitattributes",
         ".editorconfig",
         ".gitattributes",
         ".github/CODEOWNERS",
@@ -525,13 +503,12 @@ describe("template cases — common flows with every combination", () => {
                 expect(ci).not.toContain("{{STEPS}}");
               }
 
-              // Invariant 4: Package directories correspond to enabled state
-              for (const opt of optInConfigs) {
-                const isEnabled =
-                  opt.type === "select" ? cfg[opt.flag] !== "none" : Boolean(cfg[opt.flag]);
-                const dirExists = await pathExists(`${result.templateDir}/configs/${opt.dir}`);
-                expect(dirExists).toBe(isEnabled);
-              }
+              // Invariant 4: the toolchain package ships in every generated
+              // project, but its template-only parts do not. There are no
+              // per-feature package directories left to check (R27).
+              expect(await pathExists(`${result.templateDir}/packages/tooling/src`)).toBe(true);
+              expect(await pathExists(`${result.templateDir}/packages/tooling/tests`)).toBe(false);
+              expect(await pathExists(`${result.templateDir}/packages/tooling/dist`)).toBe(false);
 
               // Invariant 5: Root package.json valid and preserves essential scripts
               const rootPkg = await file(`${result.templateDir}/package.json`).json();
@@ -599,17 +576,23 @@ async function scanForLeaks(cwd: string): Promise<string[]> {
     if (content.includes("@myorg")) {
       leaks.push(`${path}: @myorg`);
     }
-    if (content.includes("TEMPLATE-ONLY:START") || content.includes("TEMPLATE-ONLY:END")) {
+    // Markers inside the tooling package are the generator's inputs and are
+    // deliberately preserved; everywhere else they must be stripped.
+    const isToolingSource = path.includes(`${sep}packages${sep}tooling${sep}`);
+    if (
+      !isToolingSource &&
+      (content.includes("TEMPLATE-ONLY:START") || content.includes("TEMPLATE-ONLY:END"))
+    ) {
       leaks.push(`${path}: TEMPLATE-ONLY marker`);
     }
-    if (content.includes("configs/template")) {
-      // configs/template is removed by the scaffolder, so a surviving reference
-      // is a leak — with two deliberate exceptions below.
-      if (!path.includes("configs/template")) {
-        if (content.includes("configs/template/dist") || content.includes("!configs/template")) {
-          leaks.push(`${path}: configs/template`);
-        }
-      }
+    // The committed scaffold bundle exists only to run `bun-create.preinstall`
+    // off the tarball, so a generated project must not carry a .gitignore
+    // negation keeping it visible. (The bundle directory itself is covered by
+    // invariant 4; the tooling package's own CI fragments legitimately mention
+    // the path inside TEMPLATE-ONLY blocks the aggregator strips at generate
+    // time, so only the root .gitignore is checked here.)
+    if (path === `${cwd}${sep}.gitignore` && content.includes("packages/tooling/dist")) {
+      leaks.push(`${path}: packages/tooling/dist negation`);
     }
   }
   return leaks;

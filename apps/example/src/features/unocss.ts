@@ -26,7 +26,7 @@ export async function hasUnocss(files: FeatureFiles = APP_FILES): Promise<boolea
 /** The UnoCSS config package — deleted by the scaffolder when UnoCSS is declined. */
 export async function hasUnoConfig(files: FeatureFiles = APP_FILES): Promise<boolean> {
   try {
-    return await files.repo("configs/unocss/uno.config.ts").exists();
+    return await files.repo("packages/tooling/src/configs/uno.config.ts").exists();
   } catch {
     return false;
   }

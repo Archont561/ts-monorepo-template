@@ -1,5 +1,5 @@
       # TEMPLATE-ONLY:START(pages)
-      # Site build + base path live in the m pages CLI (configs/pages/src/cli.ts).
+      # Site build + base path live in the m pages CLI (src/commands/pages-shared.ts).
       # Assets are built per package/app by `bun run build` — there is no global
       # CSS step here, apps own their own (e.g. apps/example's build:css).
       - name: Build static site for Pages
