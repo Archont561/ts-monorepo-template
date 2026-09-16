@@ -132,7 +132,7 @@ jobs:
       # codecov.yml slice it per package, so no per-package upload steps exist
       # to drift when the workspace changes. Store the token as CODECOV_TOKEN.
       - name: Upload to Codecov (merged monorepo report)
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage/lcov.info
@@ -156,7 +156,7 @@ jobs:
         shell: bash
 
       - name: Upload coverage HTML artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage/html/
@@ -169,7 +169,7 @@ jobs:
 
       - name: Report coverage to PR
         if: github.event_name == 'pull_request'
-        uses: romeovs/lcov-reporter-action@v0.3.1
+        uses: romeovs/lcov-reporter-action@v0.4.0
         with:
           lcov-file: ./coverage/lcov.info
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -230,7 +230,7 @@ jobs:
 
       # Gitleaks — secret scanning in CI (always, security baseline)
       - name: Gitleaks — secret scanning (m gitleaks via action)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
