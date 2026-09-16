@@ -1,0 +1,39 @@
+- name: Checkout
+        uses: actions/checkout@v7
+
+      # pixi standalone at the pinned version — the installer honors
+      # PIXI_VERSION exactly the way `m sandbox setup` pins it on a developer
+      # machine, so the bundle and its consumer run the same binary.
+      - name: Install pixi ({{PIXI_VERSION}})
+        env:
+          PIXI_VERSION: {{PIXI_VERSION}}
+        run: |
+          curl -fsSL https://pixi.sh/install.sh | bash
+          echo "${PIXI_HOME}/bin" >> "${GITHUB_PATH}"
+
+      # Frozen — the committed lock IS the bundle, so manifest/lock drift must
+      # fail here loudly instead of silently changing what ships.
+      - name: Install the environment (locked)
+        run: pixi install --frozen
+
+      # `pixi run fetch-vendor` = `cargo vendor vendor` against Cargo.lock.
+      # A native-less repo has no lock (the native feature is pruned), so the
+      # bundle would be a mixed bag — thus the whole workflow is gated on the
+      # native feature in the aggregator.
+      - name: Rebuild the cargo vendor tree
+        run: pixi run fetch-vendor
+
+      - name: Pack the pixi environment
+        run: pixi run pack
+
+      - name: Archive the vendor tree
+        run: tar -czf vendor.tar.gz vendor
+
+      - name: Upload the sandbox bundle
+        uses: actions/upload-artifact@v6
+        with:
+          name: sandbox-bundle
+          path: |
+            environment.tar
+            vendor.tar.gz
+          if-no-files-found: error

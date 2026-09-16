@@ -458,6 +458,15 @@ const WORKFLOWS: readonly WorkflowSpec[] = [
     reason: () => "native disabled",
   },
   {
+    // The offline sandbox bundle exists to rebuild the vendored cargo tree, so
+    // it only makes sense alongside the native feature (which owns Cargo.lock).
+    base: "sandbox.base.yml",
+    steps: "sandbox.steps.yml",
+    outcome: (ctx) => (ctx.native ? "generate" : "remove"),
+    stale: ".github/workflows/sandbox.yml",
+    reason: () => "native disabled — no Cargo.lock to bundle",
+  },
+  {
     base: "dependabot.base.yml",
     steps: "dependabot.yml",
     outcome: (ctx) => (ctx.dependabot ? "generate" : "skip"),

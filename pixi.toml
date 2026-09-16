@@ -1,4 +1,8 @@
 [workspace]
+# The reproducible sandbox the workflows and `m sandbox` build on: act runs
+# GitHub Actions locally through the podman container engine, actionlint
+# validates the generated workflows, cargo rebuilds the vendored crate tree,
+# and pixi-pack produces the offline environment bundle.
 authors = ["archont561 <archont561@github.com>"]
 channels = ["conda-forge"]
 name = "ts-monorepo-template"
@@ -6,7 +10,23 @@ platforms = ["linux-64"]
 version = "0.1.0"
 
 [tasks]
+# Rebuild the gitignored cargo vendor tree (offline crates) from Cargo.lock.
+# `m sandbox fetch-vendor` wraps this and points .cargo/config.toml at it.
+fetch-vendor = "cargo vendor vendor"
+
+# Pack the installed environment for offline distribution (`m sandbox setup
+# --archive` unpacks it). The env-pack workflow runs this in CI.
+pack = "pixi-pack -o environment.tar ."
+
+# Run the push workflow locally — the pixi-native twin of `m ci:local`, so act
+# never needs a system install. Kept in sync with ACT_FLAGS in
+# packages/tooling/src/commands/ci.ts.
+ci-local = "act -P ubuntu-latest=catthehacker/ubuntu:act-latest --container-architecture linux/amd64 push"
 
 [dependencies]
 actionlint = ">=1.7.12,<2"
 act = ">=0.2.89,<0.3"
+# The `rust` conda package provides the cargo binary the fetch-vendor task runs.
+rust = ">=1.88,<2"
+pixi-pack = ">=0.7.11,<0.8"
+podman = ">=5.8.3,<6"

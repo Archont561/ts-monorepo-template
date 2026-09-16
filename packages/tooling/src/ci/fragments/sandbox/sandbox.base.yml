@@ -1,0 +1,29 @@
+name: Sandbox Bundle
+
+# Builds the offline sandbox bundle: the pixi environment packed for
+# distribution (act + actionlint + podman + rust) and the cargo vendor tree
+# that Cargo builds against when the network is blocked. `m sandbox setup
+# --archive ...` fetches this bundle and unpacks it on a machine that has never
+# spoken to a conda channel.
+#
+# Manual only — the job packs every system binary into one archive, so a
+# maintainer starts it when pixi.toml, pixi.lock or Cargo.lock change.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: sandbox-bundle
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  pack:
+    name: Pack environment + vendor
+    runs-on: ubuntu-latest
+    env:
+      # The pixi installer writes here; its bin/ is added to GITHUB_PATH below.
+      PIXI_HOME: ${{ github.workspace }}/.pixi
+    steps:
+      {{STEPS}}

@@ -260,7 +260,14 @@ const FEATURE_RECORD = {
   },
   "gh-actions": {
     name: "@myorg/gh-actions",
-    ciFiles: ["ci.base.yml", "ci.bootstrap.yml", "release.base.yml", "sections/gh-actions.yml"],
+    ciFiles: [
+      "ci.base.yml",
+      "ci.bootstrap.yml",
+      "release.base.yml",
+      "sections/gh-actions.yml",
+      "fragments/sandbox/sandbox.base.yml",
+      "fragments/sandbox/sandbox.steps.yml",
+    ],
     dir: "gh-actions",
     meta: {
       default: "always",

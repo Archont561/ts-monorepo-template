@@ -8,17 +8,18 @@ import { defineCommand, runMain } from "./utils/spawn";
  * Every legacy `m*` bin has exactly one subcommand here, so nothing is lost in
  * the consolidation:
  *
- *   mbadges    -> m badges          mbiome     -> m biome  (+ m lint, m lint:fix)
- *   mbun       -> m bun             (+ m test)
- *   mbunup     -> m build           (+ m health)
- *   mchangeset -> m changeset       mcodeql    -> m codeql
- *   mcoverage  -> m coverage        mci        -> m ci     (+ m ci:lint, m ci:local)
- *   mgitleaks  -> m gitleaks        msetup     -> m setup
- *   mnative    -> m native          mpages     -> m pages
- *   mskills    -> m skills          mtrivy     -> m trivy
- *   mtsc       -> m typecheck       mturbo     -> m turbo
- *   me2e       -> m e2e
- *   mdocs      -> m docs
+*   mbadges    -> m badges          mbiome     -> m biome  (+ m lint, m lint:fix)
+   *   mbun       -> m bun             (+ m test)
+   *   mbunup     -> m build           (+ m health)
+   *   mchangeset -> m changeset       mcodeql    -> m codeql
+   *   mcoverage  -> m coverage        mci        -> m ci     (+ m ci:lint, m ci:local)
+   *   mgitleaks  -> m gitleaks        msetup     -> m setup
+   *   mnative    -> m native          mpages     -> m pages
+   *   mskills    -> m skills          mtrivy     -> m trivy
+   *   msandbox   -> m sandbox         mtsc       -> m typecheck
+   *   mturbo     -> m turbo
+   *   me2e       -> m e2e
+   *   mdocs      -> m docs
  *
  * `mcitty` has no subcommand: it only ever printed framework info, and the
  * helpers it documented now live in `src/utils/spawn.ts`.
@@ -61,6 +62,9 @@ const subCommands: SubCommandsDef = {
   pages: () => import("./commands/pages").then((m) => m.default),
   skills: () => import("./commands/skills").then((m) => m.default),
   badges: () => import("./commands/badges").then((m) => m.default),
+
+  // Reproducible sandbox
+  sandbox: () => import("./commands/sandbox").then((m) => m.default),
 
   // Meta
   docs: () => import("./commands/docs").then((m) => m.default),

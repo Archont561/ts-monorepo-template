@@ -1226,6 +1226,57 @@ describe("MonorepoScaffolder (unit)", () => {
       const targets = await collectScopeTargets(workDir);
       expect(new Set(targets).size).toBe(targets.length);
     });
+
+    test("CONTEXT.md is never a scope target — the prune wipes it instead", async () => {
+      await mkdir(`${workDir}/packages/demo`, { recursive: true });
+      await mkdir(`${workDir}/apps/demo`, { recursive: true });
+      await write(`${workDir}/CONTEXT.md`, "@myorg\n");
+      await write(`${workDir}/packages/demo/CONTEXT.md`, "@myorg\n");
+      await write(`${workDir}/packages/demo/README.md`, "@myorg\n");
+      await write(`${workDir}/apps/demo/AGENTS.md`, "@myorg\n");
+
+      const targets = await collectScopeTargets(workDir);
+      expect(targets).not.toContain("CONTEXT.md");
+      expect(targets).not.toContain("packages/demo/CONTEXT.md");
+      expect(targets).toContain("packages/demo/README.md");
+      expect(targets).toContain("apps/demo/AGENTS.md");
+    });
+  });
+
+  describe("removeContextFiles", () => {
+    test("deletes CONTEXT.md at the root, in packages and in apps", async () => {
+      await mkdir(`${workDir}/packages/demo`, { recursive: true });
+      await mkdir(`${workDir}/apps/demo`, { recursive: true });
+      await mkdir(`${workDir}/packages/demo/node_modules/x`, { recursive: true });
+      await write(`${workDir}/CONTEXT.md`, "@myorg\n");
+      await write(`${workDir}/packages/demo/CONTEXT.md`, "@myorg\n");
+      await write(`${workDir}/apps/demo/CONTEXT.md`, "@myorg\n");
+      // CONTEXT under node_modules is ignored; the docs that DO ship survive.
+      await write(`${workDir}/packages/demo/node_modules/x/CONTEXT.md`, "@myorg\n");
+      await write(`${workDir}/packages/demo/README.md`, "@myorg\n");
+      await write(`${workDir}/apps/demo/AGENTS.md`, "@myorg\n");
+
+      const s = new MonorepoScaffolder({ targetDir: workDir, gitHooks: false });
+      await s.removeContextFiles();
+
+      for (const relative of [
+        "CONTEXT.md",
+        "packages/demo/CONTEXT.md",
+        "apps/demo/CONTEXT.md",
+      ]) {
+        expect(await pathExists(`${workDir}/${relative}`)).toBe(false);
+      }
+      expect(await pathExists(`${workDir}/packages/demo/node_modules/x/CONTEXT.md`)).toBe(true);
+      expect(await pathExists(`${workDir}/packages/demo/README.md`)).toBe(true);
+      expect(await pathExists(`${workDir}/apps/demo/AGENTS.md`)).toBe(true);
+    });
+
+    test("is a no-op when no CONTEXT.md exists", async () => {
+      await write(`${workDir}/AGENTS.md`, "@myorg\n");
+      const s = new MonorepoScaffolder({ targetDir: workDir, gitHooks: false });
+      await s.removeContextFiles();
+      expect(await pathExists(`${workDir}/AGENTS.md`)).toBe(true);
+    });
   });
 });
 

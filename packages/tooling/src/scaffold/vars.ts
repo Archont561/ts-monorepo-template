@@ -27,10 +27,10 @@ export const APP_DIR = "apps/example";
 export const BUN_VERSION = "latest";
 
 /** pixi standalone, pinned by the sandbox bootstrap + env-pack workflow. */
-export const PIXI_VERSION = "v0.48.0";
+export const PIXI_VERSION = "v0.72.2";
 
-/** pixi-pack, pinned by the environment-pack workflow. */
-export const PIXI_PACK_VERSION = "v0.7.10";
+/** pixi-pack (pixi-unpack ships in the same release), pinned by the sandbox. */
+export const PIXI_PACK_VERSION = "v0.7.11";
 
 /** Local cargo vendor tree (gitignored), fetched by `pixi run fetch-vendor`. */
 export const VENDOR_DIR = "vendor";

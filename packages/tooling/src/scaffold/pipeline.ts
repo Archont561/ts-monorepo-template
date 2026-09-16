@@ -90,13 +90,14 @@ const STATIC_SCOPE_TARGETS: readonly string[] = [
   "package.json",
   "lefthook.yml",
 
-  // Documentation
+  // Documentation. CONTEXT.md is deliberately absent: it is the template's
+  // in-flight state, so the scaffold wipes every copy (root + per-package +
+  // per-app) instead of shipping a stale snapshot.
   "README.md",
   "AGENTS.md",
-  "CONTEXT.md",
   "LICENSE.md",
   // The per-package and per-app docs are discovered below — every package
-  // and app directory carries its own README/AGENTS/CONTEXT.
+  // and app directory carries its own README/AGENTS (CONTEXT is pruned).
 
   // Changesets
   ".changeset/config.json",
@@ -201,10 +202,11 @@ async function findTextFiles(
 export async function collectScopeTargets(targetDir: string): Promise<string[]> {
   const targets = new Set<string>(STATIC_SCOPE_TARGETS);
 
-  // Per-package and per-app documentation (README/AGENTS/CONTEXT).
+  // Per-package and per-app documentation (README/AGENTS). CONTEXT.md is
+  // pruned rather than rewritten, so it is excluded from the scope pass too.
   const docs = await findTextFiles(targetDir, [`${targetDir}/packages`, `${targetDir}/apps`], {
     names: ["*.md"],
-    exclude: ["*/node_modules/*", "*/dist/*", "*/target/*", "*/.turbo/*"],
+    exclude: ["*/CONTEXT.md", "*/node_modules/*", "*/dist/*", "*/target/*", "*/.turbo/*"],
   });
   for (const relativePath of docs) targets.add(relativePath);
 
@@ -497,6 +499,30 @@ export class MonorepoScaffolder {
       if (await file(fullPath).exists()) {
         await $`rm -rf ${fullPath}`.quiet();
       }
+    }
+  }
+
+  /**
+   * Wipes every CONTEXT.md in the tree (root, per-package, per-app).
+   *
+   * CONTEXT.md is the template's in-flight state — a snapshot that goes stale
+   * on the next commit — so a generated project must not inherit it. It is
+   * dropped from `collectScopeTargets` and deleted here, before either scope
+   * pass runs, so the placeholder scope never leaks into it.
+   */
+  async removeContextFiles(): Promise<void> {
+    const found = await findTextFiles(this.targetDir, [this.targetDir], {
+      names: ["CONTEXT.md"],
+      exclude: [
+        "*/node_modules/*",
+        "*/.git/*",
+        "*/dist/*",
+        "*/.turbo/*",
+        "*/.pixi/*",
+      ],
+    });
+    for (const relativePath of found) {
+      await $`rm -rf ${this.targetDir}/${relativePath}`.quiet();
     }
   }
 
@@ -851,6 +877,7 @@ export class MonorepoScaffolder {
     await this.replaceScopePlaceholders();
     await this.stripTemplateMarkers(); // Scope-aware
     await this.removeTemplateFiles();
+    await this.removeContextFiles(); // CONTEXT.md is template state, never shipped
     await this.handleConfig(); // Data-driven removals, incl. template self-destruct
     await this.runSetup(); // Data-driven setup for enabled configs (e.g. native, skills)
     // Second pass after setup — catches files created by setup scripts (e.g. .agents/skills)
