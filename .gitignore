@@ -58,12 +58,14 @@ lefthook-local.yml
 !.agents/README.md
 
 # Rust / Cargo
+# Cargo workspace at the repo root (Cargo.toml, crates/, rust-toolchain.toml, .cargo/).
+# Cargo.lock is committed — update it with the toolchain, never hand-edit.
 # Workspace target dir (shared across members) — always ignored
 /target/
 target/
 **/target/
-# Cargo.lock — commit for binaries, ignore for libraries (native is cdylib lib)
-Cargo.lock
+# Vendored crate sources, fetched by `pixi run fetch-vendor` (offline builds)
+/vendor/
 # NAPI-RS generated
 **/*.node
 **/*.wasi.cjs

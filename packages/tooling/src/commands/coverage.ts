@@ -349,14 +349,14 @@ const collectCommand = defineCommand({
   run() {
     spawnTool(["bun", "run", "coverage"]);
 
-    const hasNative = existsSync("packages/native/Cargo.toml");
+    const hasNative = existsSync("Cargo.toml");
     if (!hasNative || !has("cargo-llvm-cov")) {
       console.warn("⚠️ cargo-llvm-cov not installed — skipping Rust coverage");
       process.exit(0);
     }
 
     console.log("🦀 Collecting Rust coverage via m native llvm-cov");
-    spawnTool(["m native", "llvm-cov", "--lcov", "--output-path", `../../${COVERAGE_RUST_LCOV}`]);
+    spawnTool(["m native", "llvm-cov", "--lcov", "--output-path", COVERAGE_RUST_LCOV]);
     if (!existsSync(COVERAGE_RUST_LCOV)) {
       process.exit(0);
     }

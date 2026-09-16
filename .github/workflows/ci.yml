@@ -306,40 +306,40 @@ jobs:
 
       # TEMPLATE-ONLY:START(native)
       - name: Setup Rust toolchain
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('Cargo.toml') != ''
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
           targets: wasm32-wasip1-threads
 
       - name: Rust cache
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('Cargo.toml') != ''
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "packages/native"
+          workspaces: "."
 
       - name: Cargo fmt check (m native)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('Cargo.toml') != ''
         run: bunx m native fmt:check
         shell: bash
 
       - name: Cargo clippy (deny warnings, m native)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('Cargo.toml') != ''
         run: bunx m native clippy
         shell: bash
 
       - name: Cargo check (fast, m native)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('Cargo.toml') != ''
         run: bunx m native check
         shell: bash
 
       - name: Cargo test (m native)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('Cargo.toml') != ''
         run: bunx m native test
         shell: bash
 
       - name: Build native bindings (host, m native)
-        if: hashFiles('packages/native/Cargo.toml') != ''
+        if: hashFiles('Cargo.toml') != ''
         run: bunx m native napi:build
         shell: bash
 

@@ -27,11 +27,12 @@ itself and a docs app (`apps/template-docs`) that the scaffolder removes.
 | :--- | :--- | :--- |
 | `@myorg/external` | Public API — the installable artifact | ✅ npm |
 | `@myorg/internal` | Shared implementation, inlined into `external` at build time | ❌ |
-| `@myorg/native` | Rust bindings built from `packages/native/crates/native` (opt-in) | ✅ npm |
+| `@myorg/native` | Rust bindings built from `crates/native` (opt-in) | ✅ npm |
 | `@myorg/example` | Bun.serve demo app, also the Pages artifact (opt-in) | ❌ |
 
-`packages/tooling` is private. `packages/native` itself is a Cargo workspace root,
-not an npm package — the npm package is `packages/native/npm/native`.
+The Cargo workspace root is the **repo root** (`Cargo.toml`, `crates/*`).
+`packages/native` holds only the npm packages under `packages/native/npm/`; the
+npm package for the default binding is `packages/native/npm/native`. `packages/tooling` is private.
 
 ## Configs
 
@@ -50,7 +51,7 @@ not an npm package — the npm package is `packages/native/npm/native`.
 - **Generated-file system** — every generated file has a source in `packages/tooling/src/`. Never edit output; always regenerate.
 - **Zero root devDependencies** — all tools are workspace packages exposing `m`-prefixed bins.
 - **Monorepo-wide concerns stay at the root** — git hooks, workflow generation, skills, coverage merge. Per-package work is Turbo's.
-- **Native is a virtual Cargo workspace** — `packages/native/crates/*` for Rust, `packages/native/npm/*` for the npm packages; per-platform packages are CI artifacts only.
+- **Native workspace is at the repo root** — `Cargo.toml`/`Cargo.lock`/`crates/*` at `./`, npm packages under `packages/native/npm/*`; `Cargo.lock` is committed, per-platform packages are CI artifacts only.
 - **One Pages deployer** — in this repo `template-docs.yml`, so `docs:sync` skips `pages.yml`/`coverage.yml` while `docs/` exists.
 - **Coverage gate is 80% lines** — enforced by `mcoverage check` in CI.
 
@@ -58,6 +59,7 @@ not an npm package — the npm package is `packages/native/npm/native`.
 
 ### In-flight
 
+- Branch `arena/01a0a0bf-ts-monorepo-template`. Cargo workspace moved to the **repo root**: `/Cargo.toml` (virtual), `/Cargo.lock` (now committed), `/rust-toolchain.toml`, `/.cargo/config.toml` and `/crates/{native,shared}`; `packages/native` keeps only `npm/*` + its generated-loader `.gitignore`. Root `workspaces` gained the `crates` bridge entry (`crates/package.json`, `@myorg/native-crates`). `mnative`/setup/discover/templates all run cargo against `./`; the scaffold removes `crates`/`Cargo.toml`/`Cargo.lock`/`rust-toolchain.toml`/`.cargo` on `native=none`; CI fragments, dependabot, lefthook and the Dockerfile re-pointed to the root and regenerated.
 - Branch `arena/01a0a0bf-ts-monorepo-template`. Rust integration after the Bun+Turbo+Cargo guide (rustup itself impossible in the sandbox — TLS-blocked — so the Rust layer is verified by structure tests only): `packages/native` now splits logic from bindings — new pure crate `crates/shared` (add, fibonacci, reverse_string, primes_up_to, Counter + tests; no napi), `crates/native` reduced to thin `#[napi]` wrappers via `shared.workspace = true`. Pure crates form ONE Turbo node: the bridge package `packages/native/crates/package.json` (`@myorg/native-crates`, scripts `mnative build/test --pure`), in root `workspaces`; bindings with Cargo path deps carry `@myorg/native-crates: workspace:*` so Turbo orders pure Rust before napi builds. `mnative` gained `sync` (refresh bridge + mirror/drop the `workspace:*` edges to match Cargo path deps — discover.ts now resolves both `{path = …}` and `x.workspace = true` spellings) and `--pure` on build/check/clippy/fmt/fmt:check/test. `@myorg/native#build` is now Turbo-**cached** (outputs `*.node`/`index.js`/`index.d.ts`; inputs `../../crates/*/src/**/*.rs` + crate manifests + `../../Cargo.toml|Cargo.lock|rust-toolchain.toml` — verified: touching a `.rs` changes the task hash); bridge + wasm tasks stay uncached (cargo owns `target/`). `[profile.release]` (lto, codegen-units 1, strip) and the previously missing `[profile.ci]` are now actually emitted. Scaffolder/setup/tests/docs updated; CLI-contract snapshot refreshed (sync command).
 - Branch `arena/01a0a0bf-ts-monorepo-template`. Codecov integration, mcoverage-first: `mcoverage sync` generates the repo-root `codecov.yml` from the workspace package list (components deliver per-package statuses from the single merged upload — no per-package upload steps to drift; `flag_management`/carryforward stay configured for future flagged uploads). Refreshed by `prepare` and `docs:sync`. `mcoverage summary --markdown` renders the per-package `$GITHUB_STEP_SUMMARY` table. CI (ci.yml + standalone coverage.yml) uploads the merged report via codecov-action@v5 with `CODECOV_TOKEN` and `fail_ci_if_error: true`; the turbo `coverage` task output narrowed to `coverage/lcov.info`; new `coverage:report` script runs coverage + HTML in one shot.
 - Branch `arena/01a0a0bf-ts-monorepo-template`. Coverage suite re-run after install; three warnings fixed (turbo's "globally installed" false positive via `TURBO_GLOBAL_WARNING_DISABLED` + a `spawnTool` env fix — Bun spawns children with the startup env snapshot; the d.ts TS9007 warning via an explicit `NativeBinding` type) and the pending-changeset leak in scaffolds plugged. Then the docs site moved from root `docs/` into `apps/template-docs`: a real workspace app (own `vitepress` dep, Turbo `build`/`dev`/`preview`, `outDir: "dist"`), removed on scaffold purely via package options, and `template-docs.yml` now uploads `apps/template-docs/dist` — the same dist/ convention as every app. `mdocs site` builds through the `docs:build` delegate and folds coverage (`dist/coverage`) and the demo app (`dist/example`) in after the build, so the cacheable docs build stays deterministic.

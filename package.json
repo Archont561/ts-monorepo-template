@@ -5,8 +5,8 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "packages/native/npm/*",
-    "packages/native/crates"
+    "crates",
+    "packages/native/npm/*"
   ],
   "devDependencies": {
     "@emnapi/core": "1.11.3",

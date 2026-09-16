@@ -122,7 +122,7 @@ pre-push:
     # a native workspace from even trying.
     native:
       run: |
-        test -f packages/native/Cargo.toml || exit 0
+        test -f Cargo.toml || exit 0
         bun run m native fmt:check && bun run m native check && bun run m native clippy
     # Falls back to the remote's default branch for a branch with no upstream,
     # and skips if nothing resolves (shallow clone, first push).
@@ -151,7 +151,7 @@ post-checkout:
       # {1} = previous HEAD, {2} = new HEAD, {3} = 1 for a branch checkout.
       run: |
         [ "{3}" = "1" ] || exit 0
-        git diff --quiet "{1}" "{2}" -- bun.lock Cargo.lock packages/native/Cargo.lock 2>/dev/null \
+        git diff --quiet "{1}" "{2}" -- bun.lock Cargo.lock 2>/dev/null \
           || { echo "🔒 Lockfile changed — running bun install"; bun install; }
 
 post-merge:
@@ -159,7 +159,7 @@ post-merge:
     install:
       run: |
         git rev-parse --verify ORIG_HEAD >/dev/null 2>&1 || exit 0
-        git diff --quiet ORIG_HEAD HEAD -- bun.lock Cargo.lock packages/native/Cargo.lock 2>/dev/null \
+        git diff --quiet ORIG_HEAD HEAD -- bun.lock Cargo.lock 2>/dev/null \
           || { echo "🔒 Lockfile changed — running bun install"; bun install; }
 
 post-rewrite:
@@ -167,5 +167,5 @@ post-rewrite:
     install:
       run: |
         git rev-parse --verify ORIG_HEAD >/dev/null 2>&1 || exit 0
-        git diff --quiet ORIG_HEAD HEAD -- bun.lock Cargo.lock packages/native/Cargo.lock 2>/dev/null \
+        git diff --quiet ORIG_HEAD HEAD -- bun.lock Cargo.lock 2>/dev/null \
           || { echo "🔒 Lockfile changed — running bun install"; bun install; }

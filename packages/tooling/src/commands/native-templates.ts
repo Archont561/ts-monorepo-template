@@ -40,7 +40,7 @@ export function workspaceCargoToml(crates: NativeCrateSpec[], options: TemplateO
   const shared = crates.some((crate) => (crate.uses ?? []).includes("shared"));
   const lines = [
     "# Virtual Cargo workspace — no [package] here, only members.",
-    "# Everything Rust lives under packages/native, so the repo root stays clean.",
+    "# The workspace root is the repo root: Cargo.toml + crates/ live at ./.",
     "[workspace]",
     'resolver = "3"',
     "members = [",
@@ -588,12 +588,12 @@ export const npmTurboJson = (): string => `{
     "build": {
       "inputs": [
         "package.json",
-        "../../crates/*/src/**/*.rs",
-        "../../crates/*/Cargo.toml",
-        "../../crates/*/build.rs",
-        "../../Cargo.toml",
-        "../../Cargo.lock",
-        "../../rust-toolchain.toml"
+        "../../../crates/*/src/**/*.rs",
+        "../../../crates/*/Cargo.toml",
+        "../../../crates/*/build.rs",
+        "../../../Cargo.toml",
+        "../../../Cargo.lock",
+        "../../../rust-toolchain.toml"
       ],
       "outputs": ["*.node", "index.js", "index.d.ts"],
       "cache": true
@@ -634,12 +634,12 @@ export const npmPackageTest = (spec: NativeCrateSpec, options: TemplateOptions =
     ? `
 describe("pure Rust crates", () => {
   it("keep the shared logic in crates/${pure}, napi-free", async () => {
-    const manifest = await Bun.file("../../crates/${pure}/Cargo.toml").text();
+    const manifest = await Bun.file("../../../crates/${pure}/Cargo.toml").text();
     expect(manifest).toContain('name    = "${pure}"');
     expect(manifest).not.toMatch(/^crate-type/m);
     expect(manifest).not.toMatch(/^napi/m);
 
-    const lib = await Bun.file("../../crates/${pure}/src/lib.rs").text();
+    const lib = await Bun.file("../../../crates/${pure}/src/lib.rs").text();
     expect(lib).toContain("pub fn add");
     expect(lib).toContain("pub fn fibonacci");
     expect(lib).toContain("pub fn primes_up_to");
@@ -653,12 +653,12 @@ describe("pure Rust crates", () => {
   });
 
   it("are listed in the virtual workspace manifest", async () => {
-    const manifest = await Bun.file("../../Cargo.toml").text();
+    const manifest = await Bun.file("../../../Cargo.toml").text();
     expect(manifest).toContain('"crates/${pure}"');
   });
 
   it("tune the release profile (lto, single codegen unit, stripped)", async () => {
-    const manifest = await Bun.file("../../Cargo.toml").text();
+    const manifest = await Bun.file("../../../Cargo.toml").text();
     expect(manifest).toContain("[profile.release]");
     expect(manifest).toContain("lto           = true");
     expect(manifest).toContain("codegen-units = 1");
@@ -666,7 +666,7 @@ describe("pure Rust crates", () => {
   });
 
   it("are one Turbo node — the bridge package runs m native --pure", async () => {
-    const pkg = await Bun.file("../../crates/package.json").json();
+    const pkg = await Bun.file("../../../crates/package.json").json();
     expect(pkg.name).toBe("${scope}/native-crates");
     expect(pkg.private).toBe(true);
     expect(pkg.scripts.build).toBe("m native build --pure");
@@ -674,7 +674,7 @@ describe("pure Rust crates", () => {
   });
 
   it("never Turbo-cache the bridge tasks (cargo owns target/)", async () => {
-    const turbo = await Bun.file("../../crates/turbo.json").json();
+    const turbo = await Bun.file("../../../crates/turbo.json").json();
     expect(turbo.tasks.build.cache).toBe(false);
     expect(turbo.tasks.test.cache).toBe(false);
   });
@@ -688,11 +688,11 @@ describe("pure Rust crates", () => {
 // The Rust code itself is covered by \`cargo test\`, the JS fallback path by
 // packages/external.
 
-const CRATE = "../../crates/${name}";
+const CRATE = "../../../crates/${name}";
 
 describe("${name} workspace", () => {
   it("has a virtual workspace manifest listing the crate", async () => {
-    const content = await Bun.file("../../Cargo.toml").text();
+    const content = await Bun.file("../../../Cargo.toml").text();
     expect(content).toContain("[workspace]");
     // \`[workspace.package]\` is fine — a real [package] table is not.
     expect(content).not.toMatch(/^\\[package\\]$/m);
@@ -749,8 +749,8 @@ ${
     expect(turbo.tasks.build.cache).toBe(true);
     expect(turbo.tasks.build.outputs).toContain("*.node");
     // The crate sources live OUTSIDE this package — the inputs must reach them.
-    expect(turbo.tasks.build.inputs).toContain("../../crates/*/src/**/*.rs");
-    expect(turbo.tasks.build.inputs).toContain("../../Cargo.lock");
+    expect(turbo.tasks.build.inputs).toContain("../../../crates/*/src/**/*.rs");
+    expect(turbo.tasks.build.inputs).toContain("../../../Cargo.lock");
     // The wasm build shells out to the wasm32 target toolchain — never cached.
     expect(turbo.tasks["build:wasm"].cache).toBe(false);
   });
@@ -765,7 +765,7 @@ targets = ["${NATIVE_WASM_TARGET}"]
 `;
 
 export const cargoConfigToml =
-  (): string => `# Cargo config for packages/native — no root Cargo.toml in this repo.
+  (): string => `# Cargo config for the repo-root workspace — the workspace root is ./.
 #
 # WASI builds need a linker; CI sets WASI_SDK_PATH before building.
 
@@ -774,10 +774,8 @@ export const cargoConfigToml =
 # rustflags = ["-C", "link-arg=-fuse-ld=mold"]
 `;
 
-export const nativeGitignore = (): string => `# Rust build output
-target/
-
-# Generated by \`napi build\` — index.js, index.d.ts and the binaries
+export const nativeGitignore =
+  (): string => `# Generated by \`napi build\` — index.js, index.d.ts and the binaries
 npm/*/index.js
 npm/*/index.d.ts
 npm/*/*.node
@@ -847,7 +845,7 @@ function sortMembers(content: string, name: string): string {
  * is picked up without hand-editing TOML.
  */
 export async function addWorkspaceMember(root: string, name: string): Promise<void> {
-  const manifest = join(root, "packages", "native", "Cargo.toml");
+  const manifest = join(root, "Cargo.toml");
   if (!existsSync(manifest)) return;
   const content = await Bun.file(manifest).text();
   if (content.includes(`"crates/${name}"`)) return;
@@ -922,15 +920,15 @@ export const bridgeTurboJson = (): string => `{
 `;
 
 /**
- * Writes (or refreshes) the bridge node at `packages/native/crates/`. Called
- * by setup and by `m native add --pure`, so the node can never go missing or
- * drift from the templates.
+ * Writes (or refreshes) the bridge node at `crates/`. Called by setup and by
+ * `m native add --pure`, so the node can never go missing or drift from the
+ * templates.
  */
 export async function writeBridgeNode(
   root: string,
   options: TemplateOptions = {},
 ): Promise<string> {
-  const bridgeDir = join(root, "packages", "native", "crates");
+  const bridgeDir = join(root, "crates");
   await mkdir(bridgeDir, { recursive: true });
   await writeFile(
     join(bridgeDir, "package.json"),

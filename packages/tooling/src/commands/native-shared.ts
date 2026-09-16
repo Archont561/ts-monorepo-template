@@ -1,17 +1,17 @@
 /**
  * Shared constants for the native (Rust + napi-rs) workspace.
  *
- * Layout: one Rust workspace under `packages/native`, with a crate per Rust
- * unit and an npm package per napi binding. Per-platform packages are build
- * artifacts — `napi create-npm-dirs` generates them in CI, so they are never
- * committed.
+ * Layout: the Cargo workspace lives at the repo root, with a crate per Rust
+ * unit and an npm package per napi binding under `packages/native/npm`.
+ * Per-platform packages are build artifacts — `napi create-npm-dirs` generates
+ * them in CI, so they are never committed.
  *
  * ```
+ * Cargo.toml            virtual workspace (no [package]) — members: crates/*
+ * crates/native/        cdylib binding
+ * crates/shared/        pure Rust
  * packages/native/
- * ├── Cargo.toml        virtual workspace (no [package]) — members: crates/*
- * ├── crates/native/    cdylib binding   ─┐
- * ├── crates/shared/    pure Rust        ─┤ one npm package per binding
- * └── npm/native/       @scope/native    ─┘
+ * └── npm/native/       @scope/native
  *     npm/native-darwin-arm64/            generated in CI
  * ```
  */
@@ -19,10 +19,10 @@
 /** Scope used when nothing else (flag, manifest, env) provides one. */
 export const DEFAULT_NATIVE_SCOPE = "@myorg";
 
-/** Workspace-relative path of the Rust workspace. */
+/** Workspace-relative path of the npm packages (the `packages/native` subtree). */
 export const NATIVE_DIR = "packages/native";
 
-/** Directory holding the crates, relative to `NATIVE_DIR`. */
+/** Directory holding the crates, relative to the repo root (= the Cargo workspace root). */
 export const NATIVE_CRATES_DIR = "crates";
 
 /** Directory holding the npm packages, relative to `NATIVE_DIR`. */
@@ -32,8 +32,7 @@ export const NATIVE_NPM_DIR = "npm";
 export const NATIVE_WORKSPACE_GLOB = `${NATIVE_DIR}/${NATIVE_NPM_DIR}/*`;
 
 /** Crate and npm-package names are kept identical so either can be found. */
-export const nativeCrateDir = (name: string): string =>
-  `${NATIVE_DIR}/${NATIVE_CRATES_DIR}/${name}`;
+export const nativeCrateDir = (name: string): string => `${NATIVE_CRATES_DIR}/${name}`;
 
 export const nativePackageDir = (name: string): string => `${NATIVE_DIR}/${NATIVE_NPM_DIR}/${name}`;
 
@@ -97,7 +96,7 @@ export const NATIVE_WASI_SDK_VERSION = "24";
 export const CARGO_CONFIG = {
   edition: "2024",
   resolver: "3",
-  workspaceManifest: `${NATIVE_DIR}/Cargo.toml`,
+  workspaceManifest: "Cargo.toml",
   cratesDir: NATIVE_CRATES_DIR,
 } as const;
 
@@ -147,8 +146,8 @@ export type NativeCrateSpec = {
 /**
  * What `m native setup` creates: one pure crate with the shared logic plus the
  * thin binding crate that exposes it to JS. The pure crate has no npm package
- * of its own — `packages/native/crates/package.json` (the bridge node) is the
- * single Turbo package that represents every pure crate.
+ * of its own — `crates/package.json` (the bridge node) is the single Turbo
+ * package that represents every pure crate.
  */
 export const DEFAULT_NATIVE_CRATES: readonly NativeCrateSpec[] = [
   { name: "native", binding: true, uses: ["shared"], sample: "arithmetic" },

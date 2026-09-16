@@ -10,7 +10,7 @@
         if: hashFiles('{{NATIVE_CARGO}}') != ''
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "{{NATIVE_DIR}}"
+          workspaces: "."
 
       - name: Cargo build release (m native)
         if: hashFiles('{{NATIVE_CARGO}}') != ''

@@ -1,10 +1,12 @@
 # AGENTS.md — packages/native
 
-> The Cargo workspace. Orientation in [README.md](./README.md), current state in [CONTEXT.md](./CONTEXT.md).
+> The native side of the monorepo: the npm packages live here, the Cargo
+> workspace at the repo root. Orientation in [README.md](./README.md), current
+> state in [CONTEXT.md](./CONTEXT.md).
 
 ## Rules
 
-- `Cargo.toml` here is the workspace root and must stay virtual — no `[package]` section. The repo root never gets a `Cargo.toml`.
+- The Cargo workspace root is the **repo root** (`/Cargo.toml`) and must stay virtual — no `[package]` section. This directory holds only the npm packages (`npm/*`).
 - Never hand-edit `members`. `mnative add <name>` creates the crate, its npm package, and re-syncs and sorts `members`.
 - One npm package per binding crate; a pure-Rust crate (`--pure`) gets no npm package of its own — it is represented in the Turbo graph by the bridge node `crates/package.json`.
 - Binding crates stay **thin**: `#[napi]` wrappers that delegate to pure crates. Logic lives in pure crates so it is testable without a Node runtime.
@@ -12,7 +14,7 @@
 - Never hand-edit `crates/package.json` or `crates/turbo.json` — they are generated (`mnative sync` / `mnative add --pure` / setup rewrite them).
 - Every crate declares `[lints] workspace = true` so `unsafe_code = "forbid"` is inherited, and inherits `version`, `edition`, `license` and `repository` from `[workspace.package]` instead of restating them.
 - `crate-type = ["cdylib"]` belongs on binding crates only.
-- Never commit `target/`, `Cargo.lock`, `npm/*/index.js`, `npm/*/*.node`, `*.wasm` or `npm/*-<platform>/` — all are generated and gitignored.
+- `Cargo.lock` at the repo root **is committed** — update it with the toolchain, never hand-edit. Never commit `target/`, `npm/*/index.js`, `npm/*/*.node`, `*.wasm` or `npm/*-<platform>/` — all are generated and gitignored.
 - Use `mnative` rather than running cargo directly; it applies the workspace paths and keeps one invocation over every crate. The `--pure` flag scopes the cargo commands to the pure crates.
 - Never `#![deny(warnings)]` in Rust source — `-D warnings` is a CI flag only.
 - Release-profile tuning (`lto`, `codegen-units`, `strip`) lives once in the workspace `[profile.release]` — never in a crate.

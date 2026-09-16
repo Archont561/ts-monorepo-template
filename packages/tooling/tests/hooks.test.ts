@@ -145,7 +145,7 @@ describe("hook design rules", () => {
   // requiring the scaffolder to rewrite this file per project.
   test("Rust hooks are guarded by the Cargo workspace existing", () => {
     const native = run("pre-push", "native");
-    expect(native).toContain("test -f packages/native/Cargo.toml");
+    expect(native).toContain("test -f Cargo.toml");
     // Formatting is enforced here rather than in pre-commit, to keep that hook
     // minimal — but it is still enforced.
     expect(native).toContain("fmt:check");

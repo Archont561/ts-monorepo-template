@@ -29,7 +29,7 @@
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "{{NATIVE_DIR}}"
+          workspaces: "."
           key: ${{ matrix.target }}
 
       # `rust-toolchain.toml` pins the channel only, so a non-host target has to

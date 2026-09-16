@@ -32,16 +32,15 @@ import {
 import { addWorkspaceMember, writeBridgeNode, writeCrate } from "./native-templates";
 
 /**
- * m native — Cargo + napi-rs wrapper for the `packages/native` workspace.
+ * m native — Cargo + napi-rs wrapper for the repo-root Cargo workspace.
  *
- * Cargo commands run against the whole workspace; napi commands run once per
- * npm package, each pointed at its own crate. The workspace is discovered from
- * disk, so `m native` works from the repo root or from any package directory
- * (turbo runs it with cwd = the package).
+ * Cargo commands run against the whole workspace (manifest at `./Cargo.toml`);
+ * napi commands run once per npm package, each pointed at its own crate. The
+ * workspace is discovered from disk, so `m native` works from the repo root or
+ * from any package directory (turbo runs it with cwd = the package).
  */
 
 const ROOT = findNativeRoot();
-const WORKSPACE_DIR = join(ROOT, NATIVE_DIR);
 
 /**
  * True when the Rust toolchain is present.
@@ -62,8 +61,8 @@ function cargoExistsOrWarn(): boolean {
  * scripts would need `test -f packages/native/...` guards again.
  */
 function nativeExistsOrWarn(): boolean {
-  if (existsSync(join(WORKSPACE_DIR, "Cargo.toml"))) return true;
-  console.warn(`⚠️ ${NATIVE_DIR}/Cargo.toml not present, skipping (enable the native config)`);
+  if (existsSync(join(ROOT, "Cargo.toml"))) return true;
+  console.warn("⚠️ Cargo.toml not present at the repo root, skipping (enable the native config)");
   return false;
 }
 
@@ -75,7 +74,7 @@ function runCargo(args: string[], opts: { cwd?: string } = {}): number {
   return withOptionalTool("cargo", () => {
     const cmd = ["cargo", ...args];
     const { exitCode, output } = spawnToolCaptured(cmd, {
-      cwd: opts.cwd ?? WORKSPACE_DIR,
+      cwd: opts.cwd ?? ROOT,
     });
     if (output) process.stdout.write(output);
     // A cargo failure is the one case where "exit code 1" says nothing: the
@@ -91,7 +90,7 @@ function runCargo(args: string[], opts: { cwd?: string } = {}): number {
 /**
  * `--exclude <binding>` for every cdylib crate, so the pure Rust crates can be
  * built, checked, tested and linted as one unit (`m native <cmd> --pure`) —
- * the bridge package `packages/native/crates/package.json` runs these.
+ * the bridge package `crates/package.json` runs these.
  */
 function pureArgs(enabled: boolean): string[] {
   if (!enabled) return [];
@@ -215,7 +214,7 @@ function runNapiPerPackage(
   return failed;
 }
 
-function runNapi(args: string[], cwd: string = WORKSPACE_DIR): number {
+function runNapi(args: string[], cwd: string = ROOT): number {
   if (!nativeExistsOrWarn() || !cargoExistsOrWarn()) return 0;
   return spawnTool(["bun", napiBin(), ...args], { cwd });
 }
@@ -562,11 +561,11 @@ const addCommand = defineCommand({
       await writeBridgeNode(ROOT, { scope });
     }
     console.log(`\n✅ Added ${args.pure ? "pure Rust crate" : "crate + npm package"} "${name}"`);
-    console.log(`   crate:   ${NATIVE_DIR}/crates/${name}/`);
+    console.log(`   crate:   crates/${name}/`);
     if (!args.pure) {
       console.log(`   package: ${nativePackageDir(name)}/`);
     } else {
-      console.log(`   bridge:  ${NATIVE_DIR}/crates/package.json (${scope}/native-crates)`);
+      console.log(`   bridge:  crates/package.json (${scope}/native-crates)`);
       console.log(`   Bindings that use "${name}" add it to workspace.dependencies + Cargo.toml,`);
       console.log(`   and \`${scope}/native-crates: workspace:*\` in their package.json.`);
     }
@@ -673,10 +672,10 @@ const napiCommand = defineCommand({
 
 /**
  * `m native sync` — re-syncs the Turbo ↔ Cargo wiring:
- *   1. refreshes the bridge node (packages/native/crates/{package,turbo}.json),
+ *   1. refreshes the bridge node (crates/{package,turbo}.json),
  *   2. mirrors every binding's Cargo path deps as the `@scope/native-crates`
  *      workspace dependency (and drops the edge when the Cargo dep is gone),
- *   3. adds the `packages/native/crates` entry to the root workspaces.
+ *   3. adds the `crates` entry to the root workspaces.
  * Idempotent; run it after hand-editing Cargo.toml dependencies.
  */
 const syncCommand = defineCommand({
@@ -694,7 +693,7 @@ const syncCommand = defineCommand({
     let edits = 0;
 
     await writeBridgeNode(ROOT, { scope });
-    console.log(`  ✓ ${NATIVE_DIR}/crates/{package,turbo}.json (bridge node)`);
+    console.log("  ✓ crates/{package,turbo}.json (bridge node)");
 
     for (const crate of discoverCrates(ROOT).filter((entry) => entry.binding)) {
       const manifest = join(ROOT, nativePackageDir(crate.name), "package.json");
@@ -724,10 +723,10 @@ const syncCommand = defineCommand({
     const rootManifest = join(ROOT, "package.json");
     await updateManifestFile(rootManifest, (source) => {
       const pkg = readJson<{ workspaces?: string[] }>(source);
-      if ((pkg.workspaces ?? []).includes(`${NATIVE_DIR}/crates`)) return source;
-      console.log(`  ✓ package.json workspaces += ${NATIVE_DIR}/crates`);
+      if ((pkg.workspaces ?? []).includes("crates")) return source;
+      console.log("  ✓ package.json workspaces += crates");
       edits += 1;
-      return addJsonArrayValue(source, "workspaces", `${NATIVE_DIR}/crates`);
+      return addJsonArrayValue(source, "workspaces", "crates");
     });
 
     console.log(
@@ -744,7 +743,7 @@ const main = defineCommand({
     name: "m native",
     version: "1.0.0",
     description:
-      "Native Rust bindings via Cargo + napi-rs — one Cargo workspace in packages/native with a crate per Rust unit and an npm package per napi binding.",
+      "Native Rust bindings via Cargo + napi-rs — the Cargo workspace at the repo root with a crate per Rust unit and an npm package per napi binding.",
   },
   subCommands: {
     list: listCommand,
@@ -778,18 +777,18 @@ const main = defineCommand({
     const raw = rawArgsAfter("native");
     if (raw.length === 0) {
       console.log(`
-m native — Cargo + napi-rs wrapper (${NATIVE_DIR})
+m native — Cargo + napi-rs wrapper (repo-root Cargo workspace)
 
 Usage:
   m native <command> [args]
 
 Workspace:
-  list                 crates + npm packages discovered in ${NATIVE_DIR}
+  list                 crates + npm packages discovered at ./
   add <name>           new crate + npm package (--pure for Rust-only, --uses shared)
   sync                 re-sync the bridge node + Cargo→npm dependency edges
   typecheck            tsc --noEmit in every npm package
 
-Cargo (whole workspace, run in ${NATIVE_DIR}):
+Cargo (whole workspace, run at ./):
   check                cargo check --workspace
   clippy               cargo clippy --workspace --all-targets -- -D warnings
   fmt / fmt:check      cargo fmt --all [-- --check]

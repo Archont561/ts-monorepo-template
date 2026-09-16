@@ -34,13 +34,13 @@ lefthook-local.yml
 !.agents/skills.index.json
 !.agents/README.md
 
-# Rust / Cargo
-/target/
+# Rust / Cargo — crate sources (Cargo.lock is committed at the root now)
+crates/
+Cargo.toml
+Cargo.lock
+rust-toolchain.toml
+.cargo/
 target/
-**/target/
-# Cargo.lock is ignored for library (cdylib) per guide, but we keep it in context for cache if present
-# Comment out if you want to include it:
-# Cargo.lock
 
 # NAPI generated
 **/*.node

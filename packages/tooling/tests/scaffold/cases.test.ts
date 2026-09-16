@@ -92,8 +92,10 @@ const COMMON_CASES: TemplateCase[] = [
       hasFiles: [
         "packages/native",
         "apps/example/src/pages/api/native",
-        "packages/native/rust-toolchain.toml",
-        "packages/native/.cargo/config.toml",
+        "rust-toolchain.toml",
+        ".cargo/config.toml",
+        "Cargo.toml",
+        "crates/native/Cargo.toml",
       ],
       ciContains: ["test:e2e", "CodeQL", "Trivy", "Gitleaks", "m native napi:build"],
       hasWorkflows: ["ci.yml", "release.yml", "pages.yml", "stale.yml", "dependabot.yml"],
@@ -112,7 +114,8 @@ const COMMON_CASES: TemplateCase[] = [
     expectations: {
       hasFiles: [
         "packages/native",
-        "packages/native/rust-toolchain.toml",
+        "rust-toolchain.toml",
+        ".cargo/config.toml",
         "apps/example/Dockerfile",
       ],
       ciContains: ["m native napi:build", "m native typecheck"],
@@ -365,21 +368,20 @@ describe("template cases — common flows with every combination", () => {
       );
       if (opt === "none") {
         expect(hasNative).toBe(false);
+        // Native=none also prunes the root Cargo workspace
+        expect(await pathExists(`${result.templateDir}/Cargo.toml`)).toBe(false);
+        expect(await pathExists(`${result.templateDir}/crates`)).toBe(false);
+        expect(await pathExists(`${result.templateDir}/.cargo`)).toBe(false);
+        expect(await pathExists(`${result.templateDir}/rust-toolchain.toml`)).toBe(false);
       } else {
         expect(hasNative).toBe(true);
-        expect(await pathExists(`${result.templateDir}/packages/native/rust-toolchain.toml`)).toBe(
-          true,
-        );
-        expect(await pathExists(`${result.templateDir}/packages/native/.cargo/config.toml`)).toBe(
-          true,
-        );
-        // Cargo workspace: virtual manifest + one crate per binding
-        const workspace = await file(`${result.templateDir}/packages/native/Cargo.toml`).text();
+        expect(await pathExists(`${result.templateDir}/rust-toolchain.toml`)).toBe(true);
+        expect(await pathExists(`${result.templateDir}/.cargo/config.toml`)).toBe(true);
+        // Cargo workspace at the repo root: virtual manifest + one crate per binding
+        const workspace = await file(`${result.templateDir}/Cargo.toml`).text();
         expect(workspace).toContain("[workspace]");
         expect(workspace).toContain('"crates/native"');
-        const crate = await file(
-          `${result.templateDir}/packages/native/crates/native/Cargo.toml`,
-        ).text();
+        const crate = await file(`${result.templateDir}/crates/native/Cargo.toml`).text();
         expect(crate).toContain("cdylib");
         // npm package: napi config, and the scope rewritten everywhere
         const npmPkg = await file(

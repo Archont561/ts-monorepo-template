@@ -54,7 +54,7 @@ function runSetupScript(relativeScript: string, label: string): FeatureSetup {
   };
 }
 
-/** Scaffolds `packages/native/` — crates, bridge package, toolchain, routes. */
+/** Scaffolds the native layer — root Cargo workspace (crates/, toolchain, .cargo) + npm packages + routes. */
 export const setupNative: FeatureSetup = runSetupScript("commands/native-setup.ts", "native");
 
 /** Writes `.devcontainer/devcontainer.json` from the consolidated asset. */

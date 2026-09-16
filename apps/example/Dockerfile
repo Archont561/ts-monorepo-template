@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Production-ready Dockerfile for @myorg/example
-# Native: packages/native is a virtual Cargo workspace (crates/* + npm/*), driven by `m native`
+# Native: the Cargo workspace lives at the repo root (crates/* + packages/native/npm/*), driven by `m native`
 # Follows guide: pinned tags, multi-stage, layer caching, non-root, exec form, HEALTHCHECK, OCI labels, BuildKit cache
 
 ARG BUN_VERSION=1.4.2
@@ -27,10 +27,12 @@ COPY packages/internal/package.json ./packages/internal/package.json
 COPY packages/tooling/package.json ./packages/tooling/package.json
 COPY packages/native/npm/native/package.json ./packages/native/npm/native/package.json
 
-# The Rust workspace lives in packages/native (no root Cargo.toml): the virtual
-# manifest, its crates and their npm packages — busted only when they change.
-# This also brings packages/native/crates/package.json, a workspace member that
-# `bun install --frozen-lockfile` below needs in order to match the lockfile.
+# The Rust workspace lives at the repo root: the virtual manifest, toolchain
+# pin and crates/ — plus the crates/package.json bridge node that `bun install
+# --frozen-lockfile` below needs in order to match the lockfile. Busted only
+# when they change.
+COPY Cargo.toml rust-toolchain.toml .cargo/ ./
+COPY crates/ ./crates/
 COPY packages/native/ ./packages/native/
 
 RUN --mount=type=cache,target=/root/.bun/install/cache \
@@ -44,13 +46,13 @@ FROM deps AS builder
 COPY . .
 
 
-# Cargo via `m native` (virtual workspace in packages/native)
-RUN if [ -f "packages/native/Cargo.toml" ]; then \
-      echo "🦀 Native workspace detected (packages/native)"; \
+# Cargo via `m native` (virtual workspace at the repo root)
+RUN if [ -f "Cargo.toml" ]; then \
+      echo "🦀 Native workspace detected (repo root)"; \
       if command -v cargo >/dev/null 2>&1; then \
         echo "→ m native check (fast)"; \
         bun run --filter @myorg/native-crates run build || true; \
-        ./node_modules/.bin/m native check || cargo check --manifest-path packages/native/Cargo.toml || true; \
+        ./node_modules/.bin/m native check || cargo check || true; \
         echo "→ m native clippy"; \
         ./node_modules/.bin/m native clippy || true; \
         echo "→ bun run build:native (m native napi:build)"; \
@@ -80,15 +82,16 @@ RUN curl -fsSL https://bun.sh/install | bash && \
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package.json ./package.json
 COPY --from=deps /app/bun.lock ./bun.lock
-# rust-toolchain.toml and .cargo/config.toml live inside packages/native
-COPY packages/native/ ./packages/native/
+# rust-toolchain.toml and .cargo/config.toml live at the repo root
+COPY Cargo.toml rust-toolchain.toml .cargo/ ./
+COPY crates/ ./crates/
 COPY packages/ ./packages/
 COPY apps/ ./apps/
 
 # Build every crate + every binding in the workspace via `m native`
-RUN if [ -f "packages/native/Cargo.toml" ]; then \
+RUN if [ -f "Cargo.toml" ]; then \
       echo "🦀 Rust-builder: m native build:release"; \
-      ./node_modules/.bin/m native build:release || cargo build --manifest-path packages/native/Cargo.toml --workspace --release || true; \
+      ./node_modules/.bin/m native build:release || cargo build --workspace --release || true; \
       echo "🦀 Rust-builder: m native napi:build (once per package)"; \
       ./node_modules/.bin/m native napi:build || bun --filter @myorg/native run build || true; \
     else \

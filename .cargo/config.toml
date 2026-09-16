@@ -1,5 +1,5 @@
-# Cargo config — self-contained, no root Cargo.toml
-# All Rust code lives in packages/native/Cargo.toml
+# Cargo config for the repo-root Cargo workspace (Cargo.toml + crates/ live at ./)
+# The offline vendored override is generated on demand by `pixi run fetch-vendor` — never committed.
 
 [build]
 # Uncomment to use faster linker if available (mold, lld)

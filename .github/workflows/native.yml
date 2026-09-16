@@ -4,12 +4,20 @@ on:
   push:
     branches: [main]
     paths:
-      - packages/native/**
+      - crates/**
+      - Cargo.toml
+      - Cargo.lock
+      - rust-toolchain.toml
+      - .cargo/**
       - packages/native/**
       - .github/workflows/native.yml
   pull_request:
     paths:
-      - packages/native/**
+      - crates/**
+      - Cargo.toml
+      - Cargo.lock
+      - rust-toolchain.toml
+      - .cargo/**
       - packages/native/**
       - .github/workflows/native.yml
   workflow_dispatch:
@@ -93,7 +101,7 @@ jobs:
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "packages/native"
+          workspaces: "."
           key: ${{ matrix.target }}
 
       # `rust-toolchain.toml` pins the channel only, so a non-host target has to

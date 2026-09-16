@@ -11,10 +11,10 @@ import {
 /**
  * Discovery for the Rust workspace.
  *
- * Nothing is declared in a manifest: crates are whatever lives in
- * `packages/native/crates/*`, and each cdylib crate maps to the npm package of
- * the same name in `packages/native/npm/*`. Adding a crate is therefore just
- * adding a directory — no registry to keep in sync.
+ * Nothing is declared in a manifest: crates are whatever lives in `crates/*`
+ * at the repo root, and each cdylib crate maps to the npm package of the same
+ * name in `packages/native/npm/*`. Adding a crate is therefore just adding a
+ * directory — no registry to keep in sync.
  */
 
 export type NativeCrate = {
@@ -42,13 +42,16 @@ export type NativeNpmPackage = {
 };
 
 /**
- * Walks up from `start` until it finds the Rust workspace, so `m native` works
- * from any package directory (turbo runs it with cwd = the package).
+ * Walks up from `start` until it finds the Rust workspace — the repo-root
+ * Cargo.toml must carry a `[workspace]` table, so a crate-level manifest is
+ * never mistaken for the root. Works from any package directory (turbo runs it
+ * with cwd = the package).
  */
 export function findNativeRoot(start: string = process.cwd()): string {
   let dir = resolve(start);
   for (let depth = 0; depth < 32; depth++) {
-    if (existsSync(join(dir, "packages", "native", "Cargo.toml"))) return dir;
+    const manifest = join(dir, "Cargo.toml");
+    if (existsSync(manifest) && readFileSync(manifest, "utf8").includes("[workspace]")) return dir;
     const parent = dirname(dir);
     if (parent === dir) break;
     dir = parent;
@@ -66,8 +69,8 @@ function readDirs(path: string): string[] {
 
 /** Every crate in the workspace, pure-Rust ones included. */
 export function discoverCrates(root: string): NativeCrate[] {
-  const cratesDir = join(root, "packages", "native", NATIVE_CRATES_DIR);
-  const workspaceManifest = join(root, "packages", "native", "Cargo.toml");
+  const cratesDir = join(root, NATIVE_CRATES_DIR);
+  const workspaceManifest = join(root, "Cargo.toml");
   const workspaceContent = existsSync(workspaceManifest)
     ? readFileSync(workspaceManifest, "utf8")
     : "";

@@ -35,16 +35,15 @@ import {
 /**
  * Setup script for native bindings — run when the native config is enabled.
  *
- * Scaffolds `packages/native` as a **Cargo workspace** with one crate per Rust
- * unit and one npm package per napi binding:
+ * Scaffolds the **Cargo workspace at the repo root** with one crate per Rust
+ * unit and one npm package per napi binding under `packages/native/npm`:
  *
  * ```
+ * Cargo.toml            virtual workspace (members: crates/*)
+ * rust-toolchain.toml
+ * .cargo/config.toml
+ * crates/native/        cdylib binding
  * packages/native/
- * ├── Cargo.toml        virtual workspace (members: crates/*)
- * ├── rust-toolchain.toml
- * ├── .cargo/config.toml
- * ├── .gitignore
- * ├── crates/native/    cdylib binding
  * └── npm/native/       @scope/native — platform packages are generated in CI
  * ```
  *
@@ -67,11 +66,9 @@ const ROOT_PACKAGE_JSON = join(TARGET_DIR, "package.json");
 const TURBO_BASE = join(TARGET_DIR, CONFIGS_RELATIVE, "turbo.base.json");
 const EXAMPLE_NATIVE_DIR = join(TARGET_DIR, "apps/example/src/pages/api/native");
 
-const WORKSPACE_MANIFEST = join(NATIVE_ROOT, "Cargo.toml");
-const TOOLCHAIN = join(NATIVE_ROOT, "rust-toolchain.toml");
-const ROOT_TOOLCHAIN = join(TARGET_DIR, "rust-toolchain.toml");
-const CARGO_CONFIG = join(NATIVE_ROOT, ".cargo/config.toml");
-const ROOT_CARGO_CONFIG = join(TARGET_DIR, ".cargo/config.toml");
+const WORKSPACE_MANIFEST = join(TARGET_DIR, "Cargo.toml");
+const TOOLCHAIN = join(TARGET_DIR, "rust-toolchain.toml");
+const CARGO_CONFIG = join(TARGET_DIR, ".cargo/config.toml");
 const NATIVE_GITIGNORE = join(NATIVE_ROOT, ".gitignore");
 
 /** Root scripts the workspace needs, and the m native command each one runs. */
@@ -174,12 +171,14 @@ function relative(path: string): string {
 }
 
 /**
- * Moves a pre-workspace `packages/native/{src,build.rs,Cargo.toml}` package
- * into `crates/<name>/` so older projects pick up the new shape on setup.
+ * Moves a legacy single-crate `packages/native/{src,build.rs,Cargo.toml}`
+ * package into `crates/<name>/` so projects scaffolded before the workspace
+ * shape pick up the new layout on setup.
  */
 async function migrateLegacyCrate(name: string): Promise<boolean> {
-  if (!(await file(WORKSPACE_MANIFEST).exists())) return false;
-  const content = await file(WORKSPACE_MANIFEST).text();
+  const legacyManifest = join(NATIVE_ROOT, "Cargo.toml");
+  if (!(await file(legacyManifest).exists())) return false;
+  const content = await file(legacyManifest).text();
   if (!content.includes("[package]")) return false;
 
   const crateDir = join(TARGET_DIR, nativeCrateDir(name));
@@ -192,7 +191,7 @@ async function migrateLegacyCrate(name: string): Promise<boolean> {
     await $`mv ${join(NATIVE_ROOT, "build.rs")} ${join(crateDir, "build.rs")}`.quiet();
   }
   await $`rm -rf ${join(NATIVE_ROOT, "src")}`.quiet();
-  await $`rm -f ${WORKSPACE_MANIFEST}`.quiet();
+  await $`rm -f ${legacyManifest}`.quiet();
 
   // The npm package used to live at the workspace root — move it under npm/.
   const legacyPackage = join(NATIVE_ROOT, "package.json");
@@ -213,15 +212,53 @@ async function migrateLegacyCrate(name: string): Promise<boolean> {
       await $`rm -rf ${join(NATIVE_ROOT, "tests")}`.quiet();
     }
   }
-  console.log(`  ✓ Moved crate + npm package under packages/native/`);
+  console.log(`  ✓ Moved crate + npm package under crates/ + packages/native/npm/`);
   return true;
 }
 
-/** Brings a project that predates the Cargo workspace onto the current layout. */
+/**
+ * Moves a legacy `packages/native/{Cargo.toml,rust-toolchain.toml,.cargo,crates}`
+ * Cargo workspace up to the repo root. Projects scaffolded by earlier template
+ * versions owned the whole Rust tree under `packages/native`; the Cargo
+ * workspace root is the repo root now.
+ */
+async function migrateLegacyWorkspace(): Promise<void> {
+  const legacyManifest = join(NATIVE_ROOT, "Cargo.toml");
+  if (!(await file(legacyManifest).exists()) || (await file(WORKSPACE_MANIFEST).exists())) {
+    return;
+  }
+  if (await file(join(TARGET_DIR, nativeCrateDir("native"), "Cargo.toml")).exists()) return;
+
+  console.log("  📦 Moving the Cargo workspace from packages/native/ to the repo root...");
+  await $`mv ${legacyManifest} ${WORKSPACE_MANIFEST}`.quiet();
+
+  const legacyCrates = join(NATIVE_ROOT, "crates");
+  if (await exists(legacyCrates)) {
+    await mkdir(join(TARGET_DIR, "crates"), { recursive: true });
+    await $`sh -c 'cp -a ${legacyCrates}/. ${join(TARGET_DIR, "crates")}/'`.quiet();
+    await $`rm -rf ${legacyCrates}`.quiet();
+  }
+
+  const legacyToolchain = join(NATIVE_ROOT, "rust-toolchain.toml");
+  if ((await file(legacyToolchain).exists()) && !(await file(TOOLCHAIN).exists())) {
+    await $`mv ${legacyToolchain} ${TOOLCHAIN}`.quiet();
+  }
+
+  if (await exists(join(NATIVE_ROOT, ".cargo"))) {
+    await mkdir(join(TARGET_DIR, ".cargo"), { recursive: true });
+    await $`sh -c 'cp -a ${join(NATIVE_ROOT, ".cargo")}/. ${join(TARGET_DIR, ".cargo")}/'`.quiet();
+    await $`rm -rf ${join(NATIVE_ROOT, ".cargo")}`.quiet();
+  }
+
+  console.log("  ✓ packages/native/Cargo.toml + crates/ + .cargo/ → repo root");
+}
+
+/** Brings a project that predates the repo-root Cargo workspace onto the layout. */
 async function migrateLegacyLayout(): Promise<void> {
   for (const spec of DEFAULT_NATIVE_CRATES) {
     await migrateLegacyCrate(spec.name);
   }
+  await migrateLegacyWorkspace();
 }
 
 /** Writes the crates + npm packages that are missing, leaving existing ones alone. */
@@ -242,20 +279,19 @@ async function writeCrates(): Promise<NativeCrateSpec[]> {
   return crates;
 }
 
-/**
- * Bridge node — the single Turbo package for every pure Rust crate. Refreshed
+/** Bridge node — the single Turbo package for every pure Rust crate. Refreshed
  * from the templates on every setup so it can never drift.
  */
 async function syncBridgeNode(): Promise<void> {
   await writeBridgeNode(TARGET_DIR, { scope: SCOPE, repository: REPO_URL });
-  console.log("  ✓ packages/native/crates/ (pure-Rust bridge node)");
+  console.log("  ✓ crates/ (pure-Rust bridge node @ packages/native/npm side untouched)");
 }
 
 /** Virtual workspace manifest — members are re-synced, never clobbered. */
 async function syncWorkspaceManifest(crates: NativeCrateSpec[]): Promise<void> {
   if (await file(WORKSPACE_MANIFEST).exists()) {
     for (const spec of crates) await addWorkspaceMember(TARGET_DIR, spec.name);
-    console.log("  ✓ packages/native/Cargo.toml (members synced)");
+    console.log("  ✓ Cargo.toml (members synced)");
     return;
   }
 
@@ -263,41 +299,24 @@ async function syncWorkspaceManifest(crates: NativeCrateSpec[]): Promise<void> {
     WORKSPACE_MANIFEST,
     workspaceCargoToml(crates, { scope: SCOPE, repository: REPO_URL }),
   );
-  console.log("  ✓ packages/native/Cargo.toml (virtual workspace, resolver 3)");
+  console.log("  ✓ Cargo.toml (virtual workspace, resolver 3)");
 }
 
-/** Toolchain pin: adopt one left at the repo root, otherwise write the default. */
+/** Toolchain pin at the repo root — write the default unless one exists. */
 async function setupToolchain(): Promise<void> {
   if (await file(TOOLCHAIN).exists()) return;
 
-  if (await file(ROOT_TOOLCHAIN).exists()) {
-    await writeFile(TOOLCHAIN, await file(ROOT_TOOLCHAIN).text());
-    await $`rm -f ${ROOT_TOOLCHAIN}`.quiet();
-    console.log("  ✓ Moved rust-toolchain.toml into packages/native/");
-    return;
-  }
-
   await writeFile(TOOLCHAIN, rustToolchainToml());
-  console.log("  ✓ packages/native/rust-toolchain.toml (stable + wasm32-wasip1-threads)");
+  console.log("  ✓ rust-toolchain.toml (stable + wasm32-wasip1-threads)");
 }
 
-/** Cargo config lives with the crates — a root-level one is migrated and removed. */
+/** Cargo config lives at the repo root, next to the workspace manifest. */
 async function setupCargoConfig(): Promise<void> {
-  if (!(await file(CARGO_CONFIG).exists())) {
-    await mkdir(join(NATIVE_ROOT, ".cargo"), { recursive: true });
-    await writeFile(
-      CARGO_CONFIG,
-      (await file(ROOT_CARGO_CONFIG).exists())
-        ? await file(ROOT_CARGO_CONFIG).text()
-        : cargoConfigToml(),
-    );
-    console.log("  ✓ packages/native/.cargo/config.toml");
-  }
+  if (await file(CARGO_CONFIG).exists()) return;
 
-  if (!(await file(ROOT_CARGO_CONFIG).exists())) return;
-
-  await $`rm -f ${ROOT_CARGO_CONFIG}`.quiet();
-  await $`rmdir ${join(TARGET_DIR, ".cargo")}`.nothrow().quiet();
+  await mkdir(join(TARGET_DIR, ".cargo"), { recursive: true });
+  await writeFile(CARGO_CONFIG, cargoConfigToml());
+  console.log("  ✓ .cargo/config.toml");
 }
 
 async function ensureNativeGitignore(): Promise<void> {
@@ -325,7 +344,7 @@ async function linkNpmPackages(): Promise<void> {
 
     // The bridge node is a single package (not a glob) so the crates dir
     // itself is never treated as a workspace member.
-    const bridgeEntry = `${NATIVE_DIR}/crates`;
+    const bridgeEntry = "crates";
     if (!(pkg.workspaces ?? []).includes(bridgeEntry)) {
       console.log(`  ✓ Added workspace entry ${bridgeEntry} (pure-Rust bridge node)`);
       next = addJsonArrayValue(next, "workspaces", bridgeEntry);
@@ -381,11 +400,11 @@ async function writeExampleRoutes(): Promise<void> {
 }
 
 function printNextSteps(): void {
-  console.log("\n✅ Native setup complete (Cargo workspace + napi-rs).\n");
+  console.log("\n✅ Native setup complete (Cargo workspace at the repo root + napi-rs).\n");
   console.log("  Layout:");
-  console.log(`    ${NATIVE_DIR}/Cargo.toml       virtual workspace`);
-  console.log(`    ${NATIVE_DIR}/crates/<name>/   one crate per Rust unit`);
-  console.log(`    ${NATIVE_DIR}/npm/<name>/      one npm package per binding\n`);
+  console.log(`    Cargo.toml                       virtual workspace`);
+  console.log(`    crates/<name>/                   one crate per Rust unit`);
+  console.log(`    ${NATIVE_DIR}/npm/<name>/        one npm package per binding\n`);
   console.log("  Commands:");
   console.log("    m native list              # crates + packages");
   console.log("    m native add <name>        # add a crate (+ npm package)");
@@ -397,8 +416,10 @@ function printNextSteps(): void {
 }
 
 async function main() {
-  console.log("\n🦀 Setting up native Rust bindings (Cargo workspace + napi-rs)...\n");
-  console.log(`  Mode: Cargo workspace at ${NATIVE_DIR}/ (crates/* + npm/*)`);
+  console.log(
+    "\n🦀 Setting up native Rust bindings (Cargo workspace at the repo root + napi-rs)...\n",
+  );
+  console.log("  Mode: Cargo workspace at ./ (crates/* + packages/native/npm/*)");
   console.log("  CLI: m native (cargo + napi wrapper)\n");
 
   await mkdir(NATIVE_ROOT, { recursive: true });

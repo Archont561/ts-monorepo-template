@@ -336,7 +336,17 @@ const FEATURE_RECORD = {
       ],
       removals: {
         none: {
-          extraRemovals: ["packages/native", "apps/example/src/pages/api/native"],
+          extraRemovals: [
+            "packages/native",
+            // The Cargo workspace moves to the repo root when native is on —
+            // native=none must take the whole tree with it.
+            "crates",
+            "Cargo.toml",
+            "rust-toolchain.toml",
+            ".cargo",
+            "Cargo.lock",
+            "apps/example/src/pages/api/native",
+          ],
           scriptsToRemove: ["build:native", "build:wasm", "test:native", "security:audit"],
           turboTasksToRemove: ["build:native", "build:wasm"],
           filePatternsToRemove: [
@@ -344,12 +354,20 @@ const FEATURE_RECORD = {
             "**/*.napi.*",
             "**/*.wasi.cjs",
             "**/rust-toolchain.toml",
-            "Cargo.lock",
+            "**/Cargo.toml",
+            "**/Cargo.lock",
             ".cargo/**",
             "**/native/**",
             "**/api/native/**",
           ],
-          fileRegexesToRemove: ["\\\\.node$", "napi", "rust-toolchain", "api/native"],
+          fileRegexesToRemove: [
+            "\\\\.node$",
+            "napi",
+            "rust-toolchain",
+            "\\\\bCargo\\.toml$",
+            "\\\\bCargo\\.lock$",
+            "api/native",
+          ],
           appDepsToRemove: ["@myorg/native"],
         },
         publish: {},

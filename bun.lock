@@ -32,6 +32,10 @@
         "vitepress": "^1.6.4",
       },
     },
+    "crates": {
+      "name": "@myorg/native-crates",
+      "version": "0.0.0",
+    },
     "packages/external": {
       "name": "@myorg/external",
       "version": "0.1.0",
@@ -46,10 +50,6 @@
       "devDependencies": {
         "@myorg/tooling": "workspace:*",
       },
-    },
-    "packages/native/crates": {
-      "name": "@myorg/native-crates",
-      "version": "0.0.0",
     },
     "packages/native/npm/native": {
       "name": "@myorg/native",
@@ -342,7 +342,7 @@
 
     "@myorg/native": ["@myorg/native@workspace:packages/native/npm/native"],
 
-    "@myorg/native-crates": ["@myorg/native-crates@workspace:packages/native/crates"],
+    "@myorg/native-crates": ["@myorg/native-crates@workspace:crates"],
 
     "@myorg/template-docs": ["@myorg/template-docs@workspace:apps/template-docs"],
 

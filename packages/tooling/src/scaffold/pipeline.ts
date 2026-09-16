@@ -114,11 +114,11 @@ const STATIC_SCOPE_TARGETS: readonly string[] = [
   "packages/external/src/user.ts",
   "packages/external/src/native.ts",
 
-  // Native workspace (self-contained, no root Cargo.toml)
-  "packages/native/Cargo.toml",
+  // Native Rust workspace (root Cargo.toml, crates/ at the repo root)
+  "Cargo.toml",
   // The bridge package that stands for every pure Rust crate in the Turbo
   // graph — a single static node, unlike the npm packages discovered below.
-  "packages/native/crates/package.json",
+  "crates/package.json",
   // The npm packages underneath it are discovered below — there is one per
   // binding crate, so they cannot be listed here.
 
@@ -661,9 +661,10 @@ export class MonorepoScaffolder {
       }
 
       // A config removal can take a whole workspace with it (native=none deletes
-      // packages/native, the npm packages under npm/* included). A root
-      // dependency or workspace glob left pointing at the missing directory makes
-      // `bun install` fail outright, so both are reconciled with what survived.
+      // packages/native and the root crates/, the npm packages under npm/*
+      // included). A root dependency or workspace glob left pointing at the
+      // missing directory makes `bun install` fail outright, so both are
+      // reconciled with what survived.
       const reconciled = await this.reconcileWorkspaces(next);
       return reconciled.source;
     });
@@ -690,11 +691,12 @@ export class MonorepoScaffolder {
     }
 
     // Package names come from the whole tree rather than only the surviving
-    // globs: a nested package (`packages/native/npm/*`) or one whose glob is
-    // imprecise enough that a manifest is missed still resolves, and dropping
-    // it would break `bun install` in the other direction.
+    // globs: a nested package (`packages/native/npm/*`), the root-level
+    // `crates/` bridge node, or one whose glob is imprecise enough that a
+    // manifest is missed still resolves, and dropping it would break
+    // `bun install` in the other direction.
     const names = new Set<string>();
-    const manifests = new Glob("{apps,packages}/**/package.json").scanSync({
+    const manifests = new Glob("{apps,packages,crates}/**/package.json").scanSync({
       cwd: this.targetDir,
       onlyFiles: true,
     });

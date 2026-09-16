@@ -4,18 +4,18 @@
 
 ## Current state
 
-- Virtual workspace, `resolver = "3"`, members: `crates/native` (cdylib binding) and `crates/shared` (pure Rust, no npm package).
+- Virtual workspace at the **repo root** (`/Cargo.toml`), `resolver = "3"`, members: `crates/native` (cdylib binding) and `crates/shared` (pure Rust, no npm package).
 - `crates/native` is a thin layer — every `#[napi]` fn delegates to `shared` (`shared.workspace = true`).
-- `crates/package.json` (`@myorg/native-crates`) is the bridge node: the single Turbo package for all pure crates, running `mnative build/test --pure`. Root `workspaces` includes `packages/native/crates`; the binding's `package.json` depends on the bridge via `workspace:*`.
+- `crates/package.json` (`@myorg/native-crates`) is the bridge node: the single Turbo package for all pure crates, running `mnative build/test --pure`. Root `workspaces` includes `crates`; the binding's `package.json` depends on the bridge via `workspace:*`.
 - `[workspace.package]`: edition 2024, version 0.1.0, MIT, repository `Archont561/ts-monorepo-template`.
 - Shared dependencies: `napi` 3 (feature `napi4`), `napi-derive` 3, `napi-build` 2, `shared = { path = "crates/shared" }`. Lints: `unsafe_code = "forbid"`, `clippy.all = "warn"`. `[profile.release]`: lto, codegen-units 1, strip.
-- Turbo: `@myorg/native#build` is **cached** (`*.node`, `index.js`, `index.d.ts`; inputs glob `../../crates/**` + workspace manifests); the bridge tasks are **never cached** (cargo owns `target/`); `build:wasm` stays uncached.
-- Toolchain: stable with `rustfmt`, `clippy`, and the `wasm32-wasip1-threads` target.
-- `Cargo.lock` is gitignored — these are cdylib libraries, not binaries.
+- Turbo: `@myorg/native#build` is **cached** (`*.node`, `index.js`, `index.d.ts`; inputs glob `../../../crates/**` + workspace manifests); the bridge tasks are **never cached** (cargo owns `target/`); `build:wasm` stays uncached.
+- Toolchain: stable with `rustfmt`, `clippy`, and the `wasm32-wasip1-threads` target (`/rust-toolchain.toml` at the repo root).
+- `Cargo.lock` at the repo root **is committed** — reproducible native builds.
 
 ## Decisions as outcomes
 
-- **Workspace under `packages/`** — the repo root stays free of Rust, so the native config is removable as one directory.
+- **Workspace at the repo root** — `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `.cargo/` and `crates/` sit at `./`; only the npm packages stay under `packages/native/npm/`. Cargo resolves path deps and the workspace from one manifest, and the committed `Cargo.lock` makes vendored/offline builds possible.
 - **One bridge package for all pure crates** — pure crates stay out of the npm namespace (no package churn when they move), while Turbo still orders pure Rust before the napi builds that consume it. The guide's per-crate npm packages were collapsed into this single node deliberately.
 - **Cargo graph mirrored as `workspace:*`** — Turbo cannot see `[dependencies]` in Cargo.toml; the bridge edge is the one ordering fact it needs, and `mnative sync` keeps it honest.
 - **napi builds cached, cargo tasks not** — napi outputs are stable local artifacts with well-defined inputs; cargo's incremental state is its own cache and the toolchain belongs in its key. Over-invalidating is cheap, a stale `.node` is not.

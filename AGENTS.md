@@ -147,7 +147,7 @@ Editing generated output is silent data loss: the next regeneration overwrites i
 ## Non-obvious patterns
 
 - `@myorg` is the template scope; the scaffolder rewrites it. Use it everywhere in configs and never hardcode a real scope.
-- `packages/native` is a **virtual Cargo workspace**: `crates/*` for Rust, `npm/*` for the npm packages built from them. There is no root `Cargo.toml`.
+- The Cargo workspace lives at the **repo root**: `Cargo.toml` (virtual, members = `crates/*`), `Cargo.lock`, `rust-toolchain.toml`, `.cargo/` and `crates/`. The npm packages built from binding crates stay under `packages/native/npm/*`.
 - Platform npm packages (`npm/<name>-<platform>/`) are generated in CI and gitignored. Never commit or hand-edit them.
 - `attw` runs with `--profile esm-only`. node10 and CJS resolution failures are intentional, not bugs.
 - Biome `overrides` **replace** rule options rather than merging — restate every option you need inside each override block.

@@ -2,22 +2,25 @@
 
 The Rust side of the monorepo — a virtual Cargo workspace whose members are crates: **pure Rust crates** that hold the logic, and **binding crates** that expose it to JS via napi-rs, each wrapped by an npm package.
 
+The Cargo workspace lives at the **repo root**; the npm packages stay here. The `m native` CLI discovers both from disk.
+
 ```
-packages/native/
+<repo root>/
 ├── Cargo.toml            # virtual workspace: resolver 3, members = crates/*
+├── Cargo.lock            # committed — reproducible native builds
 ├── rust-toolchain.toml   # stable + rustfmt, clippy, wasm32-wasip1-threads
 ├── .cargo/config.toml    # build config (WASI linker)
-├── .gitignore            # build output, generated loaders, per-platform packages
-├── crates/
-│   ├── package.json      # @myorg/native-crates — the bridge node (see below)
-│   ├── turbo.json        # its Turbo tasks
-│   ├── native/           # binding crate — crate-type = ["cdylib"], thin #[napi] wrappers
-│   └── shared/           # pure Rust crate — the logic, no napi, plain `cargo test`
+└── crates/
+    ├── package.json      # @myorg/native-crates — the bridge node (see below)
+    ├── turbo.json        # its Turbo tasks
+    ├── native/           # binding crate — crate-type = ["cdylib"], thin #[napi] wrappers
+    └── shared/           # pure Rust crate — the logic, no napi, plain `cargo test`
+
+packages/native/
+├── .gitignore            # generated loaders, per-platform packages
 └── npm/
     └── native/           # one npm package per binding crate
 ```
-
-The repo root has **no `Cargo.toml`**. Everything Rust lives here, which is what lets the native config be dropped by deleting one directory.
 
 ## How the pieces relate
 
@@ -25,8 +28,8 @@ The repo root has **no `Cargo.toml`**. Everything Rust lives here, which is what
 | :--- | :--- |
 | `crates/<name>/` (pure) | Rust logic — testable with plain `cargo test`, no Node runtime |
 | `crates/<name>/` (binding) | Thin `#[napi]` wrappers that delegate to the pure crates |
-| `npm/<name>/` | The npm manifest with the napi config, generated loader and types |
-| `Cargo.toml` | Members, `edition`/`version`/`license`/`repository`, shared dependencies (incl. `shared = { path = … }`), lints and `[profile.release]` |
+| `npm/<name>/` (under `packages/native`) | The npm manifest with the napi config, generated loader and types |
+| `Cargo.toml` (root) | Members, `edition`/`version`/`license`/`repository`, shared dependencies (incl. `shared = { path = … }`), lints and `[profile.release]` |
 | `crates/package.json` | The **bridge node** — the single Turbo package that stands for every pure crate |
 | `npm/<name>-<platform>/` | **Generated in CI**, never committed |
 
@@ -56,7 +59,8 @@ the root `workspaces` entry) after Cargo dependencies are hand-edited.
 
 ## Commands
 
-All of them go through `mnative`, which discovers crates and packages from disk:
+All of them go through `mnative`, which discovers crates and packages from disk
+and runs cargo against the workspace at the repo root:
 
 ```bash
 mnative list              # crates → npm packages, targets per package
