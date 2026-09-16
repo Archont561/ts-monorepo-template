@@ -58,7 +58,7 @@ jobs:
         run: tar -czf vendor.tar.gz vendor
 
       - name: Upload the sandbox bundle
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: sandbox-bundle
           path: |
